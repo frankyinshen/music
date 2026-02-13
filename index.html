@@ -15,54 +15,52 @@
             --ios-gray-btn: #eef0f4;
             --ios-blur: rgba(255, 255, 255, 0.95);
             --ios-radius: 12px;
-            --safe-area-bottom: env(safe-area-inset-bottom);
+            /* 适配 iPhone 刘海屏安全区 */
+            --safe-top: env(safe-area-inset-top, 20px);
+            --safe-bottom: env(safe-area-inset-bottom);
         }
 
         body {
             margin: 0; padding: 0;
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-            background-color: var(--ios-bg);
-            color: var(--ios-text);
-            height: 100vh;
-            display: flex; flex-direction: column; overflow: hidden;
+            background-color: var(--ios-bg); color: var(--ios-text);
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
         }
 
-        /* --- 顶部导航 --- */
+        /* --- 顶部导航 (修复位置过高问题) --- */
         .header {
             background-color: var(--ios-blur);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            padding: 10px 15px;
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: calc(var(--safe-top) + 5px) 15px 10px 15px;
             border-bottom: 0.5px solid rgba(0,0,0,0.1);
             z-index: 100;
         }
         .path-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
         .back-btn { color: var(--ios-blue); font-size: 17px; font-weight: 500; background: none; border: none; cursor: pointer; display: flex; align-items: center; }
         .current-folder { font-size: 16px; font-weight: 600; max-width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .search-bar { background-color: #e3e3e8; border-radius: 10px; padding: 8px 10px; display: flex; align-items: center; }
+        
+        .search-bar { background-color: #e3e3e8; border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; }
         .search-input { border: none; background: transparent; width: 100%; font-size: 16px; margin-left: 6px; outline: none; }
 
         /* --- 列表区域 --- */
-        .content { flex: 1; overflow-y: auto; padding: 10px 16px 300px 16px; }
+        .content { flex: 1; overflow-y: auto; padding: 10px 16px 320px 16px; }
         .list-group { background-color: var(--ios-card); border-radius: var(--ios-radius); overflow: hidden; }
-        .list-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 0.5px solid rgba(0,0,0,0.08); cursor: pointer; position: relative; }
+        .list-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 0.5px solid rgba(0,0,0,0.08); cursor: pointer; }
         .list-item:active { background-color: #e5e5ea; }
         .list-item.active .item-title { color: var(--ios-blue); font-weight: 600; }
+        .list-item.special-folder { background-color: #fafaff; }
         
         .item-icon { font-size: 20px; margin-right: 12px; }
         .item-info { flex: 1; overflow: hidden; }
         .item-title { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .item-subtext { font-size: 11px; color: var(--ios-subtext); margin-top: 2px; }
 
-        .fav-heart { padding: 8px; margin-left: 10px; font-size: 20px; filter: grayscale(1); opacity: 0.3; }
-        .fav-heart.active { filter: grayscale(0); opacity: 1; }
-
         /* --- 底部播放器 --- */
         .player-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
             background-color: var(--ios-card);
             border-top: 0.5px solid rgba(0,0,0,0.1);
-            padding: 10px 0 calc(10px + var(--safe-area-bottom)) 0;
+            padding: 10px 0 calc(10px + var(--safe-bottom)) 0;
             z-index: 200; box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
         }
 
@@ -86,23 +84,44 @@
         .learn-btn svg { width: 28px; height: 28px; margin-bottom: 4px; }
         .ab-btn.active { color: var(--ios-blue); }
 
-        .basic-controls { display: flex; justify-content: center; align-items: center; gap: 30px; margin-bottom: 15px; }
+        .basic-controls { display: flex; justify-content: center; align-items: center; gap: 25px; margin-bottom: 15px; }
         .icon-btn { background: none; border: none; padding: 0; cursor: pointer; color: #000; }
-        .play-btn svg { width: 42px; height: 42px; }
+        .play-btn svg { width: 44px; height: 44px; }
         .side-btn svg { width: 28px; height: 28px; }
+        .fav-heart { color: var(--ios-text); font-size: 26px; transition: transform 0.1s; }
+        .fav-heart.active { color: var(--ios-red); }
 
         .feature-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 0 15px; }
         .pill-btn {
             background-color: var(--ios-gray-btn); border: none; border-radius: 8px;
-            padding: 8px 0; font-size: 12px; font-weight: 600; cursor: pointer;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            padding: 10px 0; font-size: 12px; font-weight: 600; cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
         .pill-btn.active { background-color: var(--ios-blue); color: white; }
+
+        /* --- 仿 Apple Music 选择弹窗 --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4); z-index: 1000; display: none;
+            justify-content: center; align-items: flex-end;
+        }
+        .playlist-modal {
+            background: var(--ios-card); width: 100%; max-width: 500px;
+            border-radius: 20px 20px 0 0; padding: 20px;
+            animation: slideUp 0.3s ease-out; max-height: 80vh; overflow-y: auto;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; text-align: center; }
+        .playlist-option {
+            padding: 15px; border-bottom: 0.5px solid #eee; font-size: 17px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .new-playlist-btn { color: var(--ios-blue); font-weight: 600; justify-content: center; }
 
         #toast {
             position: fixed; top: 20%; left: 50%; transform: translateX(-50%);
             background: rgba(0,0,0,0.8); color: white; padding: 10px 20px;
-            border-radius: 20px; font-size: 14px; z-index: 1000; display: none;
+            border-radius: 20px; font-size: 14px; z-index: 2000; display: none;
         }
     </style>
 </head>
@@ -110,6 +129,16 @@
 
     <audio id="audioPlayer"></audio>
     <div id="toast">提示</div>
+
+    <!-- 收藏夹选择弹窗 -->
+    <div class="modal-overlay" id="playlistModal">
+        <div class="playlist-modal">
+            <div class="modal-title">添加到收藏夹</div>
+            <div id="playlistOptions"></div>
+            <div class="playlist-option new-playlist-btn" onclick="createNewPlaylistFromModal()">＋ 新建收藏夹</div>
+            <div class="playlist-option" style="justify-content: center; color: var(--ios-red); border-bottom: none; margin-top: 10px;" onclick="closePlaylistModal()">取消</div>
+        </div>
+    </div>
 
     <div class="header">
         <div class="path-nav">
@@ -121,7 +150,7 @@
             <div style="width: 40px;"></div>
         </div>
         <div class="search-bar">
-            <input type="text" class="search-input" id="searchInput" placeholder="搜索当前列表..." oninput="filterList()">
+            <input type="text" class="search-input" id="searchInput" placeholder="搜索歌曲..." oninput="filterList()">
         </div>
     </div>
 
@@ -168,8 +197,8 @@
             <button class="icon-btn side-btn" onclick="playNext()">
                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
             </button>
-            <!-- 修复后的红心按钮 -->
-            <button class="icon-btn side-btn" id="mainFavBtn" onclick="handleQuickFavorite()" style="font-size: 24px;">
+            <!-- 仿 Apple Music 红心 -->
+            <button class="icon-btn side-btn fav-heart" id="mainFavBtn" onclick="openPlaylistModal()">
                 🤍
             </button>
         </div>
@@ -177,18 +206,20 @@
         <div class="feature-grid">
             <button class="pill-btn" id="speedBtn" onclick="changeSpeed()">1.0x</button>
             <button class="pill-btn" id="timerBtn" onclick="setTimer()">定时关机</button>
-            <button class="pill-btn" id="currentListBtn" onclick="switchActivePlaylist()" style="color:var(--ios-blue)">收藏夹...</button>
+            <!-- 重新设计的收藏夹图标与文字 -->
+            <button class="pill-btn" onclick="fetchDirectory('virtual:folders')">
+                <span style="font-size: 16px;">📂</span>
+                <span>收藏夹</span>
+            </button>
             <button class="pill-btn" onclick="refreshList()">刷新</button>
         </div>
     </div>
 
     <script>
-        // --- 配置 ---
         const SITE_ROOT = 'https://res.evanyin.dpdns.org/';
         const BASE_URL = 'https://res.evanyin.dpdns.org/banyu/';
         const AUDIO_EXTS = ['.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg'];
 
-        // --- 状态 ---
         let currentPath = BASE_URL;
         let fileList = [], playList = [], currentTrackIndex = -1;
         let loopMode = 'list', playbackRate = 1.0, sleepTimer = null;
@@ -213,92 +244,86 @@
             speedBtn: document.getElementById('speedBtn'),
             timerBtn: document.getElementById('timerBtn'),
             mainFavBtn: document.getElementById('mainFavBtn'),
-            currentListBtn: document.getElementById('currentListBtn')
+            modal: document.getElementById('playlistModal'),
+            modalOptions: document.getElementById('playlistOptions')
         };
 
         document.addEventListener('DOMContentLoaded', () => {
-            updatePlaylistUI();
             fetchDirectory(currentPath);
             setupAudioEvents();
         });
 
-        // --- 收藏逻辑修复 ---
+        // --- 仿 Apple Music 弹窗逻辑 ---
 
-        function updatePlaylistUI() {
-            if (activePlaylistName) {
-                ui.currentListBtn.textContent = `📍 ${activePlaylistName}`;
-                ui.currentListBtn.classList.add('active');
-            } else {
-                ui.currentListBtn.textContent = "创建收藏夹";
-                ui.currentListBtn.classList.remove('active');
-            }
-            updateFavHeart();
-        }
-
-        function switchActivePlaylist() {
-            const listNames = Object.keys(playlists);
-            let promptMsg = "当前所有收藏夹: " + (listNames.length ? listNames.join(", ") : "(空)");
-            promptMsg += "\n\n请输入收藏夹名称（新建或切换）:";
-            
-            const name = prompt(promptMsg, activePlaylistName || "");
-            if (name && name.trim() !== "") {
-                const cleanName = name.trim();
-                if (!playlists[cleanName]) playlists[cleanName] = [];
-                activePlaylistName = cleanName;
-                localStorage.setItem('active_playlist_name', cleanName);
-                savePlaylists();
-                updatePlaylistUI();
-                showToast(`当前目标: ${cleanName}`);
-                if (currentPath === 'virtual:folders') renderPlaylistFolders();
-            }
-        }
-
-        function handleQuickFavorite() {
+        function openPlaylistModal() {
             const track = playList[currentTrackIndex];
-            if (!track) return showToast("请先播放歌曲");
+            if (!track) return showToast("请先播放一首曲目");
 
-            if (!activePlaylistName) {
-                switchActivePlaylist();
-                if (!activePlaylistName) return;
-            }
+            ui.modal.style.display = 'flex';
+            ui.modalOptions.innerHTML = '';
+            
+            const listNames = Object.keys(playlists);
+            listNames.forEach(name => {
+                const opt = document.createElement('div');
+                opt.className = 'playlist-option';
+                const isAlreadyIn = playlists[name].some(f => f.url === track.url);
+                opt.innerHTML = `<span>📁</span> <span>${name}</span> ${isAlreadyIn ? '<span style="margin-left:auto; color:var(--ios-blue);">✓</span>' : ''}`;
+                opt.onclick = () => addToPlaylist(name);
+                ui.modalOptions.appendChild(opt);
+            });
+        }
 
-            const list = playlists[activePlaylistName];
+        function closePlaylistModal() { ui.modal.style.display = 'none'; }
+
+        function addToPlaylist(name) {
+            const track = playList[currentTrackIndex];
+            const list = playlists[name];
             const idx = list.findIndex(f => f.url === track.url);
 
             if (idx > -1) {
                 list.splice(idx, 1);
-                showToast(`已从【${activePlaylistName}】移除`);
+                showToast(`已从【${name}】移除`);
             } else {
                 list.push(track);
-                showToast(`已加入【${activePlaylistName}】`);
+                showToast(`已加入【${name}】`);
             }
+            activePlaylistName = name;
+            localStorage.setItem('active_playlist_name', name);
             savePlaylists();
             updateFavHeart();
-            if (currentPath === `virtual:list:${activePlaylistName}`) renderTracksInPlaylist(activePlaylistName);
+            closePlaylistModal();
+            if (currentPath.startsWith('virtual:list:')) renderTracksInPlaylist(name);
+        }
+
+        function createNewPlaylistFromModal() {
+            const name = prompt("请输入新收藏夹名称:");
+            if (name && name.trim() !== "") {
+                const cleanName = name.trim();
+                if (!playlists[cleanName]) playlists[cleanName] = [];
+                addToPlaylist(cleanName);
+            }
         }
 
         function updateFavHeart() {
             const track = playList[currentTrackIndex];
-            if (!track || !activePlaylistName) {
-                ui.mainFavBtn.textContent = "🤍";
-                ui.mainFavBtn.style.color = "#000";
-                return;
-            }
-            const isFav = playlists[activePlaylistName]?.some(f => f.url === track.url);
-            ui.mainFavBtn.textContent = isFav ? "❤️" : "🤍";
-            ui.mainFavBtn.style.color = isFav ? "var(--ios-red)" : "#000";
+            if (!track) { ui.mainFavBtn.textContent = "🤍"; ui.mainFavBtn.classList.remove('active'); return; }
+            
+            // Apple Music 逻辑：如果当前曲目在任何一个收藏夹里，红心就亮
+            const isInAny = Object.values(playlists).some(list => list.some(f => f.url === track.url));
+            ui.mainFavBtn.textContent = isInAny ? "❤️" : "🤍";
+            ui.mainFavBtn.classList.toggle('active', isInAny);
         }
 
         function savePlaylists() { localStorage.setItem('my_playlists_v3', JSON.stringify(playlists)); }
 
-        // --- 核心：目录导航与返回键修复 ---
+        // --- 目录与返回逻辑 ---
 
         async function fetchDirectory(url) {
             if (url === 'virtual:folders') return renderPlaylistFolders();
             if (url.startsWith('virtual:list:')) return renderTracksInPlaylist(url.replace('virtual:list:', ''));
 
             currentPath = url;
-            ui.list.innerHTML = '<div style="text-align:center;padding:20px;color:gray;">加载中...</div>';
+            ui.list.innerHTML = '<div style="text-align:center;padding:20px;color:gray;">连接云端中...</div>';
             ui.folder.textContent = url.replace(SITE_ROOT, '/');
 
             try {
@@ -309,9 +334,9 @@
                 const links = Array.from(doc.querySelectorAll('.name-col a, a'));
 
                 fileList = []; playList = [];
-                if (url === BASE_URL) {
-                    fileList.push({ name: '⭐️ 我的收藏', url: 'virtual:folders', isFolder: true, isSpecial: true });
-                }
+                
+                // ★ 核心修复：无论在哪，“我的收藏”永远置顶 ★
+                fileList.push({ name: '⭐️ 我的收藏夹', url: 'virtual:folders', isFolder: true, isSpecial: true });
 
                 links.forEach(a => {
                     const href = a.getAttribute('href');
@@ -339,66 +364,92 @@
             const folders = Object.keys(playlists).map(name => ({
                 name: `📁 ${name}`, url: `virtual:list:${name}`, isFolder: true
             }));
+            // 置顶收藏
             ui.list.innerHTML = '';
-            if (folders.length === 0) ui.list.innerHTML = '<div style="padding:20px;text-align:center;color:gray;">无收藏夹</div>';
-            else renderList(folders);
+            const head = document.createElement('div');
+            head.className = 'list-item special-folder active';
+            head.innerHTML = `<div class="item-icon">⭐️</div><div class="item-info"><div class="item-title">我的收藏夹目录</div></div>`;
+            ui.list.appendChild(head);
+            
+            if (folders.length === 0) {
+                const tip = document.createElement('div');
+                tip.style = "padding:30px; text-align:center; color:gray; font-size:14px;";
+                tip.innerHTML = "目前没有收藏文件夹<br>播放歌曲时点红心即可创建";
+                ui.list.appendChild(tip);
+            } else {
+                renderList(folders, true);
+            }
         }
 
         function renderTracksInPlaylist(name) {
             currentPath = `virtual:list:${name}`;
             ui.folder.textContent = `/收藏/${name}`;
             playList = playlists[name] || [];
-            renderList(playList);
+            
+            ui.list.innerHTML = '';
+            // 置顶
+            const head = document.createElement('div');
+            head.className = 'list-item special-folder';
+            head.onclick = () => fetchDirectory('virtual:folders');
+            head.innerHTML = `<div class="item-icon">⬅️</div><div class="item-info"><div class="item-title">返回收藏文件夹列表</div></div>`;
+            ui.list.appendChild(head);
+
+            renderList(playList, true);
         }
 
-        // ★★★ 核心修复：返回逻辑 ★★★
         function goBack() {
-            // 1. 如果在某个具体收藏夹里 -> 返回到收藏夹目录
-            if (currentPath.startsWith('virtual:list:')) {
-                fetchDirectory('virtual:folders');
-                return;
-            }
-            // 2. 如果在收藏夹目录 -> 返回到程序起始目录
-            if (currentPath === 'virtual:folders') {
-                fetchDirectory(BASE_URL);
-                return;
-            }
-            // 3. 如果已经在网站根目录 -> 不再返回
+            if (currentPath.startsWith('virtual:list:')) return fetchDirectory('virtual:folders');
+            if (currentPath === 'virtual:folders') return fetchDirectory(BASE_URL);
             if (currentPath === SITE_ROOT) return;
 
-            // 4. 标准 URL 返回上一级文件夹
             try {
                 let urlObj = new URL(currentPath);
                 let pathParts = urlObj.pathname.split('/').filter(p => p);
-                pathParts.pop(); // 移除最后一层
+                pathParts.pop();
                 let newPath = urlObj.origin + '/' + pathParts.join('/') + (pathParts.length > 0 ? '/' : '');
-                
-                // 防止退得比起始目录还深（可选）
                 fetchDirectory(newPath);
-            } catch (e) {
-                fetchDirectory(BASE_URL);
-            }
+            } catch (e) { fetchDirectory(BASE_URL); }
         }
 
-        function renderList(items) {
-            ui.list.innerHTML = '';
-            items.sort((a,b) => (a.isSpecial ? -1 : (a.isFolder === b.isFolder ? a.name.localeCompare(b.name) : a.isFolder ? -1 : 1)));
+        function renderList(items, skipSpecial = false) {
+            if (!skipSpecial) {
+                // 如果不是虚拟目录，我们需要清空再画，如果是已经画好Header的就不清空
+                const hasHeader = ui.list.querySelector('.special-folder');
+                if(!hasHeader) ui.list.innerHTML = ''; 
+            }
+
             items.forEach(item => {
+                if (!skipSpecial && item.isSpecial) {
+                   const div = document.createElement('div');
+                   div.className = 'list-item special-folder';
+                   div.onclick = () => fetchDirectory(item.url);
+                   div.innerHTML = `<div class="item-icon">⭐️</div><div class="item-info"><div class="item-title">${item.name}</div></div>`;
+                   ui.list.appendChild(div);
+                   return;
+                }
+
                 const div = document.createElement('div');
                 div.className = 'list-item';
                 if(currentTrackIndex >= 0 && playList[currentTrackIndex]?.url === item.url) div.classList.add('active');
-                div.onclick = () => item.isFolder ? fetchDirectory(item.url) : playTrack(playList.findIndex(p => p.url === item.url));
+                
+                div.onclick = () => {
+                    if (item.isFolder) fetchDirectory(item.url);
+                    else playTrack(playList.findIndex(p => p.url === item.url));
+                };
+
+                const icon = item.isFolder ? '📁' : '🎵';
                 const prog = progressDB[item.url];
                 const sub = prog > 2 ? `<div class="item-subtext">上次听到 ${formatTime(prog)}</div>` : "";
+
                 div.innerHTML = `
-                    <div class="item-icon">${item.isSpecial?'⭐️':item.isFolder?'📁':'🎵'}</div>
+                    <div class="item-icon">${icon}</div>
                     <div class="item-info"><div class="item-title">${item.name}</div>${sub}</div>
                 `;
                 ui.list.appendChild(div);
             });
         }
 
-        // --- 播放控制 (逻辑同上，确保稳定) ---
+        // --- 播放逻辑 ---
 
         function playTrack(index) {
             if(index < 0 || index >= playList.length) return;
@@ -417,10 +468,7 @@
         }
 
         function togglePlay() {
-            if(!audio.src) {
-                if(playList.length > 0) playTrack(0);
-                return;
-            }
+            if(!audio.src) { if(playList.length > 0) playTrack(0); return; }
             audio.paused ? audio.play() : audio.pause();
         }
 
@@ -464,6 +512,7 @@
         function resetAB() { abA = null; abB = null; ui.abBtn.classList.remove('active'); ui.abText.textContent = "A-B重复"; }
         function formatTime(s) { const m = Math.floor(s/60); const sec = Math.floor(s%60); return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`; }
         function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 1500); }
+        
         function changeSpeed() {
             const speeds = [1.0, 1.25, 1.5, 2.0, 0.8];
             playbackRate = speeds[(speeds.indexOf(playbackRate) + 1) % speeds.length];
@@ -471,13 +520,16 @@
             ui.speedBtn.textContent = `${playbackRate}x`;
             ui.speedBtn.classList.toggle('active', playbackRate !== 1.0);
         }
+
         function toggleLoop() {
             loopMode = (loopMode === 'list') ? 'single' : 'list';
             document.getElementById('loopBtn').style.color = loopMode === 'single' ? 'var(--ios-blue)' : '#000';
             showToast(loopMode === 'single' ? "单曲循环" : "列表循环");
         }
+
         function playNext() { playTrack((currentTrackIndex + 1) % playList.length); }
         function playPrev() { playTrack((currentTrackIndex - 1 + playList.length) % playList.length); }
+        
         function filterList() {
             if (currentPath === 'virtual:folders') renderPlaylistFolders();
             else if (currentPath.startsWith('virtual:list:')) renderTracksInPlaylist(currentPath.replace('virtual:list:', ''));
