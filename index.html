@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <!-- 版本号标注在标题 -->
-    <title>英语精听播放器 v1.1.0</title>
+    <title>英语精听播放器 v1.2.0</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -13,10 +12,10 @@
             --ios-subtext: #8e8e93;
             --ios-blue: #007aff;
             --ios-red: #ff3b30;
+            --ios-orange: #ff9500;
             --ios-gray-btn: #eef0f4;
             --ios-blur: rgba(255, 255, 255, 0.95);
             --ios-radius: 12px;
-            /* 适配 iPhone 刘海屏安全区：动态检测 */
             --safe-top: env(safe-area-inset-top, 24px);
             --safe-bottom: env(safe-area-inset-bottom, 20px);
         }
@@ -26,113 +25,108 @@
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
             background-color: var(--ios-bg); color: var(--ios-text);
             height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+            user-select: none; -webkit-user-select: none;
         }
 
-        /* --- 顶部导航：增加安全高度，彻底解决遮挡 --- */
+        /* --- 顶部导航 --- */
         .header {
             background-color: var(--ios-blur);
             backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-            padding: calc(var(--safe-top) + 10px) 15px 12px 15px;
+            padding: calc(var(--safe-top) + 15px) 15px 12px 15px; /* 增加顶部间距防止遮挡 */
             border-bottom: 0.5px solid rgba(0,0,0,0.1);
             z-index: 100;
         }
         .path-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
         .back-btn { color: var(--ios-blue); font-size: 17px; font-weight: 500; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-        .current-folder { font-size: 17px; font-weight: 700; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.4px; }
-        
-        .search-bar { background-color: rgba(118, 118, 128, 0.12); border-radius: 10px; padding: 7px 12px; display: flex; align-items: center; }
+        .current-folder { font-size: 17px; font-weight: 700; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .search-bar { background-color: rgba(118, 118, 128, 0.12); border-radius: 10px; padding: 8px 12px; display: flex; align-items: center; }
         .search-input { border: none; background: transparent; width: 100%; font-size: 17px; margin-left: 6px; outline: none; }
 
         /* --- 列表区域 --- */
         .content { flex: 1; overflow-y: auto; padding: 10px 16px 340px 16px; -webkit-overflow-scrolling: touch; }
         .list-group { background-color: var(--ios-card); border-radius: var(--ios-radius); overflow: hidden; }
-        .list-item { display: flex; align-items: center; padding: 14px 16px; border-bottom: 0.5px solid rgba(0,0,0,0.08); cursor: pointer; }
+        
+        /* 列表项滑动容器 */
+        .swipe-item-container {
+            position: relative;
+            overflow: hidden;
+            border-bottom: 0.5px solid rgba(0,0,0,0.08);
+            background-color: #f2f2f7; /* 露出的底色 */
+        }
+
+        .list-item {
+            display: flex; align-items: center; padding: 14px 16px;
+            background-color: var(--ios-card);
+            position: relative; z-index: 2;
+            transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
         .list-item:active { background-color: #e5e5ea; }
         .list-item.active .item-title { color: var(--ios-blue); font-weight: 600; }
-        /* 置顶文件夹样式 */
-        .list-item.special-folder { background-color: rgba(0, 122, 255, 0.03); border-bottom: 1px solid rgba(0, 122, 255, 0.1); }
+        .list-item.special-folder { background-color: rgba(0, 122, 255, 0.03); }
         
         .item-icon { font-size: 20px; margin-right: 12px; width: 24px; text-align: center; }
         .item-info { flex: 1; overflow: hidden; }
         .item-title { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #000; }
         .item-subtext { font-size: 11px; color: var(--ios-subtext); margin-top: 2px; }
 
-        /* --- 底部播放器 --- */
+        /* 侧滑动作按钮 */
+        .swipe-actions {
+            position: absolute; right: 0; top: 0; bottom: 0;
+            display: flex; z-index: 1;
+        }
+        .action-btn {
+            display: flex; align-items: center; justify-content: center;
+            width: 80px; color: white; font-size: 14px; font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-rename { background-color: var(--ios-orange); }
+        .btn-delete { background-color: var(--ios-red); }
+
+        /* Windows 桌面端辅助按钮 */
+        .desktop-actions { display: none; margin-left: 10px; gap: 10px; }
+        @media (pointer: fine) { /* 检测是否有鼠标 */
+            .desktop-actions { display: flex; }
+        }
+        .desc-btn { padding: 5px; opacity: 0.3; transition: opacity 0.2s; }
+        .desc-btn:hover { opacity: 1; }
+
+        /* --- 底部播放器 (保持原有精良设计) --- */
         .player-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
-            background-color: var(--ios-card);
-            border-top: 0.5px solid rgba(0,0,0,0.1);
+            background-color: var(--ios-card); border-top: 0.5px solid rgba(0,0,0,0.1);
             padding: 10px 0 calc(10px + var(--safe-bottom)) 0;
             z-index: 200; box-shadow: 0 -5px 25px rgba(0,0,0,0.06);
         }
-
         .slider-container { padding: 0 20px; margin-bottom: 12px; }
-        .ios-slider {
-            -webkit-appearance: none; width: 100%; height: 4px;
-            background: #d1d1d6; border-radius: 2px; outline: none;
-        }
-        .ios-slider::-webkit-slider-thumb {
-            -webkit-appearance: none; width: 18px; height: 18px;
-            background: white; border-radius: 50%;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.2); cursor: pointer;
-        }
-
-        .track-display { text-align: center; padding: 0 20px; margin-bottom: 10px; }
+        .ios-slider { -webkit-appearance: none; width: 100%; height: 4px; background: #d1d1d6; border-radius: 2px; outline: none; }
+        .ios-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: white; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+        .track-display { text-align: center; padding: 0 20px; margin-bottom: 8px; }
         .track-name { font-size: 15px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #000; }
-        .track-time { font-size: 11px; color: var(--ios-subtext); font-variant-numeric: tabular-nums; margin-top: 2px; }
-
+        .track-time { font-size: 11px; color: var(--ios-subtext); font-variant-numeric: tabular-nums; }
         .learning-controls { display: flex; justify-content: center; align-items: center; gap: 45px; margin-bottom: 15px; }
         .learn-btn { background: none; border: none; color: #333; cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 10px; font-weight: 600; }
         .learn-btn svg { width: 30px; height: 30px; margin-bottom: 4px; }
         .ab-btn.active { color: var(--ios-blue); }
-
         .basic-controls { display: flex; justify-content: center; align-items: center; gap: 28px; margin-bottom: 18px; }
         .icon-btn { background: none; border: none; padding: 0; cursor: pointer; color: #000; display: flex; align-items: center; }
         .play-btn svg { width: 46px; height: 46px; }
         .side-btn svg { width: 30px; height: 30px; }
-        .fav-heart { font-size: 28px; transition: transform 0.1s; color: #d1d1d6; }
+        .fav-heart { font-size: 28px; color: #d1d1d6; transition: 0.1s; }
         .fav-heart.active { color: var(--ios-red); }
-
         .feature-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 0 15px; }
-        .pill-btn {
-            background-color: var(--ios-gray-btn); border: none; border-radius: 9px;
-            padding: 9px 0; font-size: 12px; font-weight: 600; cursor: pointer;
-            display: flex; flex-direction: column; align-items: center; gap: 2px;
-        }
-        .pill-btn span:first-child { font-size: 16px; }
+        .pill-btn { background-color: var(--ios-gray-btn); border: none; border-radius: 9px; padding: 9px 0; font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; }
         .pill-btn.active { background-color: var(--ios-blue); color: white; }
-        
-        .version-tag { font-size: 9px; color: #c6c6c8; text-align: center; margin-top: 8px; }
 
-        /* --- Apple Music 风格弹出层 --- */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.4); z-index: 1000; display: none;
-            justify-content: center; align-items: flex-end;
-        }
-        .playlist-modal {
-            background: var(--ios-card); width: 100%; max-width: 500px;
-            border-radius: 20px 20px 0 0; padding: 20px 0 calc(20px + var(--safe-bottom)) 0;
-            animation: slideUp 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94); 
-            max-height: 75vh; display: flex; flex-direction: column;
-        }
+        /* 弹窗样式 */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: none; align-items: flex-end; justify-content: center; }
+        .playlist-modal { background: var(--ios-card); width: 100%; max-width: 500px; border-radius: 20px 20px 0 0; padding: 20px 0 calc(20px + var(--safe-bottom)) 0; animation: slideUp 0.3s ease-out; display: flex; flex-direction: column; }
         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 15px; text-align: center; padding: 0 20px; }
-        .playlist-scroll { overflow-y: auto; flex: 1; }
-        .playlist-option {
-            padding: 16px 25px; border-bottom: 0.5px solid rgba(0,0,0,0.05); font-size: 17px;
-            display: flex; align-items: center; gap: 12px;
-        }
-        .playlist-option:active { background-color: #f2f2f7; }
-        .playlist-option span:first-child { font-size: 20px; }
-        .new-playlist-btn { color: var(--ios-blue); font-weight: 600; border-top: 0.5px solid rgba(0,0,0,0.05); }
+        .playlist-scroll { overflow-y: auto; max-height: 50vh; }
+        .playlist-option { padding: 16px 25px; border-bottom: 0.5px solid rgba(0,0,0,0.05); font-size: 17px; display: flex; align-items: center; gap: 12px; }
+        .new-playlist-btn { color: var(--ios-blue); font-weight: 600; }
 
-        #toast {
-            position: fixed; top: 25%; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.85); color: white; padding: 12px 24px;
-            border-radius: 25px; font-size: 15px; z-index: 2000; display: none;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
+        #toast { position: fixed; top: 25%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 12px 24px; border-radius: 25px; font-size: 15px; z-index: 2000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .version-tag { font-size: 9px; color: #c6c6c8; text-align: center; margin-top: 8px; }
     </style>
 </head>
 <body>
@@ -140,19 +134,15 @@
     <audio id="audioPlayer"></audio>
     <div id="toast">提示</div>
 
-    <!-- Apple Music 风格收藏夹弹窗 -->
     <div class="modal-overlay" id="playlistModal" onclick="if(event.target===this) closePlaylistModal()">
         <div class="playlist-modal">
-            <div class="modal-title">添加到收藏夹</div>
+            <div style="font-size:17px; font-weight:700; text-align:center; margin-bottom:15px;">添加到收藏夹</div>
             <div class="playlist-scroll" id="playlistOptions"></div>
-            <div class="playlist-option new-playlist-btn" onclick="createNewPlaylistFromModal()">
-                <span>➕</span> <span>新建收藏夹...</span>
-            </div>
-            <div class="playlist-option" style="justify-content: center; color: var(--ios-red); border-bottom: none;" onclick="closePlaylistModal()">取消</div>
+            <div class="playlist-option new-playlist-btn" onclick="createNewPlaylistFromModal()">➕ 新建收藏夹...</div>
+            <div class="playlist-option" style="justify-content:center; color:var(--ios-red); border:none;" onclick="closePlaylistModal()">取消</div>
         </div>
     </div>
 
-    <!-- 顶部导航 -->
     <div class="header">
         <div class="path-nav">
             <button class="back-btn" onclick="goBack()">
@@ -167,64 +157,37 @@
         </div>
     </div>
 
-    <!-- 文件列表 -->
     <div class="content">
         <div class="list-group" id="fileList"></div>
     </div>
 
-    <!-- 底部播放控制面板 -->
     <div class="player-bar">
         <div class="slider-container">
             <input type="range" class="ios-slider" id="progressSlider" value="0" step="0.1">
         </div>
-
         <div class="track-display" id="touchSeekArea">
             <div class="track-name" id="trackName">未播放</div>
             <div class="track-time" id="trackTime">00:00 / 00:00</div>
         </div>
-
         <div class="learning-controls">
-            <button class="learn-btn" onclick="seekRelative(-15)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>
-                15s
-            </button>
-            <button class="learn-btn ab-btn" id="abBtn" onclick="handleABRepeat()">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v2H7zM7 11h10v2H7zM7 15h10v2H7z"/></svg>
-                <span id="abText">A-B重复</span>
-            </button>
-            <button class="learn-btn" onclick="seekRelative(15)">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 14l4-4-4-4"/><path d="M19 10H8a4 4 0 1 0 0 8h1"/></svg>
-                15s
-            </button>
+            <button class="learn-btn" onclick="seekRelative(-15)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>15s</button>
+            <button class="learn-btn ab-btn" id="abBtn" onclick="handleABRepeat()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v2H7zM7 11h10v2H7zM7 15h10v2H7z"/></svg><span id="abText">A-B重复</span></button>
+            <button class="learn-btn" onclick="seekRelative(15)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 14l4-4-4-4"/><path d="M19 10H8a4 4 0 1 0 0 8h1"/></svg>15s</button>
         </div>
-
         <div class="basic-controls">
-            <button class="icon-btn side-btn" id="loopBtn" onclick="toggleLoop()">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
-            </button>
-            <button class="icon-btn side-btn" onclick="playPrev()">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-            </button>
-            <button class="icon-btn play-btn" onclick="togglePlay()">
-                <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-                <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-            </button>
-            <button class="icon-btn side-btn" onclick="playNext()">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-            </button>
-            <!-- 收藏：点 🤍 弹出 Apple 风格选择器 -->
-            <button class="icon-btn side-btn fav-heart" id="mainFavBtn" onclick="openPlaylistModal()">
-                🤍
-            </button>
+            <button class="icon-btn side-btn" id="loopBtn" onclick="toggleLoop()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
+            <button class="icon-btn side-btn" onclick="playPrev()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
+            <button class="icon-btn play-btn" onclick="togglePlay()"><svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
+            <button class="icon-btn side-btn" onclick="playNext()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
+            <button class="icon-btn side-btn fav-heart" id="mainFavBtn" onclick="openPlaylistModal()">🤍</button>
         </div>
-
         <div class="feature-grid">
             <button class="pill-btn" id="speedBtn" onclick="changeSpeed()"><span>⚡️</span><span>1.0x</span></button>
             <button class="pill-btn" id="timerBtn" onclick="setTimer()"><span>🌙</span><span>定时</span></button>
             <button class="pill-btn" onclick="fetchDirectory('virtual:folders')"><span>📂</span><span>收藏夹</span></button>
             <button class="pill-btn" onclick="refreshList()"><span>🔄</span><span>刷新</span></button>
         </div>
-        <div class="version-tag">Build v1.1.0</div>
+        <div class="version-tag">Build v1.2.0</div>
     </div>
 
     <script>
@@ -237,7 +200,6 @@
         let loopMode = 'list', playbackRate = 1.0, sleepTimer = null;
         let abA = null, abB = null;
 
-        // --- 数据存储 ---
         let playlists = JSON.parse(localStorage.getItem('my_playlists_v3') || '{}');
         let progressDB = JSON.parse(localStorage.getItem('audio_progress_v2') || '{}');
 
@@ -250,31 +212,21 @@
             trackTime: document.getElementById('trackTime'),
             playIcon: document.getElementById('iconPlay'),
             pauseIcon: document.getElementById('iconPause'),
-            abBtn: document.getElementById('abBtn'),
-            abText: document.getElementById('abText'),
-            speedBtn: document.getElementById('speedBtn'),
-            timerBtn: document.getElementById('timerBtn'),
+            abBtn: document.getElementById('abBtn'), abText: document.getElementById('abText'),
+            speedBtn: document.getElementById('speedBtn'), timerBtn: document.getElementById('timerBtn'),
             mainFavBtn: document.getElementById('mainFavBtn'),
-            modal: document.getElementById('playlistModal'),
-            modalOptions: document.getElementById('playlistOptions')
+            modal: document.getElementById('playlistModal'), modalOptions: document.getElementById('playlistOptions')
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            fetchDirectory(currentPath);
-            setupAudioEvents();
-        });
+        document.addEventListener('DOMContentLoaded', () => { fetchDirectory(currentPath); setupAudioEvents(); });
 
         // --- 收藏逻辑 (Apple Music Style) ---
-
         function openPlaylistModal() {
             const track = playList[currentTrackIndex];
             if (!track) return showToast("请先播放歌曲");
-
             ui.modal.style.display = 'flex';
             ui.modalOptions.innerHTML = '';
-            
-            const listNames = Object.keys(playlists);
-            listNames.forEach(name => {
+            Object.keys(playlists).forEach(name => {
                 const opt = document.createElement('div');
                 opt.className = 'playlist-option';
                 const isAlreadyIn = playlists[name].some(f => f.url === track.url);
@@ -282,32 +234,17 @@
                 opt.onclick = () => addToPlaylist(name);
                 ui.modalOptions.appendChild(opt);
             });
-            if(listNames.length === 0) {
-                ui.modalOptions.innerHTML = '<div style="padding:20px;text-align:center;color:gray;font-size:14px;">还没有收藏夹</div>';
-            }
         }
-
         function closePlaylistModal() { ui.modal.style.display = 'none'; }
-
         function addToPlaylist(name) {
             const track = playList[currentTrackIndex];
             const list = playlists[name];
             const idx = list.findIndex(f => f.url === track.url);
-
-            if (idx > -1) {
-                list.splice(idx, 1);
-                showToast(`从【${name}】移除`);
-            } else {
-                list.push(track);
-                showToast(`已加入【${name}】`);
-            }
-            savePlaylists();
-            updateFavHeart();
-            closePlaylistModal();
-            // 如果在收藏夹视图，即时刷新
-            if (currentPath === `virtual:list:${name}`) renderTracksInPlaylist(name);
+            if (idx > -1) { list.splice(idx, 1); showToast(`从【${name}】移除`); }
+            else { list.push(track); showToast(`已加入【${name}】`); }
+            savePlaylists(); updateFavHeart(); closePlaylistModal();
+            if (currentPath.startsWith('virtual:list:')) renderTracksInPlaylist(name);
         }
-
         function createNewPlaylistFromModal() {
             const name = prompt("请输入新收藏夹名称:");
             if (name && name.trim()) {
@@ -316,7 +253,6 @@
                 addToPlaylist(cleanName);
             }
         }
-
         function updateFavHeart() {
             const track = playList[currentTrackIndex];
             if (!track) return;
@@ -324,11 +260,9 @@
             ui.mainFavBtn.textContent = isInAny ? "❤️" : "🤍";
             ui.mainFavBtn.classList.toggle('active', isInAny);
         }
-
         function savePlaylists() { localStorage.setItem('my_playlists_v3', JSON.stringify(playlists)); }
 
-        // --- 目录解析与全局置顶逻辑 ---
-
+        // --- 目录解析 & 置顶逻辑 ---
         async function fetchDirectory(url) {
             if (url === 'virtual:folders') return renderPlaylistFolders();
             if (url.startsWith('virtual:list:')) return renderTracksInPlaylist(url.replace('virtual:list:', ''));
@@ -345,20 +279,17 @@
                 const links = Array.from(doc.querySelectorAll('.name-col a, a'));
 
                 fileList = []; playList = [];
-                
-                // ★ 无论何时，收藏夹入口永远在最顶层 ★
+                // 全局置顶收藏夹入口
                 fileList.push({ name: '⭐️ 我的收藏', url: 'virtual:folders', isFolder: true, isSpecial: true });
 
                 links.forEach(a => {
                     const href = a.getAttribute('href');
                     const text = a.textContent.trim();
                     if(!href || href === '../' || href === './' || text.includes('Parent Directory')) return;
-
                     const fullUrl = new URL(href, url).href;
                     const name = decodeURIComponent(text.replace(/[📁📄]/g, '').replace(/\/$/, '').trim());
                     const isFolder = href.endsWith('/');
                     const isAudio = AUDIO_EXTS.some(ext => name.toLowerCase().endsWith(ext));
-
                     if(isFolder || isAudio) {
                         const item = { name, url: fullUrl, isFolder, isAudio };
                         fileList.push(item);
@@ -366,57 +297,109 @@
                     }
                 });
                 renderList(fileList);
-            } catch (err) { ui.list.innerHTML = '<div style="padding:20px;text-align:center;color:red;">无法访问服务器</div>'; }
+            } catch (err) { ui.list.innerHTML = '无法访问服务器'; }
         }
 
         function renderPlaylistFolders() {
             currentPath = 'virtual:folders';
             ui.folder.textContent = '/我的收藏';
-            const folders = Object.keys(playlists).map(name => ({
-                name: `${name}`, url: `virtual:list:${name}`, isFolder: true, isPlaylistFolder: true
-            }));
-            
             ui.list.innerHTML = '';
-            // 收藏夹内部的置顶标题
             const head = document.createElement('div');
             head.className = 'list-item special-folder active';
-            head.innerHTML = `<div class="item-icon">⭐️</div><div class="item-info"><div class="item-title">收藏文件夹</div></div>`;
+            head.innerHTML = `<div class="item-icon">⭐️</div><div class="item-info"><div class="item-title">收藏文件夹列表</div></div>`;
             ui.list.appendChild(head);
-            
-            renderList(folders, true);
+
+            Object.keys(playlists).forEach(name => {
+                const container = document.createElement('div');
+                container.className = 'swipe-item-container';
+                
+                // 侧滑动作层
+                container.innerHTML = `
+                    <div class="swipe-actions">
+                        <div class="action-btn btn-rename" onclick="renamePlaylist('${name}')">重命名</div>
+                        <div class="action-btn btn-delete" onclick="deletePlaylist('${name}')">删除</div>
+                    </div>
+                    <div class="list-item" id="item-${name}">
+                        <div class="item-icon">📁</div>
+                        <div class="item-info">
+                            <div class="item-title">${name}</div>
+                            <div class="item-subtext">${playlists[name].length} 首曲目</div>
+                        </div>
+                        <div class="desktop-actions">
+                            <span class="desc-btn" onclick="event.stopPropagation(); renamePlaylist('${name}')">📝</span>
+                            <span class="desc-btn" onclick="event.stopPropagation(); deletePlaylist('${name}')">🗑️</span>
+                        </div>
+                    </div>
+                `;
+
+                const itemEl = container.querySelector('.list-item');
+                setupSwipe(itemEl);
+
+                itemEl.onclick = () => fetchDirectory(`virtual:list:${name}`);
+                ui.list.appendChild(container);
+            });
         }
 
         function renderTracksInPlaylist(name) {
             currentPath = `virtual:list:${name}`;
             ui.folder.textContent = `/收藏/${name}`;
             playList = playlists[name] || [];
-            
             ui.list.innerHTML = '';
             const head = document.createElement('div');
             head.className = 'list-item special-folder';
             head.onclick = () => fetchDirectory('virtual:folders');
-            head.innerHTML = `<div class="item-icon">⬅️</div><div class="item-info"><div class="item-title">返回文件夹列表</div></div>`;
+            head.innerHTML = `<div class="item-icon">⬅️</div><div class="item-info"><div class="item-title">返回收藏夹列表</div></div>`;
             ui.list.appendChild(head);
-
             renderList(playList, true);
         }
 
-        // --- 核心修复：更强的返回逻辑 ---
-        function goBack() {
-            if (currentPath.startsWith('virtual:list:')) return fetchDirectory('virtual:folders');
-            if (currentPath === 'virtual:folders') return fetchDirectory(BASE_URL);
-            
-            const currentObj = new URL(currentPath);
-            const rootObj = new URL(SITE_ROOT);
-            
-            if (currentObj.pathname === rootObj.pathname) return;
+        // --- 侧滑逻辑 (Mobile Swipe) ---
+        let startX = 0;
+        function setupSwipe(el) {
+            el.addEventListener('touchstart', e => {
+                startX = e.touches[0].clientX;
+                // 关闭其他已打开的滑动
+                document.querySelectorAll('.list-item').forEach(item => {
+                    if(item !== el) item.style.transform = 'translateX(0px)';
+                });
+            }, {passive: true});
 
-            try {
-                let parts = currentObj.pathname.split('/').filter(p => p);
-                parts.pop();
-                let newPath = currentObj.origin + '/' + parts.join('/') + (parts.length > 0 ? '/' : '');
-                fetchDirectory(newPath);
-            } catch (e) { fetchDirectory(BASE_URL); }
+            el.addEventListener('touchmove', e => {
+                let diff = e.touches[0].clientX - startX;
+                if (diff < 0) { // 向左滑动
+                    let move = Math.max(diff, -160);
+                    el.style.transform = `translateX(${move}px)`;
+                } else {
+                    el.style.transform = `translateX(0px)`;
+                }
+            }, {passive: true});
+
+            el.addEventListener('touchend', e => {
+                let diff = e.changedTouches[0].clientX - startX;
+                if (diff < -50) el.style.transform = 'translateX(-160px)';
+                else el.style.transform = 'translateX(0px)';
+            });
+        }
+
+        // --- 收藏夹管理逻辑 ---
+        function deletePlaylist(name) {
+            if (confirm(`确定要删除收藏夹【${name}】吗？内部歌曲将不再出现在此列表中。`)) {
+                delete playlists[name];
+                savePlaylists();
+                renderPlaylistFolders();
+                updateFavHeart();
+            }
+        }
+
+        function renamePlaylist(oldName) {
+            const newName = prompt(`将【${oldName}】重命名为:`, oldName);
+            if (newName && newName.trim() && newName !== oldName) {
+                const cleanName = newName.trim();
+                playlists[cleanName] = playlists[oldName];
+                delete playlists[oldName];
+                savePlaylists();
+                renderPlaylistFolders();
+            }
         }
 
         function renderList(items, skipHeader = false) {
@@ -424,9 +407,7 @@
                 const existingHeader = ui.list.querySelector('.special-folder');
                 if(!existingHeader) ui.list.innerHTML = ''; 
             }
-
             items.forEach(item => {
-                // 处理“我的收藏”置顶项的特殊显示
                 if (!skipHeader && item.isSpecial) {
                    const div = document.createElement('div');
                    div.className = 'list-item special-folder';
@@ -435,57 +416,48 @@
                    ui.list.appendChild(div);
                    return;
                 }
-
                 const div = document.createElement('div');
                 div.className = 'list-item';
                 if(currentTrackIndex >= 0 && playList[currentTrackIndex]?.url === item.url) div.classList.add('active');
-                
-                div.onclick = () => {
-                    if (item.isFolder) fetchDirectory(item.url);
-                    else playTrack(playList.findIndex(p => p.url === item.url));
-                };
-
-                const icon = item.isPlaylistFolder ? '📁' : (item.isFolder ? '📁' : '🎵');
+                div.onclick = () => item.isFolder ? fetchDirectory(item.url) : playTrack(playList.findIndex(p => p.url === item.url));
+                const icon = item.isFolder ? '📁' : '🎵';
                 const prog = progressDB[item.url];
                 const sub = prog > 2 ? `<div class="item-subtext">上次听到 ${formatTime(prog)}</div>` : "";
-
-                div.innerHTML = `
-                    <div class="item-icon">${icon}</div>
-                    <div class="item-info"><div class="item-title">${item.name}</div>${sub}</div>
-                `;
+                div.innerHTML = `<div class="item-icon">${icon}</div><div class="item-info"><div class="item-title">${item.name}</div>${sub}</div>`;
                 ui.list.appendChild(div);
             });
         }
 
-        // --- 播放逻辑 ---
+        // --- 基础控制 & 返回 & 播放 (同上) ---
+        function goBack() {
+            if (currentPath.startsWith('virtual:list:')) return fetchDirectory('virtual:folders');
+            if (currentPath === 'virtual:folders') return fetchDirectory(BASE_URL);
+            const currentObj = new URL(currentPath);
+            const rootObj = new URL(SITE_ROOT);
+            if (currentObj.pathname === rootObj.pathname) return;
+            try {
+                let parts = currentObj.pathname.split('/').filter(p => p);
+                parts.pop();
+                let newPath = currentObj.origin + '/' + parts.join('/') + (parts.length > 0 ? '/' : '');
+                fetchDirectory(newPath);
+            } catch (e) { fetchDirectory(BASE_URL); }
+        }
 
         function playTrack(index) {
             if(index < 0 || index >= playList.length) return;
             currentTrackIndex = index;
             const track = playList[index];
             if (audio.src === track.url) return togglePlay();
-
             audio.src = track.url;
             audio.playbackRate = playbackRate;
             const savedTime = progressDB[track.url] || 0;
             audio.play().then(() => { if (savedTime > 2) audio.currentTime = savedTime; });
             ui.trackName.textContent = track.name;
-            resetAB();
-            updateFavHeart();
-            filterList();
+            resetAB(); updateFavHeart(); filterList();
         }
 
-        function togglePlay() {
-            if(!audio.src) { if(playList.length > 0) playTrack(0); return; }
-            audio.paused ? audio.play() : audio.pause();
-        }
-
-        function saveProgress() {
-            if (audio.src && audio.currentTime > 0) {
-                progressDB[audio.src] = audio.currentTime;
-                localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB));
-            }
-        }
+        function togglePlay() { if(!audio.src) { if(playList.length > 0) playTrack(0); return; } audio.paused ? audio.play() : audio.pause(); }
+        function saveProgress() { if (audio.src && audio.currentTime > 0) { progressDB[audio.src] = audio.currentTime; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } }
 
         function setupAudioEvents() {
             audio.addEventListener('play', () => { ui.playIcon.style.display = 'none'; ui.pauseIcon.style.display = 'block'; });
@@ -499,16 +471,8 @@
                 }
             });
             slider.addEventListener('input', () => { slider.dragging = true; });
-            slider.addEventListener('change', () => {
-                audio.currentTime = (slider.value / 100) * audio.duration;
-                slider.dragging = false;
-                saveProgress();
-            });
-            audio.addEventListener('ended', () => {
-                delete progressDB[audio.src];
-                localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB));
-                loopMode === 'single' ? playTrack(currentTrackIndex) : playNext();
-            });
+            slider.addEventListener('change', () => { audio.currentTime = (slider.value / 100) * audio.duration; slider.dragging = false; saveProgress(); });
+            audio.addEventListener('ended', () => { delete progressDB[audio.src]; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); loopMode === 'single' ? playTrack(currentTrackIndex) : playNext(); });
         }
 
         function seekRelative(sec) { audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + sec)); saveProgress(); }
@@ -520,7 +484,6 @@
         function resetAB() { abA = null; abB = null; ui.abBtn.classList.remove('active'); ui.abText.textContent = "A-B重复"; }
         function formatTime(s) { const m = Math.floor(s/60); const sec = Math.floor(s%60); return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`; }
         function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 1500); }
-        
         function changeSpeed() {
             const speeds = [1.0, 1.25, 1.5, 2.0, 0.8];
             playbackRate = speeds[(speeds.indexOf(playbackRate) + 1) % speeds.length];
@@ -528,33 +491,25 @@
             ui.speedBtn.querySelector('span:last-child').textContent = `${playbackRate}x`;
             ui.speedBtn.classList.toggle('active', playbackRate !== 1.0);
         }
-
         function toggleLoop() {
             loopMode = (loopMode === 'list') ? 'single' : 'list';
             document.getElementById('loopBtn').style.color = loopMode === 'single' ? 'var(--ios-blue)' : '#000';
             showToast(loopMode === 'single' ? "单曲循环" : "列表循环");
         }
-
         function playNext() { playTrack((currentTrackIndex + 1) % playList.length); }
         function playPrev() { playTrack((currentTrackIndex - 1 + playList.length) % playList.length); }
-        
         function filterList() {
             if (currentPath === 'virtual:folders') renderPlaylistFolders();
             else if (currentPath.startsWith('virtual:list:')) renderTracksInPlaylist(currentPath.replace('virtual:list:', ''));
-            else {
-                const term = document.getElementById('searchInput').value.toLowerCase();
-                renderList(fileList.filter(i => i.name.toLowerCase().includes(term)));
-            }
+            else { const term = document.getElementById('searchInput').value.toLowerCase(); renderList(fileList.filter(i => i.name.toLowerCase().includes(term))); }
         }
         function refreshList() { fetchDirectory(currentPath); }
-        
         document.getElementById('touchSeekArea').onclick = (e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const x = e.clientX - rect.left;
             if (x < rect.width / 3) seekRelative(-15);
             else if (x > (rect.width * 2) / 3) seekRelative(15);
         };
-
         function setTimer() {
             const input = prompt("几分钟后停止播放？", "30");
             if (input && !isNaN(input)) {
