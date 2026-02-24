@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>英语精听播放器 v1.6.0</title>
+    <title>英语精听播放器 v1.6.1</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -20,11 +20,16 @@
             --safe-bottom: env(safe-area-inset-bottom, 20px);
         }
 
-        body {
+        /* 修复 iOS 滚动核心 CSS */
+        html, body {
             margin: 0; padding: 0;
+            height: 100%; /* 使用 100% 替代 100vh 避免地址栏跳动问题 */
+            width: 100%;
+            overflow: hidden; /* 禁止 body 滚动，只允许 content 滚动 */
+            overscroll-behavior: none; /* 禁止整体页面回弹 */
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
             background-color: var(--ios-bg); color: var(--ios-text);
-            height: 100vh; display: flex; flex-direction: column; overflow: hidden;
+            display: flex; flex-direction: column;
             user-select: none; -webkit-user-select: none;
         }
 
@@ -35,6 +40,7 @@
             padding: calc(var(--safe-top) + 10px) 15px 12px 15px;
             border-bottom: 0.5px solid rgba(0,0,0,0.1);
             z-index: 100;
+            flex-shrink: 0; /* 防止头部被压缩 */
         }
         .path-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
         .back-btn { color: var(--ios-blue); font-size: 17px; font-weight: 500; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; }
@@ -42,21 +48,29 @@
         .search-bar { background-color: rgba(118, 118, 128, 0.12); border-radius: 10px; padding: 7px 12px; display: flex; align-items: center; }
         .search-input { border: none; background: transparent; width: 100%; font-size: 17px; margin-left: 6px; outline: none; }
 
-        /* --- 列表区域 --- 优化：减小底部多余空白区域，增加列表高度 */
-        .content { flex: 1; overflow-y: auto; padding: 10px 16px 265px 16px; -webkit-overflow-scrolling: touch; position: relative; }
+        /* --- 列表区域 --- */
+        .content {
+            flex: 1; /* 占据剩余空间 */
+            overflow-y: scroll; /* 强制开启滚动 */
+            -webkit-overflow-scrolling: touch; /* 开启 iOS 惯性滚动 */
+            min-height: 0; /* 修复 Safari Flex 容器滚动 bug 的关键属性 */
+            padding: 10px 16px 265px 16px; 
+            position: relative;
+        }
+        
         .list-group { background-color: var(--ios-card); border-radius: var(--ios-radius); overflow: hidden; }
         
         .list-item {
-            display: flex; align-items: center; padding: 16px; /* 增加点击区域高度 */
+            display: flex; align-items: center; padding: 16px;
             background-color: var(--ios-card); border-bottom: 0.5px solid rgba(0,0,0,0.08);
             cursor: pointer; position: relative;
         }
         .list-item:active { background-color: #e5e5ea; }
         .list-item.active .item-title { color: var(--ios-blue); font-weight: 600; }
         .list-item.pinned-item { background-color: rgba(0, 122, 255, 0.05); }
-        .list-item.dragging { opacity: 0.5; background-color: #eefeff; z-index: 1000; }
+        .list-item.dragging { opacity: 0.5; background-color: #eefeff; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
 
-        .drag-handle { color: #ccc; margin-right: 12px; font-size: 20px; cursor: grab; padding: 5px; }
+        .drag-handle { color: #ccc; margin-right: 12px; font-size: 20px; cursor: grab; padding: 5px; touch-action: none; }
         .item-icon { font-size: 22px; margin-right: 12px; width: 24px; text-align: center; }
         .item-info { flex: 1; overflow: hidden; }
         .item-title { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #000; }
@@ -92,7 +106,6 @@
         .player-fav-heart { font-size: 28px; color: #d1d1d6; cursor: pointer; }
         .player-fav-heart.active { color: var(--ios-red); }
 
-        /* 变更为5列网格，为常亮按钮腾出空间 */
         .feature-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 0 15px; }
         .pill-btn { background-color: var(--ios-gray-btn); border: none; border-radius: 10px; padding: 10px 0; font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: 0.2s; }
         .pill-btn.active { background-color: rgba(0, 122, 255, 0.1); color: var(--ios-blue); }
@@ -104,14 +117,12 @@
         #toast { position: fixed; top: 25%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 12px 24px; border-radius: 25px; font-size: 15px; z-index: 2000; display: none; }
         .version-tag { font-size: 10px; color: #c6c6c8; text-align: center; margin-top: 10px; font-weight: 500; }
         
-        /* 隐藏保活视频 */
         #noSleepVideo { display: none; width: 1px; height: 1px; }
     </style>
 </head>
 <body>
 
     <audio id="audioPlayer"></audio>
-    <!-- 用于旧版 iOS 防止息屏的静音透明视频 -->
     <video id="noSleepVideo" loop muted playsinline src="data:video/mp4;base64,AAAAHGZ0eXBpc29tAAACAGlzb21pc28yYXZjMQAAAAhmcmVlAAAAG21kYXQAAAGzABAHAAABthAwwgRUwu11AAIAAAFVbW9vdgAAAGxtdmhkAAAAAMw11LPMNdSzAAACWAAAAKAAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAANh0cmFrAAAAXHRraGQAAAADzDXUs8w11LMAAAABAAAAAAAoAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAEAAAABAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAACgAAAAAAABAAAAAAHcbWRpYQAAACBtZGhkAAAAAMw11LPMNdSzAAACWAAAAKBBVxAAAAAAAC1oZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAAVBtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAADsc3RibAAAALhzdHNkAAAAAAAAAAEAAACoYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAABAAABAEgAAABIAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoAP//AAAAQmF2Y0MAAgwL//tYn/4CAwz+/v7+///+gP20P/11AABaOAAACtAAAeEAAQAAAAMAAgAAAwQAAAIAC7x+OQAEAEQAEQAAAQABAAABvWcAAAAQc3R0cwAAAAAAAAABAAAAAQAAAKAAAAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAUc3RzejAAAAAAAAAAAAAAAQAAABIAAAAUc3RjbwAAAAAAAAABAAAAMAAAAGB1ZHRhAAAAWG1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAAK2lsc3QAAAAjqXRvbwAAABtkYXRhAAAAAQAAAABMYXZmNTkuMjcuMTAw"></video>
     <div id="toast">提示</div>
 
@@ -140,6 +151,7 @@
         </div>
     </div>
 
+    <!-- 内容区域 -->
     <div class="content" id="scrollContent">
         <div class="list-group" id="fileList"></div>
     </div>
@@ -177,14 +189,13 @@
             <button class="pill-btn" onclick="fetchDirectory('virtual:folders')"><span>📂</span><span>收藏</span></button>
             <button class="pill-btn" onclick="refreshList()"><span>🔄</span><span>刷新</span></button>
         </div>
-        <div class="version-tag">Build v1.6.0</div>
+        <div class="version-tag">Build v1.6.1</div>
     </div>
 
     <script>
         const SITE_ROOT = 'https://res.evanyin.dpdns.org/';
         const AUDIO_EXTS = ['.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg'];
 
-        // 已将默认目录改为 SITE_ROOT
         let currentPath = SITE_ROOT; 
         let fileList = [], playList = [], currentTrackIndex = -1;
         let loopMode = 'list', playbackRate = 1.0, sleepTimer = null, abA = null, abB = null;
@@ -196,7 +207,6 @@
         const slider = document.getElementById('progressSlider');
         const noSleepVideo = document.getElementById('noSleepVideo');
         
-        // 屏幕常亮状态控制
         let isWakeLockEnabled = false;
         let wakeLockObj = null;
 
@@ -235,14 +245,12 @@
             });
         }
 
-        // --- 屏幕常亮逻辑 (兼容新老iOS) ---
+        // --- 屏幕常亮逻辑 ---
         async function toggleWakeLock() {
             isWakeLockEnabled = !isWakeLockEnabled;
             if (isWakeLockEnabled) {
                 ui.wakeLockBtn.classList.add('active');
                 ui.wakeLockBtn.querySelector('span:last-child').textContent = "常亮开";
-                
-                // 1. 尝试现代浏览器的 WakeLock API
                 if ('wakeLock' in navigator) {
                     try {
                         wakeLockObj = await navigator.wakeLock.request('screen');
@@ -253,20 +261,17 @@
                         });
                     } catch (e) { console.log("WakeLock API 失败:", e); }
                 }
-                // 2. 兼容老旧 iOS 12: 播放隐藏静音视频
-                noSleepVideo.play().catch(e => console.log("视频播放保活失败:", e));
+                noSleepVideo.play().catch(e => console.log("视频保活失败:", e));
                 showToast("已开启屏幕常亮");
             } else {
                 ui.wakeLockBtn.classList.remove('active');
                 ui.wakeLockBtn.querySelector('span:last-child').textContent = "常亮关";
-                
                 if (wakeLockObj) { wakeLockObj.release(); wakeLockObj = null; }
                 noSleepVideo.pause();
                 showToast("已关闭屏幕常亮");
             }
         }
 
-        // 当页面重新可见时，恢复 API 锁屏限制
         document.addEventListener('visibilitychange', async () => {
             if (isWakeLockEnabled && document.visibilityState === 'visible' && 'wakeLock' in navigator) {
                 try { wakeLockObj = await navigator.wakeLock.request('screen'); } catch(e){}
@@ -337,7 +342,7 @@
             currentPath = url;
             ui.list.innerHTML = '<div style="text-align:center;padding:20px;color:gray;">连接中...</div>';
             ui.folder.textContent = url.replace(SITE_ROOT, '/');
-            if(ui.folder.textContent === '') ui.folder.textContent = '/'; // 根目录显示修复
+            if(ui.folder.textContent === '') ui.folder.textContent = '/';
             try {
                 const response = await fetch(url);
                 const htmlText = await response.text();
@@ -376,7 +381,6 @@
             items.forEach((item, index) => {
                 const div = document.createElement('div');
                 div.className = 'list-item';
-                // 移除了 ?. 兼容 iOS12
                 if(currentTrackIndex >= 0 && playList[currentTrackIndex] && playList[currentTrackIndex].url === item.url) div.classList.add('active');
                 const isFav = Object.values(playlists).some(list => list.some(f => f.url === item.url));
                 const prog = progressDB[item.url];
@@ -417,21 +421,17 @@
             renderList(playList, true);
         }
 
-        // --- 核心播放逻辑：记忆与自动恢复 ---
         function playTrack(index) {
             if(index < 0 || index >= playList.length) return;
             currentTrackIndex = index;
             const track = playList[index];
-            
             if (audio.src === track.url) return togglePlay();
-            
             audio.src = track.url;
             audio.playbackRate = playbackRate;
             ui.trackName.textContent = track.name;
             resetAB();
             updateFavHeart();
             filterList();
-
             const savedTime = progressDB[track.url] || 0;
             const attemptJump = () => {
                 if (savedTime > 2) {
@@ -439,7 +439,6 @@
                     showToast(`恢复进度: ${formatTime(savedTime)}`);
                 }
             };
-
             audio.addEventListener('loadedmetadata', attemptJump, { once: true });
             audio.play().catch(e => console.log("等待手势触发播放"));
         }
@@ -473,41 +472,60 @@
             audio.addEventListener('ended', () => { delete progressDB[audio.src]; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); loopMode === 'single' ? playTrack(currentTrackIndex) : playNext(); });
         }
 
-        // --- 拖动排序 & 侧滑 ---
+        // --- 修复版：高性能拖拽排序 ---
         let dragSrcEl = null;
+
+        function handleDragStart(e, el) {
+            dragSrcEl = el;
+            el.classList.add('dragging');
+            // 只在拖拽开始时添加全局监听器
+            window.addEventListener('mousemove', handleDragMove);
+            window.addEventListener('touchmove', handleDragMove, {passive: false});
+            window.addEventListener('mouseup', handleDragEnd);
+            window.addEventListener('touchend', handleDragEnd);
+        }
+
+        function handleDragMove(e) {
+            if (!dragSrcEl) return;
+            e.preventDefault(); // 防止拖拽时页面滚动
+            const touch = e.type === 'touchmove' ? e.touches[0] : e;
+            const target = document.elementFromPoint(touch.clientX, touch.clientY);
+            const overEl = (target && target.closest) ? target.closest('.list-item') : null;
+            if (overEl && overEl !== dragSrcEl && !overEl.classList.contains('pinned-item')) {
+                const rect = overEl.getBoundingClientRect();
+                const next = (touch.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+                ui.list.insertBefore(dragSrcEl, next ? overEl.nextSibling : overEl);
+            }
+        }
+
+        function handleDragEnd(e) {
+            if (!dragSrcEl) return;
+            dragSrcEl.classList.remove('dragging');
+            
+            // 立即移除全局监听器，释放内存，恢复滚动性能
+            window.removeEventListener('mousemove', handleDragMove);
+            window.removeEventListener('touchmove', handleDragMove);
+            window.removeEventListener('mouseup', handleDragEnd);
+            window.removeEventListener('touchend', handleDragEnd);
+
+            const playlistName = currentPath.replace('virtual:list:', '');
+            const newOrder = [];
+            ui.list.querySelectorAll('.list-item:not(.pinned-item)').forEach(item => {
+                const title = item.querySelector('.item-title').textContent;
+                const track = playlists[playlistName].find(t => t.name === title);
+                if(track) newOrder.push(track);
+            });
+            playlists[playlistName] = newOrder; 
+            savePlaylists(); 
+            playList = newOrder;
+            dragSrcEl = null;
+        }
+
         function setupDragSort(el) {
             const handle = el.querySelector('.drag-handle');
-            const onStart = (e) => { dragSrcEl = el; el.classList.add('dragging'); };
-            const onMove = (e) => {
-                if (!dragSrcEl) return;
-                const touch = e.type === 'touchmove' ? e.touches[0] : e;
-                const target = document.elementFromPoint(touch.clientX, touch.clientY);
-                // 移除了 ?. 兼容 iOS12
-                const overEl = (target && target.closest) ? target.closest('.list-item') : null;
-                if (overEl && overEl !== dragSrcEl && !overEl.classList.contains('pinned-item')) {
-                    const rect = overEl.getBoundingClientRect();
-                    const next = (touch.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
-                    ui.list.insertBefore(dragSrcEl, next ? overEl.nextSibling : overEl);
-                }
-            };
-            const onEnd = () => {
-                if (!dragSrcEl) return;
-                dragSrcEl.classList.remove('dragging'); dragSrcEl = null;
-                const playlistName = currentPath.replace('virtual:list:', '');
-                const newOrder = [];
-                ui.list.querySelectorAll('.list-item:not(.pinned-item)').forEach(item => {
-                    const title = item.querySelector('.item-title').textContent;
-                    const track = playlists[playlistName].find(t => t.name === title);
-                    if(track) newOrder.push(track);
-                });
-                playlists[playlistName] = newOrder; savePlaylists(); playList = newOrder;
-            };
-            handle.addEventListener('mousedown', onStart);
-            handle.addEventListener('touchstart', onStart);
-            window.addEventListener('mousemove', onMove);
-            window.addEventListener('touchmove', onMove, {passive: false});
-            window.addEventListener('mouseup', onEnd);
-            window.addEventListener('touchend', onEnd);
+            // 仅绑定开始事件
+            handle.addEventListener('mousedown', (e) => handleDragStart(e, el));
+            handle.addEventListener('touchstart', (e) => handleDragStart(e, el));
         }
 
         // --- 辅助功能 ---
@@ -538,12 +556,12 @@
         function playPrev() { playTrack((currentTrackIndex - 1 + playList.length) % playList.length); }
         function goBack() {
             if (currentPath.startsWith('virtual:list:')) return fetchDirectory('virtual:folders');
-            if (currentPath === 'virtual:folders') return fetchDirectory(SITE_ROOT); // 更改为根目录
+            if (currentPath === 'virtual:folders') return fetchDirectory(SITE_ROOT);
             try {
                 let u = new URL(currentPath);
                 let p = u.pathname.split('/').filter(x=>x); p.pop();
                 fetchDirectory(u.origin + '/' + p.join('/') + (p.length? '/' : ''));
-            } catch (e) { fetchDirectory(SITE_ROOT); } // 更改为根目录
+            } catch (e) { fetchDirectory(SITE_ROOT); }
         }
         function filterList() {
             if (currentPath === 'virtual:folders') renderPlaylistFolders();
