@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v1.6.3</title>
+    <title>英语精听播放器 v1.6.4 (iPhone7适配)</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -20,7 +20,6 @@
             --safe-bottom: env(safe-area-inset-bottom, 20px);
         }
 
-        /* 核心修复：使用 100% 替代 100vh，完美避开 iOS 地址栏引起的滚动高度计算 Bug */
         html, body {
             margin: 0; padding: 0;
             width: 100%; height: 100%;
@@ -38,28 +37,27 @@
         .header {
             background-color: var(--ios-blur);
             backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-            padding: calc(var(--safe-top) + 10px) 15px 12px 15px;
+            padding: calc(var(--safe-top) + 8px) 15px 8px 15px; /* 稍微减小顶部内边距 */
             border-bottom: 0.5px solid rgba(0,0,0,0.1);
             z-index: 100;
             flex-shrink: 0; 
         }
-        .path-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-        .back-btn { color: var(--ios-blue); font-size: 17px; font-weight: 500; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .path-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .back-btn { color: var(--ios-blue); font-size: 17px; font-weight: 500; background: none; border: none; cursor: pointer; display: flex; align-items: center; }
         .current-folder { font-size: 17px; font-weight: 700; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .search-bar { background-color: rgba(118, 118, 128, 0.12); border-radius: 10px; padding: 7px 12px; display: flex; align-items: center; }
-        .search-input { border: none; background: transparent; width: 100%; font-size: 17px; margin-left: 6px; outline: none; }
+        .search-bar { background-color: rgba(118, 118, 128, 0.12); border-radius: 10px; padding: 6px 12px; display: flex; align-items: center; }
+        .search-input { border: none; background: transparent; width: 100%; font-size: 16px; margin-left: 6px; outline: none; }
 
         /* --- 列表区域 --- */
         .content {
             flex: 1; 
             overflow-y: auto; 
-            /* 核心修复：恢复到 v1.5.0 的 380px padding！避免长列表最后几项被底部播放器遮挡 */
-            padding: 10px 16px 380px 16px; 
+            /* 关键修复：从380px减小到260px，给iPhone 7腾出空间 */
+            padding: 10px 16px 260px 16px; 
             -webkit-overflow-scrolling: touch; 
             position: relative; 
         }
         
-        /* 恢复 v1.5.0 完美的圆角组样式 */
         .list-group { 
             background-color: var(--ios-card); 
             border-radius: var(--ios-radius); 
@@ -67,7 +65,7 @@
         }
         
         .list-item {
-            display: flex; align-items: center; padding: 16px;
+            display: flex; align-items: center; padding: 14px 16px; /* 稍微减小列表项高度 */
             background-color: var(--ios-card); border-bottom: 0.5px solid rgba(0,0,0,0.08);
             cursor: pointer; position: relative;
         }
@@ -78,43 +76,50 @@
         .list-item.dragging { opacity: 0.5; background-color: #eefeff; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
 
         .drag-handle { color: #ccc; margin-right: 12px; font-size: 20px; cursor: grab; padding: 5px; touch-action: none; }
-        .item-icon { font-size: 22px; margin-right: 12px; width: 24px; text-align: center; }
+        .item-icon { font-size: 20px; margin-right: 12px; width: 24px; text-align: center; }
         .item-info { flex: 1; overflow: hidden; }
-        .item-title { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #000; }
-        .item-subtext { font-size: 12px; color: var(--ios-subtext); margin-top: 4px; }
+        .item-title { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #000; }
+        .item-subtext { font-size: 11px; color: var(--ios-subtext); margin-top: 2px; }
 
         .item-fav-heart { padding: 10px; font-size: 20px; color: #ddd; transition: 0.2s; }
         .item-fav-heart.active { color: var(--ios-red); }
 
-        /* --- 底部播放器 --- */
+        /* --- 底部播放器 (紧凑优化版) --- */
         .player-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
             background-color: var(--ios-card); border-top: 0.5px solid rgba(0,0,0,0.1);
-            padding: 15px 0 calc(15px + var(--safe-bottom)) 0; 
+            /* 减小内边距 */
+            padding: 10px 0 calc(10px + var(--safe-bottom)) 0; 
             z-index: 200; box-shadow: 0 -8px 30px rgba(0,0,0,0.08);
         }
 
-        .slider-container { padding: 0 25px; margin-bottom: 18px; position: relative; }
-        .ios-slider { -webkit-appearance: none; width: 100%; height: 6px; background: #d1d1d6; border-radius: 3px; outline: none; cursor: pointer; }
-        .ios-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; background: white; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+        /* 减小各个控件的下边距，挤出空间 */
+        .slider-container { padding: 0 20px; margin-bottom: 10px; position: relative; }
+        .ios-slider { -webkit-appearance: none; width: 100%; height: 5px; background: #d1d1d6; border-radius: 3px; outline: none; cursor: pointer; }
+        .ios-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: white; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
 
-        .track-display { text-align: center; padding: 0 30px; margin-bottom: 12px; min-height: 50px; }
-        .track-name { font-size: 17px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #000; margin-bottom: 4px; }
-        .track-time { font-size: 12px; color: var(--ios-subtext); font-variant-numeric: tabular-nums; }
-        .lyric-placeholder { font-size: 13px; color: var(--ios-blue); margin-top: 6px; height: 16px; }
+        .track-display { text-align: center; padding: 0 20px; margin-bottom: 8px; min-height: 40px; }
+        .track-name { font-size: 16px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #000; margin-bottom: 2px; }
+        .track-time { font-size: 11px; color: var(--ios-subtext); font-variant-numeric: tabular-nums; }
+        .lyric-placeholder { font-size: 12px; color: var(--ios-blue); margin-top: 4px; height: 14px; }
 
-        .learning-controls { display: flex; justify-content: center; align-items: center; gap: 50px; margin-bottom: 18px; }
-        .learn-btn { background: none; border: none; color: #333; cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 10px; font-weight: 600; }
-        .learn-btn svg { width: 30px; height: 30px; margin-bottom: 4px; }
+        /* 使用 margin 替代 gap 以兼容 iOS 12 */
+        .learning-controls { display: flex; justify-content: center; align-items: center; margin-bottom: 12px; }
+        .learn-btn { background: none; border: none; color: #333; cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 10px; font-weight: 600; margin: 0 25px; /* 使用 margin */ }
+        .learn-btn svg { width: 26px; height: 26px; margin-bottom: 2px; }
 
-        .basic-controls { display: flex; justify-content: center; align-items: center; gap: 28px; margin-bottom: 20px; }
-        .play-btn svg { width: 50px; height: 50px; }
-        .side-btn svg { width: 30px; height: 30px; }
-        .player-fav-heart { font-size: 28px; color: #d1d1d6; cursor: pointer; }
+        .basic-controls { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; }
+        /* 图标稍微调小适配小屏 */
+        .play-btn svg { width: 42px; height: 42px; }
+        .side-btn svg { width: 26px; height: 26px; }
+        .player-fav-heart { font-size: 24px; color: #d1d1d6; cursor: pointer; }
         .player-fav-heart.active { color: var(--ios-red); }
+        
+        /* 手动控制间距兼容旧版 */
+        .basic-controls > * { margin: 0 12px; }
 
-        .feature-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; padding: 0 15px; }
-        .pill-btn { background-color: var(--ios-gray-btn); border: none; border-radius: 10px; padding: 10px 0; font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; transition: 0.2s; }
+        .feature-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 0 10px; }
+        .pill-btn { background-color: var(--ios-gray-btn); border: none; border-radius: 8px; padding: 8px 0; font-size: 11px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; transition: 0.2s; }
         .pill-btn.active { background-color: rgba(0, 122, 255, 0.1); color: var(--ios-blue); }
 
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: none; align-items: flex-end; justify-content: center; }
@@ -196,7 +201,7 @@
             <button class="pill-btn" onclick="fetchDirectory('virtual:folders')"><span>📂</span><span>收藏</span></button>
             <button class="pill-btn" onclick="refreshList()"><span>🔄</span><span>刷新</span></button>
         </div>
-        <div class="version-tag">Build v1.6.3</div>
+        <div class="version-tag">Build v1.6.4</div>
     </div>
 
     <script>
