@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>英语精听播放器 v1.6.1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>英语精听播放器 v1.6.2</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -20,13 +20,14 @@
             --safe-bottom: env(safe-area-inset-bottom, 20px);
         }
 
-        /* 修复 iOS 滚动核心 CSS */
+        /* 终极锁定视图：防止 iOS 浏览器地址栏伸缩导致的布局跳动 */
         html, body {
+            position: fixed; 
+            top: 0; left: 0; right: 0; bottom: 0;
             margin: 0; padding: 0;
-            height: 100%; /* 使用 100% 替代 100vh 避免地址栏跳动问题 */
-            width: 100%;
-            overflow: hidden; /* 禁止 body 滚动，只允许 content 滚动 */
-            overscroll-behavior: none; /* 禁止整体页面回弹 */
+            width: 100%; height: 100%;
+            overflow: hidden; 
+            overscroll-behavior: none;
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
             background-color: var(--ios-bg); color: var(--ios-text);
             display: flex; flex-direction: column;
@@ -40,7 +41,7 @@
             padding: calc(var(--safe-top) + 10px) 15px 12px 15px;
             border-bottom: 0.5px solid rgba(0,0,0,0.1);
             z-index: 100;
-            flex-shrink: 0; /* 防止头部被压缩 */
+            flex-shrink: 0; 
         }
         .path-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
         .back-btn { color: var(--ios-blue); font-size: 17px; font-weight: 500; background: none; border: none; cursor: pointer; display: flex; align-items: center; gap: 4px; }
@@ -50,21 +51,37 @@
 
         /* --- 列表区域 --- */
         .content {
-            flex: 1; /* 占据剩余空间 */
+            flex: 1; 
             overflow-y: scroll; /* 强制开启滚动 */
-            -webkit-overflow-scrolling: touch; /* 开启 iOS 惯性滚动 */
-            min-height: 0; /* 修复 Safari Flex 容器滚动 bug 的关键属性 */
-            padding: 10px 16px 265px 16px; 
+            -webkit-overflow-scrolling: touch; /* 必须：iOS 丝滑滚动的核心 */
+            transform: translateZ(0); /* 开启 3D 硬件加速，解决 iOS 早期版本大列表渲染卡死 */
+            padding: 10px 16px 280px 16px; 
             position: relative;
         }
         
-        .list-group { background-color: var(--ios-card); border-radius: var(--ios-radius); overflow: hidden; }
+        /* 修复 iOS12 Bug：移除外层容器的 overflow: hidden，避免列表过长时触控崩溃 */
+        .list-group { 
+            background-color: transparent; 
+        }
         
         .list-item {
             display: flex; align-items: center; padding: 16px;
-            background-color: var(--ios-card); border-bottom: 0.5px solid rgba(0,0,0,0.08);
+            background-color: var(--ios-card); 
+            border-bottom: 0.5px solid rgba(0,0,0,0.08);
             cursor: pointer; position: relative;
         }
+        
+        /* 将圆角转移到首尾元素上，完美保持外观的同时绕过 WebKit Bug */
+        .list-item:first-child {
+            border-top-left-radius: var(--ios-radius);
+            border-top-right-radius: var(--ios-radius);
+        }
+        .list-item:last-child {
+            border-bottom-left-radius: var(--ios-radius);
+            border-bottom-right-radius: var(--ios-radius);
+            border-bottom: none;
+        }
+
         .list-item:active { background-color: #e5e5ea; }
         .list-item.active .item-title { color: var(--ios-blue); font-weight: 600; }
         .list-item.pinned-item { background-color: rgba(0, 122, 255, 0.05); }
@@ -189,7 +206,7 @@
             <button class="pill-btn" onclick="fetchDirectory('virtual:folders')"><span>📂</span><span>收藏</span></button>
             <button class="pill-btn" onclick="refreshList()"><span>🔄</span><span>刷新</span></button>
         </div>
-        <div class="version-tag">Build v1.6.1</div>
+        <div class="version-tag">Build v1.6.2</div>
     </div>
 
     <script>
@@ -472,13 +489,11 @@
             audio.addEventListener('ended', () => { delete progressDB[audio.src]; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); loopMode === 'single' ? playTrack(currentTrackIndex) : playNext(); });
         }
 
-        // --- 修复版：高性能拖拽排序 ---
         let dragSrcEl = null;
 
         function handleDragStart(e, el) {
             dragSrcEl = el;
             el.classList.add('dragging');
-            // 只在拖拽开始时添加全局监听器
             window.addEventListener('mousemove', handleDragMove);
             window.addEventListener('touchmove', handleDragMove, {passive: false});
             window.addEventListener('mouseup', handleDragEnd);
@@ -487,7 +502,7 @@
 
         function handleDragMove(e) {
             if (!dragSrcEl) return;
-            e.preventDefault(); // 防止拖拽时页面滚动
+            e.preventDefault(); 
             const touch = e.type === 'touchmove' ? e.touches[0] : e;
             const target = document.elementFromPoint(touch.clientX, touch.clientY);
             const overEl = (target && target.closest) ? target.closest('.list-item') : null;
@@ -501,8 +516,6 @@
         function handleDragEnd(e) {
             if (!dragSrcEl) return;
             dragSrcEl.classList.remove('dragging');
-            
-            // 立即移除全局监听器，释放内存，恢复滚动性能
             window.removeEventListener('mousemove', handleDragMove);
             window.removeEventListener('touchmove', handleDragMove);
             window.removeEventListener('mouseup', handleDragEnd);
@@ -523,7 +536,6 @@
 
         function setupDragSort(el) {
             const handle = el.querySelector('.drag-handle');
-            // 仅绑定开始事件
             handle.addEventListener('mousedown', (e) => handleDragStart(e, el));
             handle.addEventListener('touchstart', (e) => handleDragStart(e, el));
         }
