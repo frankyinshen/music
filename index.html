@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v1.6.4 (iPhone7适配)</title>
+    <title>英语精听播放器 v1.7.0</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -14,586 +14,1562 @@
             --ios-red: #ff3b30;
             --ios-orange: #ff9500;
             --ios-gray-btn: #eef0f4;
-            --ios-blur: rgba(255, 255, 255, 0.95);
+            --ios-blur: rgba(255,255,255,0.95);
             --ios-radius: 12px;
             --safe-top: env(safe-area-inset-top, 24px);
             --safe-bottom: env(safe-area-inset-bottom, 20px);
+            /* Dynamic player height vars */
+            --player-full-h: 290px;
+            --player-compact-h: 100px;
         }
 
         html, body {
             margin: 0; padding: 0;
             width: 100%; height: 100%;
-            overflow: hidden; 
+            overflow: hidden;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-            background-color: var(--ios-bg); color: var(--ios-text);
-            display: flex; flex-direction: column;
-            user-select: none; -webkit-user-select: none;
+            background-color: var(--ios-bg);
+            color: var(--ios-text);
+            -webkit-user-select: none;
+            user-select: none;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-flex-direction: column;
+            flex-direction: column;
         }
 
-        /* --- 顶部导航 --- */
+        /* ─── HEADER ─── */
         .header {
             background-color: var(--ios-blur);
-            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
-            padding: calc(var(--safe-top) + 8px) 15px 8px 15px; /* 稍微减小顶部内边距 */
+            -webkit-backdrop-filter: blur(25px);
+            backdrop-filter: blur(25px);
+            padding: calc(var(--safe-top) + 6px) 15px 8px 15px;
             border-bottom: 0.5px solid rgba(0,0,0,0.1);
             z-index: 100;
-            flex-shrink: 0; 
+            -webkit-flex-shrink: 0;
+            flex-shrink: 0;
         }
-        .path-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-        .back-btn { color: var(--ios-blue); font-size: 17px; font-weight: 500; background: none; border: none; cursor: pointer; display: flex; align-items: center; }
-        .current-folder { font-size: 17px; font-weight: 700; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .search-bar { background-color: rgba(118, 118, 128, 0.12); border-radius: 10px; padding: 6px 12px; display: flex; align-items: center; }
-        .search-input { border: none; background: transparent; width: 100%; font-size: 16px; margin-left: 6px; outline: none; }
+        .path-nav {
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: space-between;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .back-btn {
+            color: var(--ios-blue);
+            font-size: 17px;
+            font-weight: 500;
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-tap-highlight-color: transparent;
+            padding: 4px 0;
+        }
+        .current-folder {
+            font-size: 17px; font-weight: 700;
+            max-width: 60%; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap;
+        }
+        .search-bar {
+            background-color: rgba(118,118,128,0.12);
+            border-radius: 10px;
+            padding: 6px 12px;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+        }
+        .search-input {
+            border: none; background: transparent;
+            width: 100%; font-size: 16px;
+            margin-left: 6px; outline: none;
+            -webkit-appearance: none;
+        }
 
-        /* --- 列表区域 --- */
+        /* ─── CONTENT ─── */
         .content {
-            flex: 1; 
-            overflow-y: auto; 
-            /* 关键修复：从380px减小到260px，给iPhone 7腾出空间 */
-            padding: 10px 16px 260px 16px; 
-            -webkit-overflow-scrolling: touch; 
-            position: relative; 
+            -webkit-flex: 1;
+            flex: 1;
+            overflow-y: scroll;
+            -webkit-overflow-scrolling: touch;
+            position: relative;
+            padding: 10px 16px 290px 16px; /* full player default */
+            -webkit-transition: padding-bottom 0.35s ease;
+            transition: padding-bottom 0.35s ease;
         }
-        
-        .list-group { 
-            background-color: var(--ios-card); 
-            border-radius: var(--ios-radius); 
-            overflow: hidden; 
+        /* compact: not playing */
+        body.player-compact .content {
+            padding-bottom: 120px;
         }
-        
+
+        .list-group {
+            background-color: var(--ios-card);
+            border-radius: var(--ios-radius);
+            overflow: hidden;
+        }
         .list-item {
-            display: flex; align-items: center; padding: 14px 16px; /* 稍微减小列表项高度 */
-            background-color: var(--ios-card); border-bottom: 0.5px solid rgba(0,0,0,0.08);
-            cursor: pointer; position: relative;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            padding: 13px 16px;
+            background-color: var(--ios-card);
+            border-bottom: 0.5px solid rgba(0,0,0,0.08);
+            cursor: pointer;
+            position: relative;
+            -webkit-tap-highlight-color: rgba(0,0,0,0.05);
+            box-sizing: border-box;
         }
-        
         .list-item:active { background-color: #e5e5ea; }
         .list-item.active .item-title { color: var(--ios-blue); font-weight: 600; }
-        .list-item.pinned-item { background-color: rgba(0, 122, 255, 0.05); }
-        .list-item.dragging { opacity: 0.5; background-color: #eefeff; z-index: 1000; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .list-item.pinned-item { background-color: rgba(0,122,255,0.05); }
+        .list-item.dragging { opacity: 0.5; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
 
         .drag-handle { color: #ccc; margin-right: 12px; font-size: 20px; cursor: grab; padding: 5px; touch-action: none; }
         .item-icon { font-size: 20px; margin-right: 12px; width: 24px; text-align: center; }
-        .item-info { flex: 1; overflow: hidden; }
+        .item-info { -webkit-flex: 1; flex: 1; overflow: hidden; }
         .item-title { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #000; }
         .item-subtext { font-size: 11px; color: var(--ios-subtext); margin-top: 2px; }
-
-        .item-fav-heart { padding: 10px; font-size: 20px; color: #ddd; transition: 0.2s; }
+        .item-fav-heart { padding: 10px; font-size: 20px; color: #ddd; }
         .item-fav-heart.active { color: var(--ios-red); }
 
-        /* --- 底部播放器 (紧凑优化版) --- */
+        /* ─── PLAYER BAR ─── */
         .player-bar {
-            position: fixed; bottom: 0; left: 0; right: 0;
-            background-color: var(--ios-card); border-top: 0.5px solid rgba(0,0,0,0.1);
-            /* 减小内边距 */
-            padding: 10px 0 calc(10px + var(--safe-bottom)) 0; 
-            z-index: 200; box-shadow: 0 -8px 30px rgba(0,0,0,0.08);
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background-color: var(--ios-card);
+            border-top: 0.5px solid rgba(0,0,0,0.1);
+            padding-bottom: calc(10px + var(--safe-bottom));
+            padding-top: 10px;
+            z-index: 200;
+            box-shadow: 0 -8px 30px rgba(0,0,0,0.08);
+            -webkit-transition: -webkit-transform 0.35s ease;
+            transition: transform 0.35s ease;
         }
 
-        /* 减小各个控件的下边距，挤出空间 */
-        .slider-container { padding: 0 20px; margin-bottom: 10px; position: relative; }
-        .ios-slider { -webkit-appearance: none; width: 100%; height: 5px; background: #d1d1d6; border-radius: 3px; outline: none; cursor: pointer; }
-        .ios-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px; background: white; border-radius: 50%; box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+        /* sections that hide when compact */
+        .player-section-full {
+            -webkit-transition: max-height 0.35s ease, opacity 0.3s ease;
+            transition: max-height 0.35s ease, opacity 0.3s ease;
+            overflow: hidden;
+            max-height: 200px;
+            opacity: 1;
+        }
+        body.player-compact .player-section-full {
+            max-height: 0;
+            opacity: 0;
+        }
 
-        .track-display { text-align: center; padding: 0 20px; margin-bottom: 8px; min-height: 40px; }
-        .track-name { font-size: 16px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #000; margin-bottom: 2px; }
-        .track-time { font-size: 11px; color: var(--ios-subtext); font-variant-numeric: tabular-nums; }
-        .lyric-placeholder { font-size: 12px; color: var(--ios-blue); margin-top: 4px; height: 14px; }
+        /* ─── SLIDER ─── */
+        .slider-container {
+            padding: 0 20px;
+            margin-bottom: 6px;
+        }
+        .slider-wrapper {
+            position: relative;
+            height: 20px;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+        }
+        .slider-track-bg {
+            position: absolute;
+            left: 0; right: 0;
+            height: 5px;
+            background: #d1d1d6;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .slider-track-fill {
+            height: 100%;
+            background: var(--ios-blue);
+            border-radius: 3px;
+            width: 0%;
+            -webkit-transition: width 0.1s linear;
+            transition: width 0.1s linear;
+        }
+        .ios-slider {
+            -webkit-appearance: none;
+            position: absolute;
+            left: 0; right: 0;
+            width: 100%;
+            height: 20px;
+            background: transparent;
+            outline: none;
+            cursor: pointer;
+            margin: 0;
+        }
+        .ios-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px; height: 22px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        }
 
-        /* 使用 margin 替代 gap 以兼容 iOS 12 */
-        .learning-controls { display: flex; justify-content: center; align-items: center; margin-bottom: 12px; }
-        .learn-btn { background: none; border: none; color: #333; cursor: pointer; display: flex; flex-direction: column; align-items: center; font-size: 10px; font-weight: 600; margin: 0 25px; /* 使用 margin */ }
-        .learn-btn svg { width: 26px; height: 26px; margin-bottom: 2px; }
+        /* ─── TRACK DISPLAY ─── */
+        .track-display {
+            text-align: center;
+            padding: 0 20px;
+            margin-bottom: 6px;
+        }
+        .track-name {
+            font-size: 16px; font-weight: 700;
+            overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap; color: #000;
+            margin-bottom: 1px;
+        }
+        .track-time {
+            font-size: 11px; color: var(--ios-subtext);
+            font-variant-numeric: tabular-nums;
+            margin-bottom: 3px;
+        }
+        /* audio info line */
+        .audio-info {
+            font-size: 10px;
+            color: #b0b0b8;
+            min-height: 12px;
+            letter-spacing: 0.3px;
+        }
+        .lyric-placeholder {
+            font-size: 12px;
+            color: var(--ios-blue);
+            min-height: 14px;
+        }
 
-        .basic-controls { display: flex; justify-content: center; align-items: center; margin-bottom: 15px; }
-        /* 图标稍微调小适配小屏 */
-        .play-btn svg { width: 42px; height: 42px; }
-        .side-btn svg { width: 26px; height: 26px; }
-        .player-fav-heart { font-size: 24px; color: #d1d1d6; cursor: pointer; }
-        .player-fav-heart.active { color: var(--ios-red); }
-        
-        /* 手动控制间距兼容旧版 */
-        .basic-controls > * { margin: 0 12px; }
+        /* ─── LEARNING CONTROLS ─── */
+        .learning-controls {
+            display: -webkit-flex;
+            display: flex;
+            -webkit-justify-content: center;
+            justify-content: center;
+            -webkit-align-items: center;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .learn-btn {
+            background: none; border: none;
+            color: #333; cursor: pointer;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-flex-direction: column;
+            flex-direction: column;
+            -webkit-align-items: center;
+            align-items: center;
+            font-size: 10px; font-weight: 600;
+            margin: 0 22px;
+            -webkit-tap-highlight-color: transparent;
+            padding: 4px;
+        }
+        .learn-btn svg {
+            width: 26px; height: 26px;
+            margin-bottom: 2px;
+            pointer-events: none;
+        }
+        .learn-btn.active { color: var(--ios-blue); }
 
-        .feature-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 0 10px; }
-        .pill-btn { background-color: var(--ios-gray-btn); border: none; border-radius: 8px; padding: 8px 0; font-size: 11px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; transition: 0.2s; }
-        .pill-btn.active { background-color: rgba(0, 122, 255, 0.1); color: var(--ios-blue); }
+        /* ─── BASIC CONTROLS ─── */
+        .basic-controls {
+            display: -webkit-flex;
+            display: flex;
+            -webkit-justify-content: center;
+            justify-content: center;
+            -webkit-align-items: center;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .basic-controls > * { margin: 0 10px; }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); z-index: 1000; display: none; align-items: flex-end; justify-content: center; }
-        .playlist-modal { background: var(--ios-card); width: 100%; max-width: 500px; border-radius: 24px 24px 0 0; padding: 20px 0 calc(20px + var(--safe-bottom)) 0; animation: slideUp 0.3s ease-out; }
-        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-        
-        #toast { position: fixed; top: 25%; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.85); color: white; padding: 12px 24px; border-radius: 25px; font-size: 15px; z-index: 2000; display: none; }
-        .version-tag { font-size: 10px; color: #c6c6c8; text-align: center; margin-top: 10px; font-weight: 500; }
-        
+        .icon-btn {
+            background: none; border: none;
+            cursor: pointer; padding: 6px;
+            color: #000;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .icon-btn svg { pointer-events: none; }
+        .play-btn svg { width: 44px; height: 44px; }
+        .side-btn svg { width: 28px; height: 28px; }
+        .icon-btn.active { color: var(--ios-blue); }
+
+        .player-fav-heart {
+            font-size: 26px; cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* ─── FEATURE GRID (flex for iOS 12 compat) ─── */
+        .feature-grid {
+            display: -webkit-flex;
+            display: flex;
+            -webkit-justify-content: space-around;
+            justify-content: space-around;
+            -webkit-align-items: center;
+            align-items: center;
+            padding: 0 8px;
+        }
+        .pill-btn {
+            background-color: var(--ios-gray-btn);
+            border: none;
+            border-radius: 8px;
+            padding: 7px 0;
+            font-size: 11px; font-weight: 600;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-flex-direction: column;
+            flex-direction: column;
+            -webkit-align-items: center;
+            align-items: center;
+            cursor: pointer;
+            width: 18%;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .pill-btn span { line-height: 1.4; pointer-events: none; }
+        .pill-btn.active { background-color: rgba(0,122,255,0.1); color: var(--ios-blue); }
+
+        .version-tag {
+            font-size: 10px; color: #c6c6c8;
+            text-align: center; margin-top: 6px;
+        }
+
+        /* ─── SPEED SHEET ─── */
+        .sheet-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 500;
+            display: none;
+        }
+        .speed-sheet {
+            position: fixed;
+            left: 0; right: 0; bottom: 0;
+            background: var(--ios-card);
+            border-radius: 20px 20px 0 0;
+            z-index: 600;
+            display: none;
+            -webkit-flex-direction: column;
+            flex-direction: column;
+            padding-bottom: calc(16px + var(--safe-bottom));
+            -webkit-animation: slideUp 0.3s ease-out;
+            animation: slideUp 0.3s ease-out;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .speed-sheet.open {
+            display: -webkit-flex;
+            display: flex;
+        }
+        .speed-sheet-header {
+            text-align: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--ios-subtext);
+            padding: 14px 20px 8px 20px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        /* Wheel container */
+        .speed-wheel-wrap {
+            position: relative;
+            height: 220px;
+            overflow: hidden;
+        }
+        .speed-wheel-scroll {
+            height: 100%;
+            overflow-y: scroll;
+            scroll-snap-type: y mandatory;
+            -webkit-scroll-snap-type: y mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+        .speed-wheel-pad {
+            height: 88px;
+        }
+        .speed-wheel-option {
+            height: 44px;
+            display: -webkit-flex;
+            display: flex;
+            -webkit-align-items: center;
+            align-items: center;
+            -webkit-justify-content: center;
+            justify-content: center;
+            scroll-snap-align: center;
+            font-size: 22px;
+            font-weight: 500;
+            color: #000;
+            -webkit-transition: opacity 0.15s;
+            transition: opacity 0.15s;
+        }
+        /* gradient masks */
+        .speed-wheel-mask {
+            position: absolute;
+            left: 0; right: 0;
+            height: 88px;
+            pointer-events: none;
+            z-index: 2;
+        }
+        .speed-wheel-mask.top {
+            top: 0;
+            background: -webkit-linear-gradient(top, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0) 100%);
+            background: linear-gradient(to bottom, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0) 100%);
+        }
+        .speed-wheel-mask.bottom {
+            bottom: 0;
+            background: -webkit-linear-gradient(bottom, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0) 100%);
+            background: linear-gradient(to top, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0) 100%);
+        }
+        .speed-wheel-selector {
+            position: absolute;
+            top: 88px; left: 20px; right: 20px;
+            height: 44px;
+            border-top: 1px solid rgba(0,0,0,0.15);
+            border-bottom: 1px solid rgba(0,0,0,0.15);
+            pointer-events: none;
+            z-index: 3;
+            border-radius: 4px;
+        }
+        .speed-confirm-btn {
+            margin: 12px 20px 0 20px;
+            padding: 14px;
+            background: var(--ios-blue);
+            color: #fff;
+            border: none;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .speed-current-label {
+            text-align: center;
+            font-size: 13px;
+            color: var(--ios-subtext);
+            margin-bottom: 4px;
+            min-height: 18px;
+        }
+
+        /* ─── PLAYLISTS MODAL ─── */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 1000;
+            display: none;
+            -webkit-align-items: flex-end;
+            align-items: flex-end;
+            -webkit-justify-content: center;
+            justify-content: center;
+        }
+        .playlist-modal {
+            background: var(--ios-card);
+            width: 100%;
+            max-width: 500px;
+            border-radius: 24px 24px 0 0;
+            padding: 20px 0 calc(20px + var(--safe-bottom)) 0;
+            -webkit-animation: slideUp 0.3s ease-out;
+            animation: slideUp 0.3s ease-out;
+        }
+        @-webkit-keyframes slideUp {
+            from { -webkit-transform: translateY(100%); transform: translateY(100%); }
+            to { -webkit-transform: translateY(0); transform: translateY(0); }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        #toast {
+            position: fixed;
+            top: 25%; left: 50%;
+            -webkit-transform: translateX(-50%);
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.85);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 15px;
+            z-index: 2000;
+            display: none;
+            white-space: nowrap;
+        }
+
         #noSleepVideo { display: none; width: 1px; height: 1px; }
+
+        /* shuffle highlight on playlist items when shuffled */
+        .shuffle-badge {
+            font-size: 10px;
+            color: var(--ios-blue);
+            font-weight: 600;
+            background: rgba(0,122,255,0.1);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+            white-space: nowrap;
+        }
     </style>
 </head>
-<body>
+<body class="player-compact">
 
-    <audio id="audioPlayer"></audio>
-    <video id="noSleepVideo" loop muted playsinline src="data:video/mp4;base64,AAAAHGZ0eXBpc29tAAACAGlzb21pc28yYXZjMQAAAAhmcmVlAAAAG21kYXQAAAGzABAHAAABthAwwgRUwu11AAIAAAFVbW9vdgAAAGxtdmhkAAAAAMw11LPMNdSzAAACWAAAAKAAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAANh0cmFrAAAAXHRraGQAAAADzDXUs8w11LMAAAABAAAAAAAoAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAEAAAABAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAACgAAAAAAABAAAAAAHcbWRpYQAAACBtZGhkAAAAAMw11LPMNdSzAAACWAAAAKBBVxAAAAAAAC1oZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAAVBtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAADsc3RibAAAALhzdHNkAAAAAAAAAAEAAACoYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAABAAABAEgAAABIAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoAP//AAAAQmF2Y0MAAgwL//tYn/4CAwz+/v7+///+gP20P/11AABaOAAACtAAAeEAAQAAAAMAAgAAAwQAAAIAC7x+OQAEAEQAEQAAAQABAAABvWcAAAAQc3R0cwAAAAAAAAABAAAAAQAAAKAAAAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAUc3RzejAAAAAAAAAAAAAAAQAAABIAAAAUc3RjbwAAAAAAAAABAAAAMAAAAGB1ZHRhAAAAWG1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAAK2lsc3QAAAAjqXRvbwAAABtkYXRhAAAAAQAAAABMYXZmNTkuMjcuMTAw"></video>
-    <div id="toast">提示</div>
+<audio id="audioPlayer" preload="metadata"></audio>
+<video id="noSleepVideo" loop muted playsinline src="data:video/mp4;base64,AAAAHGZ0eXBpc29tAAACAGlzb21pc28yYXZjMQAAAAhmcmVlAAAAG21kYXQAAAGzABAHAAABthAwwgRUwu11AAIAAAFVbW9vdgAAAGxtdmhkAAAAAMw11LPMNdSzAAACWAAAAKAAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAANh0cmFrAAAAXHRraGQAAAADzDXUs8w11LMAAAABAAAAAAAoAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAEAAAABAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAACgAAAAAAABAAAAAAHcbWRpYQAAACBtZGhkAAAAAMw11LPMNdSzAAACWAAAAKBBVxAAAAAAAC1oZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAAVBtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAADsc3RibAAAALhzdHNkAAAAAAAAAAEAAACoYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAABAAABAEgAAABIAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoAP//AAAAQmF2Y0MAAgwL//tYn/4CAwz+/v7+///+gP20P/11AABaOAAACtAAAeEAAQAAAAMAAgAAAwQAAAIAC7x+OQAEAEQAEQAAAQABAAABvWcAAAAQc3R0cwAAAAAAAAABAAAAAQAAAKAAAAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAUc3RzejAAAAAAAAAAAAAAAQAAABIAAAAUc3RjbwAAAAAAAAABAAAAMAAAAGB1ZHRhAAAAWG1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAAK2lsc3QAAAAjqXRvbwAAABtkYXRhAAAAAQAAAABMYXZmNTkuMjcuMTAw"></video>
 
-    <!-- 收藏夹弹窗 -->
-    <div class="modal-overlay" id="playlistModal" onclick="if(event.target===this) closePlaylistModal()">
-        <div class="playlist-modal">
-            <div style="font-size:18px; font-weight:700; text-align:center; margin-bottom:15px;">添加到收藏夹</div>
-            <div id="playlistOptions" style="overflow-y:auto; max-height:45vh;"></div>
-            <div style="padding:16px 25px; border-top:0.5px solid #eee; color:var(--ios-blue); font-weight:600; font-size:17px;" onclick="createNewPlaylistFromModal()">➕ 新建收藏夹...</div>
-            <div style="padding:16px 25px; text-align:center; color:var(--ios-red); font-weight:600;" onclick="closePlaylistModal()">取消</div>
+<div id="toast"></div>
+
+<!-- ▸ Collect Modal -->
+<div class="modal-overlay" id="playlistModal" onclick="if(event.target===this)closePlaylistModal()">
+    <div class="playlist-modal">
+        <div style="font-size:18px;font-weight:700;text-align:center;margin-bottom:15px;">添加到收藏夹</div>
+        <div id="playlistOptions" style="overflow-y:auto;max-height:45vh;"></div>
+        <div style="padding:16px 25px;border-top:0.5px solid #eee;color:var(--ios-blue);font-weight:600;font-size:17px;cursor:pointer;" onclick="createNewPlaylistFromModal()">➕ 新建收藏夹...</div>
+        <div style="padding:16px 25px;text-align:center;color:var(--ios-red);font-weight:600;cursor:pointer;" onclick="closePlaylistModal()">取消</div>
+    </div>
+</div>
+
+<!-- ▸ Speed Sheet Overlay -->
+<div class="sheet-overlay" id="speedOverlay" onclick="closeSpeedSheet()"></div>
+<div class="speed-sheet" id="speedSheet">
+    <div class="speed-sheet-header">播放速度</div>
+    <div class="speed-current-label" id="speedPreviewLabel">当前速度：1.0x</div>
+    <div class="speed-wheel-wrap">
+        <div class="speed-wheel-mask top"></div>
+        <div class="speed-wheel-mask bottom"></div>
+        <div class="speed-wheel-selector"></div>
+        <div class="speed-wheel-scroll" id="speedWheelScroll"></div>
+    </div>
+    <button class="speed-confirm-btn" onclick="confirmSpeed()">确认</button>
+</div>
+
+<!-- ▸ HEADER -->
+<div class="header">
+    <div class="path-nav">
+        <button class="back-btn" onclick="goBack()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="pointer-events:none"><path d="M15 18l-6-6 6-6"/></svg>
+            返回
+        </button>
+        <div class="current-folder" id="currentFolder">/</div>
+        <div style="width:40px;"></div>
+    </div>
+    <div class="search-bar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" style="flex-shrink:0"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <input type="text" class="search-input" id="searchInput" placeholder="搜索..." oninput="filterList()">
+    </div>
+</div>
+
+<!-- ▸ CONTENT -->
+<div class="content" id="scrollContent">
+    <div class="list-group" id="fileList"></div>
+</div>
+
+<!-- ▸ PLAYER BAR -->
+<div class="player-bar" id="playerBar">
+
+    <!-- Progress Slider -->
+    <div class="slider-container">
+        <div class="slider-wrapper">
+            <div class="slider-track-bg">
+                <div class="slider-track-fill" id="sliderFill"></div>
+            </div>
+            <input type="range" class="ios-slider" id="progressSlider" value="0" min="0" max="100" step="0.1">
         </div>
     </div>
 
-    <!-- 顶部 -->
-    <div class="header">
-        <div class="path-nav">
-            <button class="back-btn" onclick="goBack()">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
-                返回
-            </button>
-            <div class="current-folder" id="currentFolder">/</div>
-            <div style="width: 40px;"></div>
-        </div>
-        <div class="search-bar">
-            <input type="text" class="search-input" id="searchInput" placeholder="搜索列表歌曲..." oninput="filterList()">
-        </div>
+    <!-- Track Info -->
+    <div class="track-display">
+        <div class="track-name" id="trackName">未播放</div>
+        <div class="track-time" id="trackTime">--:-- / --:--</div>
+        <div class="audio-info" id="audioInfo"></div>
     </div>
 
-    <!-- 内容区域 -->
-    <div class="content" id="scrollContent">
-        <div class="list-group" id="fileList"></div>
-    </div>
-
-    <!-- 底部播放器 -->
-    <div class="player-bar">
-        <div class="slider-container" id="sliderContainer">
-            <input type="range" class="ios-slider" id="progressSlider" value="0" step="0.01">
-        </div>
-
-        <div class="track-display" id="touchSeekArea">
-            <div class="track-name" id="trackName">未播放</div>
-            <div class="track-time" id="trackTime">00:00 / 00:00</div>
-            <div class="lyric-placeholder" id="lyricLabel"></div>
-        </div>
-
+    <!-- Learning Controls (hidden when compact) -->
+    <div class="player-section-full">
         <div class="learning-controls">
-            <button class="learn-btn" onclick="seekRelative(-15)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>15s</button>
-            <button class="learn-btn ab-btn" id="abBtn" onclick="handleABRepeat()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v2H7zM7 11h10v2H7zM7 15h10v2H7z"/></svg><span id="abText">A-B重复</span></button>
-            <button class="learn-btn" onclick="seekRelative(15)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 14l4-4-4-4"/><path d="M19 10H8a4 4 0 1 0 0 8h1"/></svg>15s</button>
+            <button class="learn-btn" onclick="seekRelative(-15)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>
+                15s
+            </button>
+            <button class="learn-btn" id="abBtn" onclick="handleABRepeat()">
+                <svg viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M7 7h10v2H7zM7 11h10v2H7zM7 15h10v2H7z"/></svg>
+                <span id="abText">A-B重复</span>
+            </button>
+            <button class="learn-btn" onclick="seekRelative(15)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none"><path d="M15 14l4-4-4-4"/><path d="M19 10H8a4 4 0 1 0 0 8h1"/></svg>
+                15s
+            </button>
         </div>
-
-        <div class="basic-controls">
-            <button class="icon-btn side-btn" id="loopBtn" onclick="toggleLoop()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg></button>
-            <button class="icon-btn side-btn" onclick="playPrev()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg></button>
-            <button class="icon-btn play-btn" onclick="togglePlay()"><svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg></button>
-            <button class="icon-btn side-btn" onclick="playNext()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg></button>
-            <div class="player-fav-heart" id="mainFavBtn" onclick="openPlaylistModal()">🤍</div>
-        </div>
-
-        <div class="feature-grid">
-            <button class="pill-btn" id="speedBtn" onclick="changeSpeed()"><span>⚡️</span><span>1.0x</span></button>
-            <button class="pill-btn" id="wakeLockBtn" onclick="toggleWakeLock()"><span>💡</span><span>常亮关</span></button>
-            <button class="pill-btn" id="timerBtn" onclick="setTimer()"><span>🌙</span><span>定时</span></button>
-            <button class="pill-btn" onclick="fetchDirectory('virtual:folders')"><span>📂</span><span>收藏</span></button>
-            <button class="pill-btn" onclick="refreshList()"><span>🔄</span><span>刷新</span></button>
-        </div>
-        <div class="version-tag">Build v1.6.4</div>
     </div>
 
-    <script>
-        const SITE_ROOT = 'https://res.evanyin.dpdns.org/';
-        const AUDIO_EXTS = ['.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg'];
+    <!-- Basic Controls -->
+    <div class="basic-controls">
+        <!-- Loop -->
+        <button class="icon-btn side-btn" id="loopBtn" onclick="toggleLoop()" title="循环">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+        </button>
+        <!-- Prev -->
+        <button class="icon-btn side-btn" onclick="playPrev()">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        </button>
+        <!-- Play/Pause -->
+        <button class="icon-btn play-btn" onclick="togglePlay()">
+            <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" style="display:none;pointer-events:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+        <!-- Next -->
+        <button class="icon-btn side-btn" onclick="playNext()">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        </button>
+        <!-- Shuffle -->
+        <button class="icon-btn side-btn" id="shuffleBtn" onclick="toggleShuffle()">
+            <svg viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+        </button>
+    </div>
 
-        // 默认直接加载根目录
-        let currentPath = SITE_ROOT; 
-        let fileList = [], playList = [], currentTrackIndex = -1;
-        let loopMode = 'list', playbackRate = 1.0, sleepTimer = null, abA = null, abB = null;
+    <!-- Feature Grid (hidden when compact) -->
+    <div class="player-section-full">
+        <div class="feature-grid">
+            <button class="pill-btn" id="speedBtn" onclick="openSpeedSheet()">
+                <span>⚡️</span><span id="speedLabel">1.0x</span>
+            </button>
+            <button class="pill-btn" id="wakeLockBtn" onclick="toggleWakeLock()">
+                <span>💡</span><span id="wakeLockLabel">常亮关</span>
+            </button>
+            <button class="pill-btn" id="timerBtn" onclick="setTimer()">
+                <span>🌙</span><span>定时</span>
+            </button>
+            <button class="pill-btn" onclick="fetchDirectory('virtual:folders')">
+                <span>📂</span><span>收藏</span>
+            </button>
+            <button class="pill-btn" onclick="refreshList()">
+                <span>🔄</span><span>刷新</span>
+            </button>
+        </div>
+        <div class="version-tag">Build v1.7.0</div>
+    </div>
 
-        let playlists = JSON.parse(localStorage.getItem('my_playlists_v3') || '{}');
-        let progressDB = JSON.parse(localStorage.getItem('audio_progress_v2') || '{}');
+    <!-- Compact: just a heart for fav -->
+    <div style="position:absolute;right:16px;bottom:calc(12px + var(--safe-bottom));">
+        <div class="player-fav-heart" id="mainFavBtn" onclick="openPlaylistModal()">🤍</div>
+    </div>
+</div>
 
-        const audio = document.getElementById('audioPlayer');
-        const slider = document.getElementById('progressSlider');
-        const noSleepVideo = document.getElementById('noSleepVideo');
-        
-        let isWakeLockEnabled = false;
-        let wakeLockObj = null;
+<script>
+// ════════════════════════════════════════
+//  CONFIG
+// ════════════════════════════════════════
+var SITE_ROOT = 'https://res.evanyin.dpdns.org/';
+var AUDIO_EXTS = ['.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg', '.opus'];
+var SPEED_OPTIONS = [0.5, 0.6, 0.75, 0.9, 1.0, 1.1, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0];
+var ITEM_HEIGHT = 44;
 
-        const ui = {
-            list: document.getElementById('fileList'),
-            folder: document.getElementById('currentFolder'),
-            trackName: document.getElementById('trackName'),
-            trackTime: document.getElementById('trackTime'),
-            playIcon: document.getElementById('iconPlay'),
-            pauseIcon: document.getElementById('iconPause'),
-            abBtn: document.getElementById('abBtn'), abText: document.getElementById('abText'),
-            speedBtn: document.getElementById('speedBtn'), timerBtn: document.getElementById('timerBtn'),
-            wakeLockBtn: document.getElementById('wakeLockBtn'),
-            mainFavBtn: document.getElementById('mainFavBtn'),
-            modal: document.getElementById('playlistModal'), modalOptions: document.getElementById('playlistOptions')
-        };
+// ════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════
+var currentPath = SITE_ROOT;
+var fileList = [], playList = [], currentTrackIndex = -1;
+var loopMode = 'list';
+var playbackRate = 1.0;
+var sleepTimer = null;
+var abA = null, abB = null;
+var shuffleMode = false;
+var shuffleOrder = [];
+var isDraggingSlider = false;
+var isWakeLockEnabled = false;
+var wakeLockObj = null;
+var _raf = null; // animation frame for slider
 
-        document.addEventListener('DOMContentLoaded', () => { fetchDirectory(currentPath); setupAudioEvents(); setupSliderJump(); });
+var playlists = {};
+var progressDB = {};
+try { playlists = JSON.parse(localStorage.getItem('my_playlists_v3') || '{}'); } catch(e) {}
+try { progressDB = JSON.parse(localStorage.getItem('audio_progress_v2') || '{}'); } catch(e) {}
 
-        function setupSliderJump() {
-            const container = document.getElementById('sliderContainer');
-            container.addEventListener('click', (e) => {
-                if (e.target === slider) return; 
-                const rect = slider.getBoundingClientRect();
-                const pos = (e.clientX - rect.left) / rect.width;
-                if (audio.duration) {
-                    audio.currentTime = pos * audio.duration;
-                    saveProgress();
-                }
-            });
-            slider.addEventListener('change', () => {
-                if (audio.duration) {
-                    audio.currentTime = (slider.value / 100) * audio.duration;
-                    saveProgress();
-                }
-            });
+var audio = document.getElementById('audioPlayer');
+var slider = document.getElementById('progressSlider');
+var sliderFill = document.getElementById('sliderFill');
+var noSleepVideo = document.getElementById('noSleepVideo');
+
+// ════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════
+function init() {
+    fetchDirectory(currentPath);
+    setupAudioEvents();
+    setupSlider();
+    buildSpeedWheel();
+    setPlayerCompact(true);
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+} else {
+    init();
+}
+
+// ════════════════════════════════════════
+//  PLAYER COMPACT / EXPANDED
+// ════════════════════════════════════════
+function setPlayerCompact(compact) {
+    if (compact) {
+        document.body.className = 'player-compact';
+    } else {
+        document.body.className = '';
+    }
+}
+
+// ════════════════════════════════════════
+//  SLIDER
+// ════════════════════════════════════════
+function setupSlider() {
+    slider.addEventListener('touchstart', function() { isDraggingSlider = true; }, { passive: true });
+    slider.addEventListener('mousedown', function() { isDraggingSlider = true; });
+    slider.addEventListener('input', function() {
+        isDraggingSlider = true;
+        updateSliderFill(slider.value);
+        if (audio.duration) {
+            var t = (slider.value / 100) * audio.duration;
+            document.getElementById('trackTime').textContent = formatTime(t) + ' / ' + formatTime(audio.duration);
         }
+    });
+    slider.addEventListener('change', function() {
+        if (audio.duration) {
+            audio.currentTime = (slider.value / 100) * audio.duration;
+            saveProgress();
+        }
+        isDraggingSlider = false;
+    });
+    slider.addEventListener('touchend', function() {
+        if (audio.duration) {
+            audio.currentTime = (slider.value / 100) * audio.duration;
+            saveProgress();
+        }
+        isDraggingSlider = false;
+    });
+}
 
-        // --- 屏幕常亮逻辑 ---
-        async function toggleWakeLock() {
-            isWakeLockEnabled = !isWakeLockEnabled;
-            if (isWakeLockEnabled) {
-                ui.wakeLockBtn.classList.add('active');
-                ui.wakeLockBtn.querySelector('span:last-child').textContent = "常亮开";
-                if ('wakeLock' in navigator) {
-                    try {
-                        wakeLockObj = await navigator.wakeLock.request('screen');
-                        wakeLockObj.addEventListener('release', () => {
-                            if(isWakeLockEnabled && document.visibilityState === 'visible') {
-                                navigator.wakeLock.request('screen').then(wl => wakeLockObj = wl).catch(e=>{});
-                            }
-                        });
-                    } catch (e) { console.log("WakeLock API 失败:", e); }
-                }
-                noSleepVideo.play().catch(e => console.log("视频保活失败:", e));
-                showToast("已开启屏幕常亮");
+function updateSliderFill(pct) {
+    sliderFill.style.width = pct + '%';
+}
+
+// ════════════════════════════════════════
+//  AUDIO EVENTS
+// ════════════════════════════════════════
+function setupAudioEvents() {
+    audio.addEventListener('play', onAudioPlay);
+    audio.addEventListener('pause', onAudioPause);
+    audio.addEventListener('ended', onAudioEnded);
+    audio.addEventListener('timeupdate', onTimeUpdate);
+    audio.addEventListener('durationchange', onDurationChange);
+    audio.addEventListener('error', function() {
+        showToast('音频加载失败');
+    });
+
+    // Fallback interval for iOS 12 where timeupdate may lag
+    setInterval(function() {
+        if (!audio.paused && !isDraggingSlider && audio.duration) {
+            var pct = (audio.currentTime / audio.duration) * 100;
+            slider.value = pct;
+            updateSliderFill(pct);
+            document.getElementById('trackTime').textContent =
+                formatTime(audio.currentTime) + ' / ' + formatTime(audio.duration);
+        }
+    }, 250);
+}
+
+function onAudioPlay() {
+    document.getElementById('iconPlay').style.display = 'none';
+    document.getElementById('iconPause').style.display = 'block';
+    setPlayerCompact(false);
+}
+
+function onAudioPause() {
+    document.getElementById('iconPlay').style.display = 'block';
+    document.getElementById('iconPause').style.display = 'none';
+    saveProgress();
+}
+
+function onAudioEnded() {
+    try { delete progressDB[audio.src]; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e){}
+    if (loopMode === 'single') {
+        playTrack(currentTrackIndex);
+    } else {
+        playNext();
+    }
+}
+
+function onTimeUpdate() {
+    if (!audio.duration || isNaN(audio.duration)) return;
+    if (!isDraggingSlider) {
+        var pct = (audio.currentTime / audio.duration) * 100;
+        slider.value = pct;
+        updateSliderFill(pct);
+        document.getElementById('trackTime').textContent =
+            formatTime(audio.currentTime) + ' / ' + formatTime(audio.duration);
+    }
+    // AB repeat
+    if (abA !== null && abB !== null && audio.currentTime >= abB) {
+        audio.currentTime = abA;
+    }
+}
+
+function onDurationChange() {
+    if (audio.duration && !isNaN(audio.duration)) {
+        document.getElementById('trackTime').textContent =
+            formatTime(audio.currentTime) + ' / ' + formatTime(audio.duration);
+    }
+}
+
+// ════════════════════════════════════════
+//  PLAY CONTROLS
+// ════════════════════════════════════════
+function togglePlay() {
+    if (!audio.src || audio.src === window.location.href) {
+        if (playList.length > 0) playTrack(0);
+        return;
+    }
+    if (audio.paused) {
+        audio.play().catch(function(e) { console.log('Play blocked', e); });
+    } else {
+        audio.pause();
+    }
+}
+
+function playTrack(index) {
+    if (index < 0 || index >= playList.length) return;
+    currentTrackIndex = index;
+    var track = playList[index];
+
+    audio.src = track.url;
+    audio.playbackRate = playbackRate;
+    document.getElementById('trackName').textContent = track.name;
+    document.getElementById('trackTime').textContent = '--:-- / --:--';
+    document.getElementById('audioInfo').textContent = '';
+
+    resetAB();
+    updateFavHeart();
+    updateShuffleBtn();
+    updateLoopBtn();
+    renderListHighlight();
+    fetchAudioInfo(track.url);
+
+    // restore progress
+    var savedTime = progressDB[track.url] || 0;
+    function attemptJump() {
+        if (savedTime > 2 && audio.duration && !isNaN(audio.duration)) {
+            audio.currentTime = savedTime;
+            showToast('恢复进度: ' + formatTime(savedTime));
+        }
+    }
+    audio.addEventListener('loadedmetadata', function handler() {
+        audio.removeEventListener('loadedmetadata', handler);
+        attemptJump();
+    });
+    audio.load();
+    audio.play().catch(function(e) { console.log('Play gesture needed:', e); });
+}
+
+function playNext() {
+    if (playList.length === 0) return;
+    if (shuffleMode) {
+        var pos = shuffleOrder.indexOf(currentTrackIndex);
+        var nextPos = (pos + 1) % shuffleOrder.length;
+        playTrack(shuffleOrder[nextPos]);
+    } else {
+        playTrack((currentTrackIndex + 1) % playList.length);
+    }
+}
+
+function playPrev() {
+    if (playList.length === 0) return;
+    if (shuffleMode) {
+        var pos = shuffleOrder.indexOf(currentTrackIndex);
+        var prevPos = (pos - 1 + shuffleOrder.length) % shuffleOrder.length;
+        playTrack(shuffleOrder[prevPos]);
+    } else {
+        playTrack((currentTrackIndex - 1 + playList.length) % playList.length);
+    }
+}
+
+function seekRelative(sec) {
+    if (!audio.duration) return;
+    audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + sec));
+    saveProgress();
+}
+
+// ════════════════════════════════════════
+//  SHUFFLE
+// ════════════════════════════════════════
+function toggleShuffle() {
+    shuffleMode = !shuffleMode;
+    if (shuffleMode) generateShuffleOrder();
+    updateShuffleBtn();
+    showToast(shuffleMode ? '已开启随机播放' : '已关闭随机播放');
+}
+
+function generateShuffleOrder() {
+    shuffleOrder = [];
+    for (var i = 0; i < playList.length; i++) shuffleOrder.push(i);
+    // Fisher-Yates shuffle
+    for (var i = shuffleOrder.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = shuffleOrder[i]; shuffleOrder[i] = shuffleOrder[j]; shuffleOrder[j] = tmp;
+    }
+    // Move currentTrackIndex to front
+    if (currentTrackIndex >= 0) {
+        var pos = shuffleOrder.indexOf(currentTrackIndex);
+        if (pos > 0) {
+            var tmp = shuffleOrder[0]; shuffleOrder[0] = shuffleOrder[pos]; shuffleOrder[pos] = tmp;
+        }
+    }
+}
+
+function updateShuffleBtn() {
+    var btn = document.getElementById('shuffleBtn');
+    if (btn) btn.className = 'icon-btn side-btn' + (shuffleMode ? ' active' : '');
+}
+
+// ════════════════════════════════════════
+//  LOOP
+// ════════════════════════════════════════
+function toggleLoop() {
+    loopMode = (loopMode === 'list') ? 'single' : 'list';
+    updateLoopBtn();
+    showToast(loopMode === 'single' ? '单曲循环' : '列表循环');
+}
+
+function updateLoopBtn() {
+    var btn = document.getElementById('loopBtn');
+    if (btn) btn.className = 'icon-btn side-btn' + (loopMode === 'single' ? ' active' : '');
+}
+
+// ════════════════════════════════════════
+//  SPEED SHEET (Wheel Picker)
+// ════════════════════════════════════════
+function buildSpeedWheel() {
+    var wheel = document.getElementById('speedWheelScroll');
+    wheel.innerHTML = '';
+
+    var padTop = document.createElement('div');
+    padTop.className = 'speed-wheel-pad';
+    wheel.appendChild(padTop);
+
+    for (var i = 0; i < SPEED_OPTIONS.length; i++) {
+        var opt = document.createElement('div');
+        opt.className = 'speed-wheel-option';
+        opt.textContent = formatSpeed(SPEED_OPTIONS[i]);
+        wheel.appendChild(opt);
+    }
+
+    var padBot = document.createElement('div');
+    padBot.className = 'speed-wheel-pad';
+    wheel.appendChild(padBot);
+
+    // listen for scroll to preview
+    wheel.addEventListener('scroll', onSpeedWheelScroll, { passive: true });
+}
+
+function formatSpeed(s) {
+    if (s === Math.floor(s)) return s.toFixed(1) + 'x';
+    return s + 'x';
+}
+
+function onSpeedWheelScroll() {
+    var wheel = document.getElementById('speedWheelScroll');
+    var idx = Math.round(wheel.scrollTop / ITEM_HEIGHT);
+    idx = Math.max(0, Math.min(idx, SPEED_OPTIONS.length - 1));
+    document.getElementById('speedPreviewLabel').textContent = '速度：' + formatSpeed(SPEED_OPTIONS[idx]);
+}
+
+function openSpeedSheet() {
+    var wheel = document.getElementById('speedWheelScroll');
+    // Scroll to current speed
+    var idx = SPEED_OPTIONS.indexOf(playbackRate);
+    if (idx < 0) idx = 4; // default 1.0
+    // Use scrollTop (works in iOS 12)
+    wheel.scrollTop = idx * ITEM_HEIGHT;
+    document.getElementById('speedPreviewLabel').textContent = '速度：' + formatSpeed(SPEED_OPTIONS[idx]);
+
+    document.getElementById('speedOverlay').style.display = 'block';
+    var sheet = document.getElementById('speedSheet');
+    sheet.className = 'speed-sheet open';
+}
+
+function closeSpeedSheet() {
+    document.getElementById('speedOverlay').style.display = 'none';
+    document.getElementById('speedSheet').className = 'speed-sheet';
+}
+
+function confirmSpeed() {
+    var wheel = document.getElementById('speedWheelScroll');
+    var idx = Math.round(wheel.scrollTop / ITEM_HEIGHT);
+    idx = Math.max(0, Math.min(idx, SPEED_OPTIONS.length - 1));
+    playbackRate = SPEED_OPTIONS[idx];
+    audio.playbackRate = playbackRate;
+    var label = formatSpeed(playbackRate);
+    document.getElementById('speedLabel').textContent = label;
+    var speedBtn = document.getElementById('speedBtn');
+    if (speedBtn) speedBtn.className = 'pill-btn' + (playbackRate !== 1.0 ? ' active' : '');
+    closeSpeedSheet();
+    showToast('速度：' + label);
+}
+
+// ════════════════════════════════════════
+//  AUDIO INFO
+// ════════════════════════════════════════
+function fetchAudioInfo(url) {
+    var ext = url.split('.').pop().toUpperCase();
+    var formatStr = ext || 'AUDIO';
+    document.getElementById('audioInfo').textContent = formatStr + ' · 加载中...';
+
+    // HEAD request for file size
+    fetch(url, { method: 'HEAD' }).then(function(resp) {
+        var size = resp.headers.get('content-length');
+        if (size) size = parseInt(size, 10);
+        // Wait for duration
+        function calcBitrate() {
+            if (audio.duration && !isNaN(audio.duration) && size) {
+                var bps = (size * 8) / audio.duration;
+                var kbps = Math.round(bps / 1000);
+                document.getElementById('audioInfo').textContent =
+                    formatStr + ' · ~' + kbps + ' kbps · ' + formatFileSize(size);
             } else {
-                ui.wakeLockBtn.classList.remove('active');
-                ui.wakeLockBtn.querySelector('span:last-child').textContent = "常亮关";
-                if (wakeLockObj) { wakeLockObj.release(); wakeLockObj = null; }
-                noSleepVideo.pause();
-                showToast("已关闭屏幕常亮");
+                document.getElementById('audioInfo').textContent = formatStr;
             }
         }
+        if (audio.duration && !isNaN(audio.duration)) {
+            calcBitrate();
+        } else {
+            audio.addEventListener('loadedmetadata', calcBitrate, { once: true });
+        }
+    }).catch(function() {
+        document.getElementById('audioInfo').textContent = formatStr;
+    });
+}
 
-        document.addEventListener('visibilitychange', async () => {
-            if (isWakeLockEnabled && document.visibilityState === 'visible' && 'wakeLock' in navigator) {
-                try { wakeLockObj = await navigator.wakeLock.request('screen'); } catch(e){}
-            }
-        });
+function formatFileSize(bytes) {
+    if (bytes >= 1048576) return (bytes / 1048576).toFixed(1) + ' MB';
+    if (bytes >= 1024) return Math.round(bytes / 1024) + ' KB';
+    return bytes + ' B';
+}
 
-        // --- 收藏逻辑 ---
-        function openPlaylistModal() {
-            const track = playList[currentTrackIndex];
-            if (!track) return showToast("请先播放歌曲");
-            ui.modal.style.display = 'flex';
-            ui.modalOptions.innerHTML = '';
-            Object.keys(playlists).forEach(name => {
-                const opt = document.createElement('div');
-                opt.style = "padding:16px 25px; border-bottom:0.5px solid #eee; display:flex; align-items:center; gap:12px; font-size:17px;";
-                const isAlreadyIn = playlists[name].some(f => f.url === track.url);
-                opt.innerHTML = `<span>📁</span> <span style="flex:1">${name}</span> ${isAlreadyIn ? '<span style="color:var(--ios-blue);">✓</span>' : ''}`;
-                opt.onclick = () => addToPlaylist(name);
-                ui.modalOptions.appendChild(opt);
-            });
-        }
-        function closePlaylistModal() { ui.modal.style.display = 'none'; }
-        function addToPlaylist(name) {
-            const track = playList[currentTrackIndex];
-            const list = playlists[name];
-            const idx = list.findIndex(f => f.url === track.url);
-            if (idx > -1) { list.splice(idx, 1); showToast(`从【${name}】移除`); }
-            else { list.push(track); showToast(`已加入【${name}】`); }
-            savePlaylists(); updateFavHeart(); closePlaylistModal();
-            if (currentPath.startsWith('virtual:list:')) renderTracksInPlaylist(name);
-        }
-        function createNewPlaylistFromModal() {
-            const name = prompt("请输入新收藏夹名称:");
-            if (name && name.trim()) {
-                const cleanName = name.trim();
-                if (!playlists[cleanName]) playlists[cleanName] = [];
-                addToPlaylist(cleanName);
-            }
-        }
-        function updateFavHeart() {
-            const track = playList[currentTrackIndex];
-            if (!track) return;
-            const isInAny = Object.values(playlists).some(list => list.some(f => f.url === track.url));
-            ui.mainFavBtn.textContent = isInAny ? "❤️" : "🤍";
-            ui.mainFavBtn.classList.toggle('active', isInAny);
-        }
-        function toggleQuickFav(e, trackEncoded) {
-            e.stopPropagation();
-            const track = JSON.parse(decodeURIComponent(trackEncoded));
-            const targetLists = Object.keys(playlists).filter(name => playlists[name].some(f => f.url === track.url));
-            if (targetLists.length > 0) {
-                targetLists.forEach(name => { playlists[name] = playlists[name].filter(f => f.url !== track.url); });
-                showToast("已取消收藏");
-            } else {
-                const idx = playList.findIndex(p => p.url === track.url);
-                if(idx > -1) currentTrackIndex = idx;
-                openPlaylistModal();
-                return;
-            }
-            savePlaylists(); updateFavHeart(); filterList();
-        }
-        function savePlaylists() { localStorage.setItem('my_playlists_v3', JSON.stringify(playlists)); }
-
-        // --- 目录解析 ---
-        async function fetchDirectory(url) {
-            if (url === 'virtual:folders') return renderPlaylistFolders();
-            if (url.startsWith('virtual:list:')) return renderTracksInPlaylist(url.replace('virtual:list:', ''));
-            currentPath = url;
-            ui.list.innerHTML = '<div style="text-align:center;padding:20px;color:gray;">连接中...</div>';
-            
-            // UI 显示路径计算，根目录补全 '/'
-            ui.folder.textContent = url.replace(SITE_ROOT, '/');
-            if(ui.folder.textContent === '') ui.folder.textContent = '/';
-
-            try {
-                const response = await fetch(url);
-                const htmlText = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(htmlText, 'text/html');
-                const links = Array.from(doc.querySelectorAll('.name-col a, a'));
-                fileList = []; playList = [];
-                links.forEach(a => {
-                    const href = a.getAttribute('href');
-                    const text = a.textContent.trim();
-                    if(!href || href === '../' || href === './' || text.includes('Parent Directory')) return;
-                    const fullUrl = new URL(href, url).href;
-                    const name = decodeURIComponent(text.replace(/[📁📄]/g, '').replace(/\/$/, '').trim());
-                    const isFolder = href.endsWith('/');
-                    const isAudio = AUDIO_EXTS.some(ext => name.toLowerCase().endsWith(ext));
-                    if(isFolder || isAudio) {
-                        const item = { name, url: fullUrl, isFolder, isAudio };
-                        fileList.push(item);
-                        if(isAudio) playList.push(item);
+// ════════════════════════════════════════
+//  WAKE LOCK
+// ════════════════════════════════════════
+function toggleWakeLock() {
+    isWakeLockEnabled = !isWakeLockEnabled;
+    var btn = document.getElementById('wakeLockBtn');
+    var label = document.getElementById('wakeLockLabel');
+    if (isWakeLockEnabled) {
+        btn.className = 'pill-btn active';
+        label.textContent = '常亮开';
+        if ('wakeLock' in navigator) {
+            navigator.wakeLock.request('screen').then(function(wl) {
+                wakeLockObj = wl;
+                wl.addEventListener('release', function() {
+                    if (isWakeLockEnabled && document.visibilityState === 'visible') {
+                        navigator.wakeLock.request('screen').then(function(w2) { wakeLockObj = w2; }).catch(function(){});
                     }
                 });
-                renderList(fileList);
-            } catch (err) { ui.list.innerHTML = '无法连接服务器'; }
+            }).catch(function(){});
         }
+        noSleepVideo.play().catch(function(){});
+        showToast('已开启屏幕常亮');
+    } else {
+        btn.className = 'pill-btn';
+        label.textContent = '常亮关';
+        if (wakeLockObj) { try { wakeLockObj.release(); } catch(e){} wakeLockObj = null; }
+        noSleepVideo.pause();
+        showToast('已关闭屏幕常亮');
+    }
+}
 
-        function renderList(items, isPlaylist = false) {
-            ui.list.innerHTML = '';
-            if (currentPath !== 'virtual:folders' && !currentPath.startsWith('virtual:list:')) {
-                const favEntry = document.createElement('div');
-                favEntry.className = 'list-item pinned-item';
-                favEntry.onclick = () => fetchDirectory('virtual:folders');
-                favEntry.innerHTML = `<div class="item-icon">⭐️</div><div class="item-info"><div class="item-title">我的收藏夹</div></div>`;
-                ui.list.appendChild(favEntry);
+document.addEventListener('visibilitychange', function() {
+    if (isWakeLockEnabled && document.visibilityState === 'visible' && 'wakeLock' in navigator) {
+        navigator.wakeLock.request('screen').then(function(wl) { wakeLockObj = wl; }).catch(function(){});
+    }
+});
+
+// ════════════════════════════════════════
+//  A-B REPEAT
+// ════════════════════════════════════════
+function handleABRepeat() {
+    var btn = document.getElementById('abBtn');
+    var txt = document.getElementById('abText');
+    if (abA === null) {
+        abA = audio.currentTime;
+        btn.className = 'learn-btn active';
+        txt.textContent = '设B点';
+    } else if (abB === null) {
+        abB = audio.currentTime;
+        if (abB <= abA) { abB = null; showToast('B点须在A点之后'); return; }
+        txt.textContent = '循环中';
+        audio.currentTime = abA;
+    } else {
+        abA = null; abB = null;
+        btn.className = 'learn-btn';
+        txt.textContent = 'A-B重复';
+    }
+}
+
+function resetAB() {
+    abA = null; abB = null;
+    var btn = document.getElementById('abBtn');
+    var txt = document.getElementById('abText');
+    if (btn) btn.className = 'learn-btn';
+    if (txt) txt.textContent = 'A-B重复';
+}
+
+// ════════════════════════════════════════
+//  TIMER
+// ════════════════════════════════════════
+function setTimer() {
+    var i = prompt('定时停止（分钟）:', '30');
+    if (i && !isNaN(i) && parseFloat(i) > 0) {
+        if (sleepTimer) clearTimeout(sleepTimer);
+        document.getElementById('timerBtn').className = 'pill-btn active';
+        sleepTimer = setTimeout(function() {
+            audio.pause();
+            document.getElementById('timerBtn').className = 'pill-btn';
+            sleepTimer = null;
+            showToast('定时停止');
+        }, parseFloat(i) * 60000);
+        showToast('定时 ' + i + ' 分钟');
+    }
+}
+
+// ════════════════════════════════════════
+//  FAVORITES / PLAYLISTS
+// ════════════════════════════════════════
+function openPlaylistModal() {
+    var track = playList[currentTrackIndex];
+    if (!track) { showToast('请先播放歌曲'); return; }
+    var overlay = document.getElementById('playlistModal');
+    overlay.style.display = '-webkit-flex';
+    overlay.style.display = 'flex';
+    var container = document.getElementById('playlistOptions');
+    container.innerHTML = '';
+    var keys = Object.keys(playlists);
+    for (var k = 0; k < keys.length; k++) {
+        var name = keys[k];
+        (function(n) {
+            var opt = document.createElement('div');
+            opt.style.cssText = 'padding:16px 25px;border-bottom:0.5px solid #eee;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;font-size:17px;cursor:pointer;';
+            var isIn = playlists[n].some(function(f) { return f.url === track.url; });
+            opt.innerHTML = '<span style="margin-right:12px;">📁</span><span style="-webkit-flex:1;flex:1;">' + n + '</span>' + (isIn ? '<span style="color:var(--ios-blue);">✓</span>' : '');
+            opt.onclick = function() { addToPlaylist(n); };
+            container.appendChild(opt);
+        })(name);
+    }
+}
+
+function closePlaylistModal() {
+    document.getElementById('playlistModal').style.display = 'none';
+}
+
+function addToPlaylist(name) {
+    var track = playList[currentTrackIndex];
+    if (!track) return;
+    var list = playlists[name];
+    var idx = -1;
+    for (var i = 0; i < list.length; i++) { if (list[i].url === track.url) { idx = i; break; } }
+    if (idx > -1) {
+        list.splice(idx, 1);
+        showToast('从【' + name + '】移除');
+    } else {
+        list.push(track);
+        showToast('已加入【' + name + '】');
+    }
+    savePlaylists(); updateFavHeart(); closePlaylistModal();
+    if (currentPath === 'virtual:list:' + name) renderTracksInPlaylist(name);
+}
+
+function createNewPlaylistFromModal() {
+    var name = prompt('新收藏夹名称:');
+    if (name && name.trim()) {
+        var cleanName = name.trim();
+        if (!playlists[cleanName]) playlists[cleanName] = [];
+        addToPlaylist(cleanName);
+    }
+}
+
+function updateFavHeart() {
+    var track = playList[currentTrackIndex];
+    var btn = document.getElementById('mainFavBtn');
+    if (!track || !btn) return;
+    var keys = Object.keys(playlists);
+    var isInAny = false;
+    for (var k = 0; k < keys.length; k++) {
+        if (playlists[keys[k]].some(function(f) { return f.url === track.url; })) { isInAny = true; break; }
+    }
+    btn.textContent = isInAny ? '❤️' : '🤍';
+}
+
+function toggleQuickFav(e, trackEncoded) {
+    e.stopPropagation();
+    var track;
+    try { track = JSON.parse(decodeURIComponent(trackEncoded)); } catch(e2) { return; }
+    var targetLists = Object.keys(playlists).filter(function(n) {
+        return playlists[n].some(function(f) { return f.url === track.url; });
+    });
+    if (targetLists.length > 0) {
+        for (var i = 0; i < targetLists.length; i++) {
+            playlists[targetLists[i]] = playlists[targetLists[i]].filter(function(f) { return f.url !== track.url; });
+        }
+        showToast('已取消收藏');
+    } else {
+        var idx = -1;
+        for (var i = 0; i < playList.length; i++) { if (playList[i].url === track.url) { idx = i; break; } }
+        if (idx > -1) currentTrackIndex = idx;
+        openPlaylistModal();
+        return;
+    }
+    savePlaylists(); updateFavHeart(); filterList();
+}
+
+function savePlaylists() {
+    try { localStorage.setItem('my_playlists_v3', JSON.stringify(playlists)); } catch(e) {}
+}
+
+function saveProgress() {
+    if (audio.src && audio.currentTime > 0) {
+        try {
+            progressDB[audio.src] = audio.currentTime;
+            localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB));
+        } catch(e) {}
+    }
+}
+
+// ════════════════════════════════════════
+//  DIRECTORY / FILE LISTING
+// ════════════════════════════════════════
+function fetchDirectory(url) {
+    if (url === 'virtual:folders') { renderPlaylistFolders(); return; }
+    if (url.indexOf('virtual:list:') === 0) { renderTracksInPlaylist(url.replace('virtual:list:', '')); return; }
+    currentPath = url;
+    document.getElementById('fileList').innerHTML = '<div style="text-align:center;padding:20px;color:gray;">连接中...</div>';
+    var display = url.replace(SITE_ROOT, '/');
+    if (display === '') display = '/';
+    document.getElementById('currentFolder').textContent = display;
+
+    fetch(url).then(function(resp) {
+        return resp.text();
+    }).then(function(htmlText) {
+        var parser = new DOMParser();
+        var doc = parser.parseFromString(htmlText, 'text/html');
+        var links = doc.querySelectorAll('a');
+        fileList = []; playList = [];
+        for (var i = 0; i < links.length; i++) {
+            var a = links[i];
+            var href = a.getAttribute('href');
+            var text = a.textContent.trim();
+            if (!href || href === '../' || href === './' || text.indexOf('Parent Directory') > -1) continue;
+            var fullUrl;
+            try { fullUrl = new URL(href, url).href; } catch(e) { continue; }
+            var name = decodeURIComponent(text.replace(/[📁📄]/g, '').replace(/\/$/, '').trim());
+            var isFolder = href.charAt(href.length - 1) === '/';
+            var nameLower = name.toLowerCase();
+            var isAudio = AUDIO_EXTS.some(function(ext) { return nameLower.indexOf(ext, nameLower.length - ext.length) > -1; });
+            if (isFolder || isAudio) {
+                var item = { name: name, url: fullUrl, isFolder: isFolder, isAudio: isAudio };
+                fileList.push(item);
+                if (isAudio) playList.push(item);
             }
-            if (!isPlaylist) items.sort((a,b) => (a.isFolder === b.isFolder ? a.name.localeCompare(b.name) : a.isFolder ? -1 : 1));
-            items.forEach((item, index) => {
-                const div = document.createElement('div');
-                div.className = 'list-item';
-                if(currentTrackIndex >= 0 && playList[currentTrackIndex] && playList[currentTrackIndex].url === item.url) div.classList.add('active');
-                const isFav = Object.values(playlists).some(list => list.some(f => f.url === item.url));
-                const prog = progressDB[item.url];
-                const sub = prog > 2 ? `<div class="item-subtext">上次听到 ${formatTime(prog)}</div>` : "";
-                div.innerHTML = `
-                    ${isPlaylist ? '<div class="drag-handle">≡</div>' : ''}
-                    <div class="item-icon">${item.isFolder ? '📁' : '🎵'}</div>
-                    <div class="item-info"><div class="item-title">${item.name}</div>${sub}</div>
-                    ${item.isAudio ? `<div class="item-fav-heart ${isFav?'active':''}" onclick="toggleQuickFav(event, '${encodeURIComponent(JSON.stringify(item))}')">${isFav?'❤️':'🤍'}</div>` : ''}
-                `;
-                div.onclick = (e) => {
-                    if (e.target.closest && (e.target.closest('.item-fav-heart') || e.target.closest('.drag-handle'))) return;
-                    item.isFolder ? fetchDirectory(item.url) : playTrack(playList.findIndex(p => p.url === item.url));
-                };
-                if (isPlaylist) setupDragSort(div);
-                ui.list.appendChild(div);
-            });
         }
+        if (shuffleMode) generateShuffleOrder();
+        renderList(fileList, false);
+    }).catch(function(err) {
+        document.getElementById('fileList').innerHTML = '<div style="padding:20px;color:red;text-align:center;">无法连接服务器</div>';
+    });
+}
 
-        function renderPlaylistFolders() {
-            currentPath = 'virtual:folders';
-            ui.folder.textContent = '/我的收藏';
-            ui.list.innerHTML = `<div class="list-item pinned-item active"><div class="item-icon">⭐️</div><div class="item-info"><div class="item-title">收藏文件夹列表</div></div></div>`;
-            Object.keys(playlists).forEach(name => {
-                const div = document.createElement('div');
-                div.className = 'list-item';
-                div.innerHTML = `<div class="item-icon">📁</div><div class="item-info"><div class="item-title">${name}</div><div class="item-subtext">${playlists[name].length} 首曲目</div></div><div style="font-size:12px; color:var(--ios-blue)" onclick="event.stopPropagation(); renamePlaylist('${name}')">重命名</div><div style="font-size:12px; color:var(--ios-red); margin-left:10px;" onclick="event.stopPropagation(); deletePlaylist('${name}')">删除</div>`;
-                div.onclick = () => fetchDirectory(`virtual:list:${name}`);
-                ui.list.appendChild(div);
-            });
+function renderList(items, isPlaylist) {
+    var container = document.getElementById('fileList');
+    container.innerHTML = '';
+
+    // Pinned favorites shortcut (only on normal directory views)
+    if (currentPath !== 'virtual:folders' && currentPath.indexOf('virtual:list:') !== 0) {
+        var favEntry = document.createElement('div');
+        favEntry.className = 'list-item pinned-item';
+        favEntry.innerHTML = '<div class="item-icon">⭐️</div><div class="item-info"><div class="item-title">我的收藏夹</div></div>';
+        favEntry.onclick = function() { fetchDirectory('virtual:folders'); };
+        container.appendChild(favEntry);
+
+        // Shuffle playlist button if there are audio files
+        if (playList.length > 1) {
+            var shuffleEntry = document.createElement('div');
+            shuffleEntry.className = 'list-item pinned-item';
+            shuffleEntry.innerHTML = '<div class="item-icon">🔀</div><div class="item-info"><div class="item-title">' + (shuffleMode ? '关闭随机' : '随机播放此目录') + '</div><div class="item-subtext">' + playList.length + ' 首可播放</div></div>';
+            shuffleEntry.onclick = function() {
+                if (!shuffleMode) {
+                    shuffleMode = true;
+                    generateShuffleOrder();
+                    updateShuffleBtn();
+                    if (shuffleOrder.length > 0) playTrack(shuffleOrder[0]);
+                    showToast('已开启随机播放');
+                } else {
+                    toggleShuffle();
+                }
+                renderList(items, isPlaylist);
+            };
+            container.appendChild(shuffleEntry);
         }
+    }
 
-        function renderTracksInPlaylist(name) {
-            currentPath = `virtual:list:${name}`;
-            ui.folder.textContent = `/收藏/${name}`;
-            playList = playlists[name] || [];
-            ui.list.innerHTML = `<div class="list-item pinned-item" onclick="fetchDirectory('virtual:folders')"><div class="item-icon">⬅️</div><div class="item-info"><div class="item-title">返回文件夹列表</div></div></div>`;
-            renderList(playList, true);
-        }
+    if (!isPlaylist) {
+        items.sort(function(a, b) {
+            if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
+            return a.name.localeCompare(b.name);
+        });
+    }
 
-        function playTrack(index) {
-            if(index < 0 || index >= playList.length) return;
-            currentTrackIndex = index;
-            const track = playList[index];
-            if (audio.src === track.url) return togglePlay();
-            audio.src = track.url;
-            audio.playbackRate = playbackRate;
-            ui.trackName.textContent = track.name;
-            resetAB();
-            updateFavHeart();
-            filterList();
-            const savedTime = progressDB[track.url] || 0;
-            const attemptJump = () => {
-                if (savedTime > 2) {
-                    audio.currentTime = savedTime;
-                    showToast(`恢复进度: ${formatTime(savedTime)}`);
+    for (var i = 0; i < items.length; i++) {
+        (function(item) {
+            var div = document.createElement('div');
+            div.className = 'list-item';
+            if (currentTrackIndex >= 0 && playList[currentTrackIndex] && playList[currentTrackIndex].url === item.url) {
+                div.className += ' active';
+            }
+            var keys = Object.keys(playlists);
+            var isFav = keys.some(function(k) { return playlists[k].some(function(f) { return f.url === item.url; }); });
+            var prog = progressDB[item.url];
+            var sub = (prog && prog > 2) ? '<div class="item-subtext">上次 ' + formatTime(prog) + '</div>' : '';
+
+            var encoded = encodeURIComponent(JSON.stringify(item));
+            div.innerHTML =
+                (isPlaylist ? '<div class="drag-handle">≡</div>' : '') +
+                '<div class="item-icon">' + (item.isFolder ? '📁' : '🎵') + '</div>' +
+                '<div class="item-info"><div class="item-title">' + item.name + '</div>' + sub + '</div>' +
+                (item.isAudio ? '<div class="item-fav-heart ' + (isFav ? 'active' : '') + '" onclick="toggleQuickFav(event,\'' + encoded + '\')">' + (isFav ? '❤️' : '🤍') + '</div>' : '');
+
+            div.onclick = function(e) {
+                var tgt = e.target || e.srcElement;
+                // Walk up to check if fav heart or drag handle was tapped
+                var node = tgt;
+                while (node && node !== div) {
+                    if (node.className && (node.className.indexOf('item-fav-heart') > -1 || node.className.indexOf('drag-handle') > -1)) return;
+                    node = node.parentNode;
+                }
+                if (item.isFolder) {
+                    fetchDirectory(item.url);
+                } else {
+                    var idx = -1;
+                    for (var j = 0; j < playList.length; j++) { if (playList[j].url === item.url) { idx = j; break; } }
+                    playTrack(idx);
                 }
             };
-            audio.addEventListener('loadedmetadata', attemptJump, { once: true });
-            audio.play().catch(e => console.log("等待手势触发播放"));
-        }
 
-        function togglePlay() {
-            if(!audio.src) { if(playList.length > 0) playTrack(0); return; }
-            audio.paused ? audio.play() : audio.pause();
-        }
+            if (isPlaylist) setupDragSort(div);
+            container.appendChild(div);
+        })(items[i]);
+    }
+}
 
-        function saveProgress() {
-            if (audio.src && audio.currentTime > 0) {
-                progressDB[audio.src] = audio.currentTime;
-                localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB));
+function renderListHighlight() {
+    var items = document.getElementById('fileList').querySelectorAll('.list-item');
+    for (var i = 0; i < items.length; i++) {
+        items[i].className = items[i].className.replace(' active', '');
+        var title = items[i].querySelector('.item-title');
+        if (title && currentTrackIndex >= 0 && playList[currentTrackIndex] && title.textContent === playList[currentTrackIndex].name) {
+            items[i].className += ' active';
+        }
+    }
+}
+
+function renderPlaylistFolders() {
+    currentPath = 'virtual:folders';
+    document.getElementById('currentFolder').textContent = '/我的收藏';
+    var container = document.getElementById('fileList');
+    container.innerHTML = '<div class="list-item pinned-item active"><div class="item-icon">⭐️</div><div class="item-info"><div class="item-title">收藏文件夹</div></div></div>';
+    var keys = Object.keys(playlists);
+    for (var k = 0; k < keys.length; k++) {
+        (function(name) {
+            var div = document.createElement('div');
+            div.className = 'list-item';
+            var count = playlists[name].length;
+            div.innerHTML =
+                '<div class="item-icon">📁</div>' +
+                '<div class="item-info"><div class="item-title">' + name + '</div><div class="item-subtext">' + count + ' 首</div></div>' +
+                '<div style="font-size:12px;color:var(--ios-blue);padding:8px;cursor:pointer;" onclick="event.stopPropagation();renamePlaylist(\'' + name.replace(/'/g,"\\'") + '\')">重命名</div>' +
+                '<div style="font-size:12px;color:var(--ios-red);padding:8px;cursor:pointer;" onclick="event.stopPropagation();deletePlaylist(\'' + name.replace(/'/g,"\\'") + '\')">删除</div>';
+            div.onclick = function() { fetchDirectory('virtual:list:' + name); };
+            container.appendChild(div);
+        })(keys[k]);
+    }
+}
+
+function renderTracksInPlaylist(name) {
+    currentPath = 'virtual:list:' + name;
+    document.getElementById('currentFolder').textContent = '/收藏/' + name;
+    playList = playlists[name] ? playlists[name].slice() : [];
+    if (shuffleMode) generateShuffleOrder();
+
+    var container = document.getElementById('fileList');
+    container.innerHTML =
+        '<div class="list-item pinned-item" onclick="fetchDirectory(\'virtual:folders\')">' +
+        '<div class="item-icon">⬅️</div><div class="item-info"><div class="item-title">返回文件夹列表</div></div></div>';
+
+    // Shuffle this playlist
+    if (playList.length > 1) {
+        var sEntry = document.createElement('div');
+        sEntry.className = 'list-item pinned-item';
+        sEntry.innerHTML = '<div class="item-icon">🔀</div><div class="item-info"><div class="item-title">' + (shuffleMode ? '关闭随机' : '随机播放') + '</div></div>';
+        sEntry.onclick = function() {
+            if (!shuffleMode) {
+                shuffleMode = true;
+                generateShuffleOrder();
+                updateShuffleBtn();
+                if (shuffleOrder.length > 0) playTrack(shuffleOrder[0]);
+                showToast('已开启随机播放');
+            } else {
+                toggleShuffle();
             }
-        }
-
-        function setupAudioEvents() {
-            audio.addEventListener('play', () => { ui.playIcon.style.display = 'none'; ui.pauseIcon.style.display = 'block'; });
-            audio.addEventListener('pause', () => { ui.playIcon.style.display = 'block'; ui.pauseIcon.style.display = 'none'; saveProgress(); });
-            audio.addEventListener('timeupdate', () => {
-                if (audio.duration) {
-                    if (!slider.dragging) slider.value = (audio.currentTime / audio.duration) * 100;
-                    ui.trackTime.textContent = `${formatTime(audio.currentTime)} / ${formatTime(audio.duration)}`;
-                    if (abA !== null && abB !== null && audio.currentTime >= abB) audio.currentTime = abA;
-                    if (Math.floor(audio.currentTime) % 1 === 0) saveProgress();
-                }
-            });
-            slider.addEventListener('input', () => { slider.dragging = true; });
-            slider.addEventListener('mouseup', () => { slider.dragging = false; });
-            slider.addEventListener('touchend', () => { slider.dragging = false; });
-            audio.addEventListener('ended', () => { delete progressDB[audio.src]; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); loopMode === 'single' ? playTrack(currentTrackIndex) : playNext(); });
-        }
-
-        let dragSrcEl = null;
-
-        function handleDragStart(e, el) {
-            dragSrcEl = el;
-            el.classList.add('dragging');
-            window.addEventListener('mousemove', handleDragMove);
-            window.addEventListener('touchmove', handleDragMove, {passive: false});
-            window.addEventListener('mouseup', handleDragEnd);
-            window.addEventListener('touchend', handleDragEnd);
-        }
-
-        function handleDragMove(e) {
-            if (!dragSrcEl) return;
-            e.preventDefault(); 
-            const touch = e.type === 'touchmove' ? e.touches[0] : e;
-            const target = document.elementFromPoint(touch.clientX, touch.clientY);
-            const overEl = (target && target.closest) ? target.closest('.list-item') : null;
-            if (overEl && overEl !== dragSrcEl && !overEl.classList.contains('pinned-item')) {
-                const rect = overEl.getBoundingClientRect();
-                const next = (touch.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
-                ui.list.insertBefore(dragSrcEl, next ? overEl.nextSibling : overEl);
-            }
-        }
-
-        function handleDragEnd(e) {
-            if (!dragSrcEl) return;
-            dragSrcEl.classList.remove('dragging');
-            window.removeEventListener('mousemove', handleDragMove);
-            window.removeEventListener('touchmove', handleDragMove);
-            window.removeEventListener('mouseup', handleDragEnd);
-            window.removeEventListener('touchend', handleDragEnd);
-
-            const playlistName = currentPath.replace('virtual:list:', '');
-            const newOrder = [];
-            ui.list.querySelectorAll('.list-item:not(.pinned-item)').forEach(item => {
-                const title = item.querySelector('.item-title').textContent;
-                const track = playlists[playlistName].find(t => t.name === title);
-                if(track) newOrder.push(track);
-            });
-            playlists[playlistName] = newOrder; 
-            savePlaylists(); 
-            playList = newOrder;
-            dragSrcEl = null;
-        }
-
-        function setupDragSort(el) {
-            const handle = el.querySelector('.drag-handle');
-            handle.addEventListener('mousedown', (e) => handleDragStart(e, el));
-            handle.addEventListener('touchstart', (e) => handleDragStart(e, el));
-        }
-
-        // --- 辅助功能 ---
-        function deletePlaylist(name) { if (confirm(`删除【${name}】?`)) { delete playlists[name]; savePlaylists(); renderPlaylistFolders(); updateFavHeart(); } }
-        function renamePlaylist(oldName) { const n = prompt("重命名:", oldName); if (n && n.trim() && n !== oldName) { playlists[n.trim()] = playlists[oldName]; delete playlists[oldName]; savePlaylists(); renderPlaylistFolders(); } }
-        function seekRelative(sec) { audio.currentTime = Math.max(0, Math.min(audio.duration, audio.currentTime + sec)); saveProgress(); }
-        function handleABRepeat() {
-            if (abA === null) { abA = audio.currentTime; ui.abBtn.classList.add('active'); ui.abText.textContent = "设为B点"; }
-            else if (abB === null) { abB = audio.currentTime; if (abB <= abA) { abB = null; return; } ui.abText.textContent = "循环中"; audio.currentTime = abA; }
-            else { abA = null; abB = null; ui.abBtn.classList.remove('active'); ui.abText.textContent = "A-B重复"; }
-        }
-        function resetAB() { abA = null; abB = null; ui.abBtn.classList.remove('active'); ui.abText.textContent = "A-B重复"; }
-        function formatTime(s) { const m = Math.floor(s/60); const sec = Math.floor(s%60); return `${m.toString().padStart(2,'0')}:${sec.toString().padStart(2,'0')}`; }
-        function showToast(msg) { const t = document.getElementById('toast'); t.textContent = msg; t.style.display = 'block'; setTimeout(() => t.style.display = 'none', 1500); }
-        function changeSpeed() {
-            const speeds = [1.0, 1.25, 1.5, 2.0, 0.8];
-            playbackRate = speeds[(speeds.indexOf(playbackRate) + 1) % speeds.length];
-            audio.playbackRate = playbackRate;
-            ui.speedBtn.querySelector('span:last-child').textContent = `${playbackRate}x`;
-            ui.speedBtn.classList.toggle('active', playbackRate !== 1.0);
-        }
-        function toggleLoop() {
-            loopMode = (loopMode === 'list') ? 'single' : 'list';
-            document.getElementById('loopBtn').style.color = loopMode === 'single' ? 'var(--ios-blue)' : '#000';
-            showToast(loopMode === 'single' ? "单曲循环" : "列表循环");
-        }
-        function playNext() { playTrack((currentTrackIndex + 1) % playList.length); }
-        function playPrev() { playTrack((currentTrackIndex - 1 + playList.length) % playList.length); }
-        function goBack() {
-            if (currentPath.startsWith('virtual:list:')) return fetchDirectory('virtual:folders');
-            if (currentPath === 'virtual:folders') return fetchDirectory(SITE_ROOT);
-            try {
-                let u = new URL(currentPath);
-                let p = u.pathname.split('/').filter(x=>x); p.pop();
-                fetchDirectory(u.origin + '/' + p.join('/') + (p.length? '/' : ''));
-            } catch (e) { fetchDirectory(SITE_ROOT); }
-        }
-        function filterList() {
-            if (currentPath === 'virtual:folders') renderPlaylistFolders();
-            else if (currentPath.startsWith('virtual:list:')) renderTracksInPlaylist(currentPath.replace('virtual:list:', ''));
-            else { const term = document.getElementById('searchInput').value.toLowerCase(); renderList(fileList.filter(i => i.name.toLowerCase().includes(term))); }
-        }
-        function refreshList() { fetchDirectory(currentPath); }
-        document.getElementById('touchSeekArea').onclick = (e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            if (x < rect.width / 3) seekRelative(-15);
-            else if (x > (rect.width * 2) / 3) seekRelative(15);
+            renderTracksInPlaylist(name);
         };
-        function setTimer() {
-            const i = prompt("定时分钟:", "30");
-            if (i && !isNaN(i)) {
-                if (sleepTimer) clearTimeout(sleepTimer);
-                ui.timerBtn.classList.add('active');
-                sleepTimer = setTimeout(() => { audio.pause(); ui.timerBtn.classList.remove('active'); alert("定时停止"); }, parseFloat(i)*60000);
-            }
+        container.appendChild(sEntry);
+    }
+
+    renderList(playList, true);
+}
+
+// ════════════════════════════════════════
+//  NAVIGATION
+// ════════════════════════════════════════
+function goBack() {
+    if (currentPath.indexOf('virtual:list:') === 0) { fetchDirectory('virtual:folders'); return; }
+    if (currentPath === 'virtual:folders') { fetchDirectory(SITE_ROOT); return; }
+    try {
+        var u = new URL(currentPath);
+        var parts = u.pathname.split('/').filter(function(x) { return x; });
+        parts.pop();
+        fetchDirectory(u.origin + '/' + parts.join('/') + (parts.length ? '/' : ''));
+    } catch(e) {
+        fetchDirectory(SITE_ROOT);
+    }
+}
+
+function filterList() {
+    if (currentPath === 'virtual:folders') { renderPlaylistFolders(); return; }
+    if (currentPath.indexOf('virtual:list:') === 0) { renderTracksInPlaylist(currentPath.replace('virtual:list:', '')); return; }
+    var term = document.getElementById('searchInput').value.toLowerCase();
+    renderList(fileList.filter(function(i) { return i.name.toLowerCase().indexOf(term) > -1; }), false);
+}
+
+function refreshList() { fetchDirectory(currentPath); }
+
+// ════════════════════════════════════════
+//  PLAYLIST MANAGEMENT
+// ════════════════════════════════════════
+function deletePlaylist(name) {
+    if (confirm('删除收藏夹【' + name + '】？')) {
+        delete playlists[name]; savePlaylists(); renderPlaylistFolders(); updateFavHeart();
+    }
+}
+
+function renamePlaylist(oldName) {
+    var n = prompt('重命名收藏夹:', oldName);
+    if (n && n.trim() && n.trim() !== oldName) {
+        var clean = n.trim();
+        playlists[clean] = playlists[oldName];
+        delete playlists[oldName];
+        savePlaylists(); renderPlaylistFolders();
+    }
+}
+
+// ════════════════════════════════════════
+//  DRAG & DROP SORT
+// ════════════════════════════════════════
+var dragSrcEl = null;
+
+function handleDragStart(e, el) {
+    dragSrcEl = el;
+    el.className += ' dragging';
+    window.addEventListener('mousemove', handleDragMove);
+    window.addEventListener('touchmove', handleDragMove, { passive: false });
+    window.addEventListener('mouseup', handleDragEnd);
+    window.addEventListener('touchend', handleDragEnd);
+}
+
+function handleDragMove(e) {
+    if (!dragSrcEl) return;
+    e.preventDefault();
+    var touch = e.type === 'touchmove' ? e.touches[0] : e;
+    var target = document.elementFromPoint(touch.clientX, touch.clientY);
+    var overEl = null;
+    while (target) {
+        if (target.className && target.className.indexOf('list-item') > -1) { overEl = target; break; }
+        target = target.parentNode;
+    }
+    if (overEl && overEl !== dragSrcEl && overEl.className.indexOf('pinned-item') < 0) {
+        var rect = overEl.getBoundingClientRect();
+        var next = (touch.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+        var container = document.getElementById('fileList');
+        container.insertBefore(dragSrcEl, next ? overEl.nextSibling : overEl);
+    }
+}
+
+function handleDragEnd() {
+    if (!dragSrcEl) return;
+    dragSrcEl.className = dragSrcEl.className.replace(' dragging', '');
+    window.removeEventListener('mousemove', handleDragMove);
+    window.removeEventListener('touchmove', handleDragMove);
+    window.removeEventListener('mouseup', handleDragEnd);
+    window.removeEventListener('touchend', handleDragEnd);
+
+    var playlistName = currentPath.replace('virtual:list:', '');
+    var newOrder = [];
+    var items = document.getElementById('fileList').querySelectorAll('.list-item:not(.pinned-item)');
+    for (var i = 0; i < items.length; i++) {
+        var title = items[i].querySelector('.item-title');
+        if (!title) continue;
+        var t = title.textContent;
+        var pl = playlists[playlistName];
+        for (var j = 0; j < pl.length; j++) {
+            if (pl[j].name === t) { newOrder.push(pl[j]); break; }
         }
-    </script>
+    }
+    playlists[playlistName] = newOrder;
+    savePlaylists();
+    playList = newOrder;
+    if (shuffleMode) generateShuffleOrder();
+    dragSrcEl = null;
+}
+
+function setupDragSort(el) {
+    var handle = el.querySelector('.drag-handle');
+    if (!handle) return;
+    handle.addEventListener('mousedown', function(e) { handleDragStart(e, el); });
+    handle.addEventListener('touchstart', function(e) { handleDragStart(e, el); }, { passive: false });
+}
+
+// ════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════
+function formatTime(s) {
+    if (!s || isNaN(s)) return '--:--';
+    var m = Math.floor(s / 60);
+    var sec = Math.floor(s % 60);
+    return (m < 10 ? '0' : '') + m + ':' + (sec < 10 ? '0' : '') + sec;
+}
+
+function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(function() { t.style.display = 'none'; }, 1800);
+}
+</script>
+
 </body>
 </html>
