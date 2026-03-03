@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v1.7.1</title>
+    <title>英语精听播放器 v1.7.2</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -319,6 +319,149 @@
             z-index: 2000; display: none; white-space: nowrap;
         }
         #noSleepVideo { display: none; width: 1px; height: 1px; }
+
+        /* ── STATS SHEET ─────────────────────────── */
+        .stats-sheet-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.45); z-index: 800; display: none;
+        }
+        .stats-sheet {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--ios-bg); z-index: 900; display: none;
+            -webkit-flex-direction: column; flex-direction: column;
+            -webkit-animation: slideUp 0.35s ease-out; animation: slideUp 0.35s ease-out;
+        }
+        .stats-sheet.open { display: -webkit-flex; display: flex; }
+
+        /* stats header */
+        .stats-header {
+            background: var(--ios-blur);
+            -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+            padding: calc(var(--safe-top) + 6px) 16px 0 16px;
+            border-bottom: 0.5px solid rgba(0,0,0,0.1);
+            -webkit-flex-shrink: 0; flex-shrink: 0;
+        }
+        .stats-header-row {
+            display: -webkit-flex; display: flex;
+            -webkit-align-items: center; align-items: center;
+            -webkit-justify-content: space-between; justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .stats-title { font-size: 20px; font-weight: 700; }
+        .stats-close-btn {
+            background: #e5e5ea; border: none; border-radius: 50%;
+            width: 30px; height: 30px; font-size: 16px; cursor: pointer;
+            display: -webkit-flex; display: flex;
+            -webkit-align-items: center; align-items: center;
+            -webkit-justify-content: center; justify-content: center;
+            -webkit-tap-highlight-color: transparent; color: #555; font-weight: 700;
+        }
+        /* tab bar */
+        .stats-tabs {
+            display: -webkit-flex; display: flex;
+            border-bottom: 0.5px solid rgba(0,0,0,0.1);
+        }
+        .stats-tab {
+            -webkit-flex: 1; flex: 1; text-align: center;
+            padding: 10px 0; font-size: 14px; font-weight: 600;
+            color: var(--ios-subtext); cursor: pointer;
+            border-bottom: 2px solid transparent;
+            -webkit-tap-highlight-color: transparent;
+            background: none; border-top: none; border-left: none; border-right: none;
+        }
+        .stats-tab.active { color: var(--ios-blue); border-bottom: 2px solid var(--ios-blue); }
+
+        /* stats body */
+        .stats-body {
+            -webkit-flex: 1; flex: 1;
+            overflow-y: scroll; -webkit-overflow-scrolling: touch;
+            padding: 16px 16px 30px 16px;
+        }
+
+        /* summary card */
+        .stats-summary-card {
+            background: var(--ios-blue);
+            border-radius: 16px; padding: 18px 20px; margin-bottom: 16px;
+            display: -webkit-flex; display: flex;
+            -webkit-justify-content: space-between; justify-content: space-between;
+            -webkit-align-items: center; align-items: center;
+        }
+        .stats-summary-label { font-size: 13px; color: rgba(255,255,255,0.75); margin-bottom: 4px; }
+        .stats-summary-value { font-size: 32px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
+        .stats-summary-unit  { font-size: 14px; color: rgba(255,255,255,0.8); margin-left: 4px; }
+        .stats-summary-sub   { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 3px; }
+
+        /* notice when no data */
+        .stats-empty {
+            text-align: center; padding: 50px 20px;
+            color: var(--ios-subtext); font-size: 15px; line-height: 1.6;
+        }
+        .stats-empty-icon { font-size: 44px; margin-bottom: 12px; }
+
+        /* today table */
+        .stats-section-title {
+            font-size: 13px; font-weight: 700; color: var(--ios-subtext);
+            text-transform: uppercase; letter-spacing: 0.5px;
+            margin-bottom: 8px; margin-top: 16px;
+        }
+        .stats-table {
+            background: var(--ios-card); border-radius: 12px; overflow: hidden;
+        }
+        .stats-row {
+            display: -webkit-flex; display: flex;
+            -webkit-align-items: center; align-items: center;
+            padding: 12px 16px;
+            border-bottom: 0.5px solid rgba(0,0,0,0.07);
+        }
+        .stats-row:last-child { border-bottom: none; }
+        .stats-row-rank {
+            width: 22px; height: 22px; border-radius: 11px;
+            background: var(--ios-blue); color: #fff;
+            font-size: 11px; font-weight: 700; text-align: center; line-height: 22px;
+            margin-right: 12px; -webkit-flex-shrink: 0; flex-shrink: 0;
+        }
+        .stats-row-rank.gold   { background: #f5a623; }
+        .stats-row-rank.silver { background: #9b9b9b; }
+        .stats-row-rank.bronze { background: #c47c3d; }
+        .stats-row-name {
+            -webkit-flex: 1; flex: 1;
+            font-size: 14px; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; color: #000;
+        }
+        .stats-row-time {
+            font-size: 13px; font-weight: 600; color: var(--ios-blue);
+            margin-left: 10px; -webkit-flex-shrink: 0; flex-shrink: 0;
+        }
+        .stats-row-bar-wrap {
+            width: 100%; height: 4px; background: #f0f0f5;
+            border-radius: 2px; margin-top: 5px;
+        }
+        .stats-row-bar-fill {
+            height: 100%; background: var(--ios-blue);
+            border-radius: 2px; -webkit-transition: width 0.5s ease; transition: width 0.5s ease;
+        }
+
+        /* chart */
+        .stats-chart-wrap {
+            background: var(--ios-card); border-radius: 16px;
+            padding: 16px 8px 8px 8px; margin-bottom: 16px; position: relative;
+        }
+        .stats-chart-title {
+            font-size: 13px; font-weight: 700; color: var(--ios-subtext);
+            text-align: center; margin-bottom: 12px;
+        }
+        #statsCanvas { display: block; width: 100%; touch-action: none; }
+        .stats-chart-tooltip {
+            position: absolute; background: rgba(0,0,0,0.82); color: #fff;
+            font-size: 12px; font-weight: 600; padding: 5px 10px;
+            border-radius: 8px; pointer-events: none; display: none;
+            white-space: nowrap; z-index: 10;
+            -webkit-transform: translate(-50%, -130%); transform: translate(-50%, -130%);
+        }
+        .stats-notice {
+            font-size: 11px; color: #b0b0b8; text-align: center;
+            margin-top: 8px; padding: 0 8px;
+        }
     </style>
 </head>
 <body class="player-compact">
@@ -336,6 +479,24 @@
         <div style="padding:16px 25px;border-top:0.5px solid #eee;color:var(--ios-blue);font-weight:600;font-size:17px;cursor:pointer;" onclick="createNewPlaylistFromModal()">➕ 新建收藏夹...</div>
         <div style="padding:16px 25px;text-align:center;color:var(--ios-red);font-weight:600;cursor:pointer;" onclick="closePlaylistModal()">取消</div>
     </div>
+</div>
+
+<!-- Stats Sheet -->
+<div class="stats-sheet-overlay" id="statsOverlay" onclick="closeStats()"></div>
+<div class="stats-sheet" id="statsSheet">
+    <div class="stats-header">
+        <div class="stats-header-row">
+            <div class="stats-title">📊 听力统计</div>
+            <button class="stats-close-btn" onclick="closeStats()">✕</button>
+        </div>
+        <div class="stats-tabs">
+            <button class="stats-tab active" onclick="switchStatsTab('today',this)">今日</button>
+            <button class="stats-tab" onclick="switchStatsTab('7d',this)">近7日</button>
+            <button class="stats-tab" onclick="switchStatsTab('30d',this)">近30日</button>
+            <button class="stats-tab" onclick="switchStatsTab('180d',this)">近半年</button>
+        </div>
+    </div>
+    <div class="stats-body" id="statsBody"></div>
 </div>
 
 <!-- Speed Sheet -->
@@ -465,11 +626,11 @@
             <button class="pill-btn" onclick="fetchDirectory('virtual:folders')">
                 <span>📂</span><span>收藏</span>
             </button>
-            <button class="pill-btn" onclick="refreshList()">
-                <span>🔄</span><span>刷新</span>
+            <button class="pill-btn" onclick="openStats()">
+                <span>📊</span><span>统计</span>
             </button>
         </div>
-        <div class="version-tag">Build v1.7.1</div>
+        <div class="version-tag">Build v1.7.2</div>
     </div>
 </div>
 
@@ -519,6 +680,7 @@ function init() {
     setupSlider();
     buildSpeedWheel();
     setCompact(true);
+    startStatsTicker();
 }
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -1287,6 +1449,420 @@ function showToast(msg) {
     t.textContent = msg; t.style.display = 'block';
     clearTimeout(showToast._t);
     showToast._t = setTimeout(function() { t.style.display = 'none'; }, 1800);
+}
+
+// ════════════════════════════════════════════════════
+//  LISTENING STATS  (v1.7.2)
+//
+//  Storage key:  stats_db_v1
+//  Structure:    { "YYYY-MM-DD": { "urlKey": { name, url, sec } } }
+//
+//  Tracking rule: add 1 second every second only when
+//    audio is playing  AND  audio.volume >= 0.4  AND  !audio.muted
+// ════════════════════════════════════════════════════
+var statsDB = {};
+var _statsFlushCounter = 0;
+var MIN_VOLUME = 0.4;
+
+try { statsDB = JSON.parse(localStorage.getItem('stats_db_v1') || '{}'); } catch(e) {}
+
+// --- Tracking ticker (runs every second) ---
+function startStatsTicker() {
+    setInterval(function() {
+        if (audio.paused) return;
+        if (audio.muted || audio.volume < MIN_VOLUME) return;
+        var track = playList[currentTrackIndex];
+        if (!track) return;
+
+        var today = todayKey();
+        if (!statsDB[today]) statsDB[today] = {};
+        // Use a short hash of URL as key (to avoid giant keys)
+        var k = urlKey(track.url);
+        if (!statsDB[today][k]) statsDB[today][k] = { name: track.name, url: track.url, sec: 0 };
+        statsDB[today][k].sec += 1;
+        // Flush to localStorage every 10 seconds
+        _statsFlushCounter++;
+        if (_statsFlushCounter >= 10) {
+            _statsFlushCounter = 0;
+            flushStats();
+        }
+    }, 1000);
+}
+
+function flushStats() {
+    try { localStorage.setItem('stats_db_v1', JSON.stringify(statsDB)); } catch(e) {}
+}
+
+function todayKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+}
+
+function dateKey(daysAgo) {
+    var d = new Date(); d.setDate(d.getDate() - daysAgo);
+    return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+}
+
+function urlKey(url) {
+    // Simple djb2 hash
+    var h = 5381;
+    for (var i = 0; i < url.length; i++) h = ((h << 5) + h) ^ url.charCodeAt(i);
+    return String(h >>> 0);
+}
+
+function pad2(n) { return n < 10 ? '0' + n : String(n); }
+
+function secToHms(s) {
+    s = Math.floor(s);
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var sec = s % 60;
+    if (h > 0) return h + '小时 ' + m + '分';
+    if (m > 0) return m + '分 ' + sec + '秒';
+    return sec + '秒';
+}
+
+function secToMin(s) {
+    var m = s / 60;
+    return m >= 10 ? Math.round(m) + ' 分钟' : m.toFixed(1) + ' 分钟';
+}
+
+// --- Open / Close ---
+var _statsCurrentTab = 'today';
+
+function openStats() {
+    flushStats();
+    document.getElementById('statsSheet').className = 'stats-sheet open';
+    document.getElementById('statsOverlay').style.display = 'block';
+    _statsCurrentTab = 'today';
+    // Reset tabs
+    var tabs = document.querySelectorAll('.stats-tab');
+    for (var i = 0; i < tabs.length; i++) tabs[i].className = 'stats-tab';
+    tabs[0].className = 'stats-tab active';
+    renderStatsToday();
+}
+
+function closeStats() {
+    document.getElementById('statsSheet').className = 'stats-sheet';
+    document.getElementById('statsOverlay').style.display = 'none';
+    flushStats();
+}
+
+function switchStatsTab(tab, btn) {
+    _statsCurrentTab = tab;
+    var tabs = document.querySelectorAll('.stats-tab');
+    for (var i = 0; i < tabs.length; i++) tabs[i].className = 'stats-tab';
+    btn.className = 'stats-tab active';
+    if (tab === 'today')     renderStatsToday();
+    else if (tab === '7d')   renderStatsRange(7);
+    else if (tab === '30d')  renderStatsRange(30);
+    else if (tab === '180d') renderStatsRange(180);
+}
+
+// --- TODAY VIEW ---
+function renderStatsToday() {
+    var body = document.getElementById('statsBody');
+    var today = todayKey();
+    var dayData = statsDB[today] || {};
+    var tracks = [];
+    var totalSec = 0;
+    var keys = Object.keys(dayData);
+    for (var i = 0; i < keys.length; i++) {
+        var entry = dayData[keys[i]];
+        if (entry.sec > 0) { tracks.push(entry); totalSec += entry.sec; }
+    }
+    tracks.sort(function(a, b) { return b.sec - a.sec; });
+
+    var html = '';
+
+    // Summary card
+    html += '<div class="stats-summary-card">' +
+        '<div>' +
+            '<div class="stats-summary-label">今日有效听力时长</div>' +
+            '<div style="display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;">' +
+                '<div class="stats-summary-value">' + Math.floor(totalSec / 60) + '</div>' +
+                '<div class="stats-summary-unit">分钟</div>' +
+            '</div>' +
+            '<div class="stats-summary-sub">' + secToHms(totalSec) + ' · ' + tracks.length + ' 首音频</div>' +
+        '</div>' +
+        '<div style="font-size:44px;opacity:0.25;">🎧</div>' +
+    '</div>';
+
+    if (tracks.length === 0) {
+        html += '<div class="stats-empty"><div class="stats-empty-icon">🎵</div>今天还没有听力记录<br><span style="font-size:13px;">开始播放后自动记录（音量≥40%）</span></div>';
+    } else {
+        var maxSec = tracks[0].sec;
+        html += '<div class="stats-section-title">今日播放详情</div>';
+        html += '<div class="stats-table">';
+        var rankClasses = ['gold','silver','bronze'];
+        for (var i = 0; i < tracks.length; i++) {
+            var pct = maxSec > 0 ? Math.round((tracks[i].sec / maxSec) * 100) : 0;
+            var rc  = i < 3 ? rankClasses[i] : '';
+            html += '<div class="stats-row" style="-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:flex-start;align-items:flex-start;">' +
+                '<div style="display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;width:100%;">' +
+                    '<div class="stats-row-rank ' + rc + '">' + (i+1) + '</div>' +
+                    '<div class="stats-row-name">' + escHtml(tracks[i].name) + '</div>' +
+                    '<div class="stats-row-time">' + secToMin(tracks[i].sec) + '</div>' +
+                '</div>' +
+                '<div class="stats-row-bar-wrap" style="margin-left:34px;">' +
+                    '<div class="stats-row-bar-fill" style="width:' + pct + '%;"></div>' +
+                '</div>' +
+            '</div>';
+        }
+        html += '</div>';
+    }
+
+    html += '<div class="stats-notice">⚠️ 仅统计音量≥40%的有效播放时间</div>';
+    body.innerHTML = html;
+}
+
+// --- RANGE VIEW (7 / 30 / 180 days) ---
+function renderStatsRange(days) {
+    var body = document.getElementById('statsBody');
+
+    // Build per-day array (most recent last)
+    var labels = [], values = [];
+    var totalSec = 0;
+    var activeDays = 0;
+    for (var i = days - 1; i >= 0; i--) {
+        var key = dateKey(i);
+        var dayData = statsDB[key] || {};
+        var s = 0;
+        var ks = Object.keys(dayData);
+        for (var j = 0; j < ks.length; j++) s += dayData[ks[j]].sec;
+        labels.push(key.slice(5)); // MM-DD
+        values.push(Math.round(s / 60)); // minutes
+        totalSec += s;
+        if (s > 0) activeDays++;
+    }
+
+    var avgMin = activeDays > 0 ? Math.round((totalSec / 60) / activeDays) : 0;
+
+    var html = '';
+    // Summary card
+    html += '<div class="stats-summary-card">' +
+        '<div>' +
+            '<div class="stats-summary-label">近' + days + '日总听力时长</div>' +
+            '<div style="display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;">' +
+                '<div class="stats-summary-value">' + Math.floor(totalSec / 60) + '</div>' +
+                '<div class="stats-summary-unit">分钟</div>' +
+            '</div>' +
+            '<div class="stats-summary-sub">有记录 ' + activeDays + ' 天 · 日均 ' + avgMin + ' 分钟</div>' +
+        '</div>' +
+        '<div style="font-size:44px;opacity:0.25;">📈</div>' +
+    '</div>';
+
+    // Chart area
+    html += '<div class="stats-chart-wrap" id="chartWrap">' +
+        '<div class="stats-chart-title">每日听力时长（分钟）</div>' +
+        '<canvas id="statsCanvas" height="180"></canvas>' +
+        '<div class="stats-chart-tooltip" id="chartTooltip"></div>' +
+    '</div>';
+    html += '<div class="stats-notice">⚠️ 仅统计音量≥40%的有效播放时间</div>';
+
+    body.innerHTML = html;
+
+    // Draw chart after DOM is ready
+    setTimeout(function() { drawLineChart(labels, values, days); }, 30);
+}
+
+// --- CANVAS CHART ---
+function drawLineChart(labels, values, days) {
+    var canvas = document.getElementById('statsCanvas');
+    if (!canvas) return;
+    var wrap   = document.getElementById('chartWrap');
+    var W      = wrap ? wrap.clientWidth - 16 : 300;
+    var H      = 180;
+    var dpr    = window.devicePixelRatio || 1;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+
+    var ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    var PAD_L = 36, PAD_R = 12, PAD_T = 10, PAD_B = 28;
+    var cW = W - PAD_L - PAD_R;
+    var cH = H - PAD_T - PAD_B;
+
+    var maxVal = 0;
+    for (var i = 0; i < values.length; i++) if (values[i] > maxVal) maxVal = values[i];
+    if (maxVal === 0) maxVal = 10;
+
+    // Grid lines + Y labels
+    ctx.font = '10px -apple-system, sans-serif';
+    ctx.fillStyle = '#8e8e93';
+    ctx.textAlign = 'right';
+    var gridCount = 4;
+    for (var gi = 0; gi <= gridCount; gi++) {
+        var gVal = Math.round((maxVal / gridCount) * gi);
+        var gY   = PAD_T + cH - (cH * gi / gridCount);
+        ctx.strokeStyle = 'rgba(0,0,0,0.06)';
+        ctx.lineWidth   = 0.5;
+        ctx.beginPath(); ctx.moveTo(PAD_L, gY); ctx.lineTo(W - PAD_R, gY); ctx.stroke();
+        ctx.fillText(String(gVal), PAD_L - 4, gY + 3);
+    }
+
+    // X labels (show ~5 evenly spaced)
+    ctx.textAlign = 'center';
+    var xStep = Math.ceil(days / 5);
+    for (var xi = 0; xi < labels.length; xi++) {
+        if (xi % xStep !== 0 && xi !== labels.length - 1) continue;
+        var xPos = PAD_L + (xi / (labels.length - 1)) * cW;
+        ctx.fillStyle = '#8e8e93';
+        ctx.fillText(labels[xi], xPos, H - 6);
+    }
+
+    // Build points
+    var pts = [];
+    for (var i = 0; i < values.length; i++) {
+        pts.push({
+            x: PAD_L + (i / Math.max(values.length - 1, 1)) * cW,
+            y: PAD_T + cH - (values[i] / maxVal) * cH,
+            v: values[i], lbl: labels[i]
+        });
+    }
+
+    // Filled gradient area
+    var grad = ctx.createLinearGradient(0, PAD_T, 0, PAD_T + cH);
+    grad.addColorStop(0,   'rgba(0,122,255,0.28)');
+    grad.addColorStop(0.6, 'rgba(0,122,255,0.05)');
+    grad.addColorStop(1,   'rgba(0,122,255,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, PAD_T + cH);
+    ctx.lineTo(pts[0].x, pts[0].y);
+    for (var i = 1; i < pts.length; i++) {
+        // Smooth bezier
+        var cpx = (pts[i-1].x + pts[i].x) / 2;
+        ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
+    }
+    ctx.lineTo(pts[pts.length-1].x, PAD_T + cH);
+    ctx.closePath(); ctx.fill();
+
+    // Line
+    ctx.strokeStyle = '#007aff';
+    ctx.lineWidth   = 2;
+    ctx.lineJoin    = 'round';
+    ctx.lineCap     = 'round';
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    for (var i = 1; i < pts.length; i++) {
+        var cpx = (pts[i-1].x + pts[i].x) / 2;
+        ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
+    }
+    ctx.stroke();
+
+    // Dots for non-zero days
+    for (var i = 0; i < pts.length; i++) {
+        if (pts[i].v === 0) continue;
+        ctx.beginPath();
+        ctx.arc(pts[i].x, pts[i].y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle   = '#fff';
+        ctx.strokeStyle = '#007aff';
+        ctx.lineWidth   = 2;
+        ctx.fill(); ctx.stroke();
+    }
+
+    // Touch / click interaction for tooltip
+    var tooltip = document.getElementById('chartTooltip');
+    var wrap2   = document.getElementById('chartWrap');
+
+    function showTip(clientX, clientY) {
+        var rect   = canvas.getBoundingClientRect();
+        var relX   = clientX - rect.left;
+        // Find nearest point
+        var nearest = null, nearDist = 9999;
+        for (var i = 0; i < pts.length; i++) {
+            var d = Math.abs(pts[i].x - relX);
+            if (d < nearDist) { nearDist = d; nearest = pts[i]; }
+        }
+        if (!nearest || !tooltip || !wrap2) return;
+        var wRect   = wrap2.getBoundingClientRect();
+        var tipLeft = nearest.x + wrap2.getBoundingClientRect().left - wRect.left + 8;
+        var tipTop  = nearest.y + wrap2.getBoundingClientRect().top  - wRect.top;
+
+        tooltip.textContent = nearest.lbl + '  ' + nearest.v + ' 分钟';
+        tooltip.style.left    = (nearest.x + 8) + 'px';
+        tooltip.style.top     = (nearest.y + (PAD_T > 0 ? 16 : 16)) + 'px';
+        tooltip.style.display = 'block';
+
+        // Draw crosshair
+        ctx.clearRect(0, 0, W, H);
+        // Redraw everything (just grid + chart) then add crosshair
+        drawLineChartBase(ctx, W, H, PAD_L, PAD_R, PAD_T, PAD_B, cW, cH, labels, values, maxVal, pts, days);
+        ctx.strokeStyle = 'rgba(0,122,255,0.4)';
+        ctx.lineWidth   = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath(); ctx.moveTo(nearest.x, PAD_T); ctx.lineTo(nearest.x, PAD_T + cH); ctx.stroke();
+        ctx.setLineDash([]);
+        // Highlighted dot
+        ctx.beginPath();
+        ctx.arc(nearest.x, nearest.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#007aff'; ctx.fill();
+    }
+
+    canvas.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+        showTip(e.touches[0].clientX, e.touches[0].clientY);
+    }, false);
+    canvas.addEventListener('touchend', function() {
+        if (tooltip) setTimeout(function() { tooltip.style.display = 'none'; }, 1200);
+    }, false);
+    canvas.addEventListener('mousemove', function(e) { showTip(e.clientX, e.clientY); });
+    canvas.addEventListener('mouseleave', function() { if (tooltip) tooltip.style.display = 'none'; });
+}
+
+// Re-draw static chart (used during crosshair interaction)
+function drawLineChartBase(ctx, W, H, PL, PR, PT, PB, cW, cH, labels, values, maxVal, pts, days) {
+    ctx.clearRect(0, 0, W, H);
+    // grid
+    ctx.font = '10px -apple-system, sans-serif';
+    ctx.fillStyle = '#8e8e93'; ctx.textAlign = 'right';
+    for (var gi = 0; gi <= 4; gi++) {
+        var gVal = Math.round((maxVal / 4) * gi);
+        var gY   = PT + cH - (cH * gi / 4);
+        ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 0.5;
+        ctx.beginPath(); ctx.moveTo(PL, gY); ctx.lineTo(W - PR, gY); ctx.stroke();
+        ctx.fillText(String(gVal), PL - 4, gY + 3);
+    }
+    ctx.textAlign = 'center';
+    var xStep = Math.ceil(days / 5);
+    for (var xi = 0; xi < labels.length; xi++) {
+        if (xi % xStep !== 0 && xi !== labels.length - 1) continue;
+        var xPos = PL + (xi / (labels.length - 1)) * cW;
+        ctx.fillStyle = '#8e8e93'; ctx.fillText(labels[xi], xPos, H - 6);
+    }
+    // fill
+    var grad2 = ctx.createLinearGradient(0, PT, 0, PT + cH);
+    grad2.addColorStop(0,   'rgba(0,122,255,0.28)');
+    grad2.addColorStop(0.6, 'rgba(0,122,255,0.05)');
+    grad2.addColorStop(1,   'rgba(0,122,255,0)');
+    ctx.fillStyle = grad2;
+    ctx.beginPath(); ctx.moveTo(pts[0].x, PT + cH); ctx.lineTo(pts[0].x, pts[0].y);
+    for (var i = 1; i < pts.length; i++) {
+        var cpx = (pts[i-1].x + pts[i].x) / 2;
+        ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
+    }
+    ctx.lineTo(pts[pts.length-1].x, PT + cH); ctx.closePath(); ctx.fill();
+    // line
+    ctx.strokeStyle = '#007aff'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    for (var i = 1; i < pts.length; i++) {
+        var cpx = (pts[i-1].x + pts[i].x) / 2;
+        ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
+    }
+    ctx.stroke();
+    // dots
+    for (var i = 0; i < pts.length; i++) {
+        if (pts[i].v === 0) continue;
+        ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, 3.5, 0, Math.PI * 2);
+        ctx.fillStyle = '#fff'; ctx.strokeStyle = '#007aff'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke();
+    }
+}
+
+function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 </script>
 </body>
