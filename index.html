@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v1.7.6</title>
+    <title>英语精听播放器 v1.7.7</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -78,6 +78,12 @@
             display: -webkit-flex; display: flex;
             -webkit-align-items: center; align-items: center;
             -webkit-tap-highlight-color: transparent; padding: 4px 0;
+        }
+        .header-stats-btn {
+            background: none; border: none; font-size: 22px;
+            cursor: pointer; padding: 2px 4px; line-height: 1;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-flex-shrink: 0; flex-shrink: 0;
         }
         .current-folder {
             font-size: 17px; font-weight: 700;
@@ -563,7 +569,7 @@
             返回
         </button>
         <div class="current-folder" id="currentFolder">/</div>
-        <div style="width:40px;"></div>
+        <button class="header-stats-btn" onclick="openStats()" aria-label="听力统计">📊</button>
     </div>
     <div class="search-bar">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" style="-webkit-flex-shrink:0;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -670,7 +676,7 @@
                 <span>📊</span><span>统计</span>
             </button>
         </div>
-        <div class="version-tag">Build v1.7.6</div>
+        <div class="version-tag">Build v1.7.7</div>
     </div>
 </div>
 
@@ -802,7 +808,8 @@ function onTU() {
 }
 
 // ════════════════ PLAY CONTROLS ═════════
-// ── Autoplay error handler ──────────────────────────────
+// Zero-pad to 2 digits (used for date keys)
+function pad2(n) { return n < 10 ? '0' + n : String(n); }
 // NotAllowedError = browser blocked autoplay (no user gesture yet)
 // AbortError      = normal interruption when switching tracks quickly → ignore silently
 function safePlay(targetAudio) {
@@ -1062,7 +1069,7 @@ function buildSpeedWheel() {
         opt.textContent = fmtSpeed(SPEED_OPTIONS[i]);
         wheel.appendChild(opt);
     }
-    var pad2 = document.createElement('div'); pad2.className = 'speed-wheel-pad'; wheel.appendChild(pad2);
+    var wheelPad = document.createElement('div'); wheelPad.className = 'speed-wheel-pad'; wheel.appendChild(wheelPad);
 
     // Real-time speed change on scroll – debounced 80ms for smoothness
     wheel.addEventListener('scroll', function() {
@@ -1589,61 +1596,27 @@ function showToast(msg) {
 }
 
 // ══════════════════════════════════════════════════════════
-//  LISTENING STATS  v1.7.3
+//  LISTENING STATS  v1.7.7
 //
 //  Storage:  stats_db_v1  →  { "YYYY-MM-DD": { urlHash: {name,url,sec} } }
 //
-//  Volume gate (cross-platform best-effort):
+//  Volume gate:
 //    • audio.muted         → reliable everywhere
-//    • audio.volume < 0.4  → reliable on Android/Windows/macOS
-//    • AudioContext RMS    → catches near-silence & soft-mute on iOS Safari
-//      (iOS system volume slider is undetectable in JS by design)
+//    • audio.volume < 0.4  → reliable on Android/Windows/macOS/iOS*
+//    Note: iOS system volume slider cannot be read by JS (Apple design).
+//    AudioContext RMS was previously attempted but caused silent audio —
+//    createMediaElementSource() hijacks the audio element output through
+//    a suspended AudioContext. Removed in v1.7.7.
 // ══════════════════════════════════════════════════════════
 var statsDB   = {};
 var _stFlush  = 0;
 var MIN_VOL   = 0.4;
-var MIN_RMS   = 0.03;
-
-var _audioCtx    = null;
-var _analyser    = null;
-var _anlBuf      = null;
-var _acConnected = false;
 
 try { statsDB = JSON.parse(localStorage.getItem('stats_db_v1') || '{}'); } catch(e) {}
-
-function setupAudioContext() {
-    if (_acConnected) return;
-    try {
-        var AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return;
-        _audioCtx = new AC();
-        var src = _audioCtx.createMediaElementSource(audio);
-        _analyser = _audioCtx.createAnalyser();
-        _analyser.fftSize = 256;
-        _anlBuf = new Uint8Array(_analyser.frequencyBinCount);
-        src.connect(_analyser);
-        _analyser.connect(_audioCtx.destination);
-        _acConnected = true;
-    } catch(e) {}
-}
-
-audio.addEventListener('play', function() {
-    if (_audioCtx && _audioCtx.state === 'suspended') _audioCtx.resume().catch(function(){});
-    setupAudioContext();
-}, false);
-
-function getSignalRMS() {
-    if (!_analyser || !_anlBuf) return 1.0;
-    _analyser.getByteTimeDomainData(_anlBuf);
-    var s = 0;
-    for (var i = 0; i < _anlBuf.length; i++) { var v = (_anlBuf[i] - 128) / 128; s += v * v; }
-    return Math.sqrt(s / _anlBuf.length);
-}
 
 function isAudible() {
     if (audio.muted) return false;
     if (audio.volume < MIN_VOL) return false;
-    if (_acConnected && getSignalRMS() < MIN_RMS) return false;
     return true;
 }
 
