@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v1.7.7</title>
+    <title>英语精听播放器 v1.7.8</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -667,7 +667,7 @@
                 <span>💡</span><span id="wakeLockLabel">常亮关</span>
             </button>
             <button class="pill-btn" id="timerBtn" onclick="setTimer()" aria-label="定时停止">
-                <span>🌙</span><span>定时</span>
+                <span>🌙</span><span id="timerLabel">定时</span>
             </button>
             <button class="pill-btn" onclick="fetchDirectory('virtual:folders')" aria-label="我的收藏">
                 <span>📂</span><span>收藏</span>
@@ -676,7 +676,7 @@
                 <span>📊</span><span>统计</span>
             </button>
         </div>
-        <div class="version-tag">Build v1.7.7</div>
+        <div class="version-tag">Build v1.7.8</div>
     </div>
 </div>
 
@@ -727,6 +727,7 @@ function init() {
     buildSpeedWheel();
     setCompact(true);
     startStatsTicker();
+    setupMediaSession();
 }
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -835,7 +836,8 @@ function togglePlay() {
 
 
 // ════════════════ MEDIA SESSION API ═════
-// Enables lock-screen title display and Bluetooth headset controls
+// Enables lock-screen title display and Bluetooth headset controls.
+// Only updates metadata here — action handlers are registered once in init().
 function updateMediaSession(track) {
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -845,21 +847,28 @@ function updateMediaSession(track) {
                     ? currentPath.replace('virtual:list:', '')
                     : '听力材料'
     });
-    navigator.mediaSession.setActionHandler('play',          function() { safePlay(); });
-    navigator.mediaSession.setActionHandler('pause',         function() { audio.pause(); });
-    navigator.mediaSession.setActionHandler('previoustrack', function() { playPrev(); });
-    navigator.mediaSession.setActionHandler('nexttrack',     function() { playNext(); });
-    navigator.mediaSession.setActionHandler('seekbackward',  function(d) { seekRelative(-(d && d.seekOffset || 15)); });
-    navigator.mediaSession.setActionHandler('seekforward',   function(d) { seekRelative(+(d && d.seekOffset || 15)); });
-    // seekto: allows scrubbing from Control Center
+}
+
+// Register all Media Session action handlers ONCE at startup.
+// iOS requires seekbackward/seekforward to be registered before first play,
+// and needs setPositionState called on loadedmetadata for them to appear.
+function setupMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+    var ms = navigator.mediaSession;
+    ms.setActionHandler('play',          function() { safePlay(); });
+    ms.setActionHandler('pause',         function() { audio.pause(); });
+    ms.setActionHandler('previoustrack', function() { playPrev(); });
+    ms.setActionHandler('nexttrack',     function() { playNext(); });
+    ms.setActionHandler('seekbackward',  function(d) { seekRelative(-(d && d.seekOffset ? d.seekOffset : 15)); });
+    ms.setActionHandler('seekforward',   function(d) { seekRelative(+(d && d.seekOffset ? d.seekOffset : 15)); });
     try {
-        navigator.mediaSession.setActionHandler('seekto', function(d) {
-            if (d.seekTime !== undefined && audio.duration) {
+        ms.setActionHandler('seekto', function(d) {
+            if (d && d.seekTime !== undefined && audio.duration) {
                 audio.currentTime = d.seekTime;
                 saveProgress();
             }
         });
-    } catch(e) {}  // 'seekto' not supported on all platforms
+    } catch(e) {}   // 'seekto' unsupported on some platforms — safe to ignore
 }
 
 function clearMediaSession() {
@@ -899,11 +908,19 @@ function playTrack(index) {
     var savedTime = progressDB[track.url] || 0;
     var metaHandler = function() {
         audio.removeEventListener('loadedmetadata', metaHandler);
+        audio.playbackRate = playbackRate;   // iOS resets to 1.0 after load()
         if (savedTime > 2 && audio.duration && !isNaN(audio.duration)) {
             audio.currentTime = savedTime;
             showToast('恢复进度: ' + fmtTime(savedTime));
         }
         updateAudioInfo();
+        // Trigger lock-screen seek buttons: iOS needs positionState set early
+        try {
+            navigator.mediaSession && navigator.mediaSession.setPositionState &&
+            navigator.mediaSession.setPositionState({
+                duration: audio.duration, playbackRate: playbackRate, position: audio.currentTime
+            });
+        } catch(e) {}
     };
     audio.addEventListener('loadedmetadata', metaHandler);
     audio.load();
@@ -914,7 +931,12 @@ function playNext() {
     if (!playList.length) return;
     if (playMode === 'shuffle') {
         var pos = shuffleOrder.indexOf(currentTrackIndex);
-        playTrack(shuffleOrder[(pos + 1) % shuffleOrder.length]);
+        var next = pos + 1;
+        if (next >= shuffleOrder.length) {
+            genShuffle();   // re-shuffle so next round is never the same order
+            next = 0;
+        }
+        playTrack(shuffleOrder[next]);
     } else {
         playTrack((currentTrackIndex + 1) % playList.length);
     }
@@ -984,54 +1006,64 @@ function genShuffle() {
 
 // ════════════════ AUDIO INFO ════════════
 // Fetches file size via HEAD (or Range request) and pairs with duration to estimate bitrate
+// Reads file size via PerformanceResourceTiming (no CORS needed) first,
+// then falls back to XHR HEAD / Range for servers that strip timing data.
 function startAudioInfoLoad(url) {
     var ext = url.split('.').pop().toUpperCase();
     document.getElementById('audioInfo').textContent = ext + ' · 读取中…';
+    if (_fileSizeCache[url]) { updateAudioInfo(); }
 
-    // Try HEAD first, fall back to Range 0-0.
-    // If server doesn't expose Content-Length / Content-Range via CORS
-    // (Access-Control-Expose-Headers), headers will be null — show format only.
-    var fetched = false;
-    function tryHead() {
+    // ── Strategy 1: PerformanceResourceTiming ──────────────────────────
+    // The <audio> element's network request appears in the perf buffer.
+    // encodedBodySize gives real bytes without any CORS header requirement.
+    var perfTries = 0;
+    function tryPerf() {
+        perfTries++;
+        var entries = (window.performance && performance.getEntriesByName)
+                        ? performance.getEntriesByName(url, 'resource') : [];
+        if (entries.length) {
+            var e = entries[entries.length - 1];
+            var sz = e.encodedBodySize || e.decodedBodySize || 0;
+            if (sz > 512) {         // >512 B means we got a real body size
+                _fileSizeCache[url] = sz;
+                updateAudioInfo();
+                return;
+            }
+        }
+        if (perfTries < 25) setTimeout(tryPerf, 200);   // retry up to ~5 s
+        else tryXHR();                                   // give up, fall to XHR
+    }
+
+    // ── Strategy 2: XHR HEAD → Range fallback ──────────────────────────
+    var xhrDone = false;
+    function tryXHR() {
         var xhr = new XMLHttpRequest();
         xhr.open('HEAD', url, true);
         xhr.onreadystatechange = function() {
-            if (xhr.readyState !== 4) return;
-            var size = parseInt(xhr.getResponseHeader('Content-Length') || '0', 10);
-            if (size > 0) {
-                _fileSizeCache[url] = size;
-                fetched = true;
-                updateAudioInfo();
-            } else if (!fetched) {
-                // Content-Length missing: either not exposed via CORS or server omitted it
-                tryRange();
-            }
+            if (xhr.readyState !== 4 || xhrDone) return;
+            var sz = parseInt(xhr.getResponseHeader('Content-Length') || '0', 10);
+            if (sz > 0) { xhrDone = true; _fileSizeCache[url] = sz; updateAudioInfo(); }
+            else tryRange();
         };
-        xhr.onerror = function() { if (!fetched) tryRange(); };
-        try { xhr.send(); } catch(e) { if (!fetched) tryRange(); }
+        xhr.onerror = tryRange;
+        try { xhr.send(); } catch(e) { tryRange(); }
     }
     function tryRange() {
+        if (xhrDone) return;
         var xhr2 = new XMLHttpRequest();
         xhr2.open('GET', url, true);
         try { xhr2.setRequestHeader('Range', 'bytes=0-0'); } catch(e) {}
         xhr2.onreadystatechange = function() {
-            if (xhr2.readyState !== 4) return;
-            var cr = xhr2.getResponseHeader('Content-Range') || '';
-            var m  = cr.match(/\/(\d+)/);
-            if (m) {
-                _fileSizeCache[url] = parseInt(m[1], 10);
-                fetched = true;
-                updateAudioInfo();
-            } else {
-                // Headers not exposed — show format only (CORS: add
-                // Access-Control-Expose-Headers: Content-Length,Content-Range on server)
-                document.getElementById('audioInfo').textContent = ext;
-            }
+            if (xhr2.readyState !== 4 || xhrDone) return;
+            var m = (xhr2.getResponseHeader('Content-Range') || '').match(/\/(\d+)/);
+            if (m) { xhrDone = true; _fileSizeCache[url] = parseInt(m[1], 10); updateAudioInfo(); }
+            else { document.getElementById('audioInfo').textContent = ext; }
         };
         xhr2.onerror = function() { document.getElementById('audioInfo').textContent = ext; };
         try { xhr2.send(); } catch(e) { document.getElementById('audioInfo').textContent = ext; }
     }
-    tryHead();
+
+    tryPerf();
 }
 
 function updateAudioInfo() {
@@ -1205,19 +1237,48 @@ function resetAB() {
 }
 
 // ════════════════ TIMER ══════════════════
-function setTimer() {
-    var i = prompt('定时停止（分钟）:', '30');
-    if (i && !isNaN(i) && parseFloat(i) > 0) {
-        if (sleepTimer) clearTimeout(sleepTimer);
-        document.getElementById('timerBtn').className = 'pill-btn active';
-        sleepTimer = setTimeout(function() {
-            audio.pause();
-            document.getElementById('timerBtn').className = 'pill-btn';
-            sleepTimer = null;
-            showToast('定时停止');
-        }, parseFloat(i) * 60000);
-        showToast('定时 ' + i + ' 分钟后停止');
+var _sleepTimerEnd  = 0;   // epoch ms when timer fires
+var _sleepCountdown = null; // setInterval handle
+
+function _updateTimerLabel() {
+    var remaining = Math.max(0, _sleepTimerEnd - Date.now());
+    var m = Math.floor(remaining / 60000);
+    var s = Math.floor((remaining % 60000) / 1000);
+    document.getElementById('timerLabel').textContent =
+        m > 0 ? m + '分' + (s < 10 ? '0' : '') + s + '秒'
+              : s + '秒';
+    if (remaining <= 0) {
+        clearInterval(_sleepCountdown);
+        _sleepCountdown = null;
+        document.getElementById('timerLabel').textContent = '定时';
     }
+}
+
+function setTimer() {
+    // If timer already running, cancel it
+    if (sleepTimer) {
+        clearTimeout(sleepTimer);  sleepTimer = null;
+        clearInterval(_sleepCountdown); _sleepCountdown = null;
+        document.getElementById('timerBtn').className  = 'pill-btn';
+        document.getElementById('timerLabel').textContent = '定时';
+        showToast('已取消定时');
+        return;
+    }
+    var i = prompt('定时停止（分钟）:', '30');
+    if (!i || isNaN(i) || parseFloat(i) <= 0) return;
+    var ms = parseFloat(i) * 60000;
+    _sleepTimerEnd = Date.now() + ms;
+    document.getElementById('timerBtn').className = 'pill-btn active';
+    _updateTimerLabel();
+    _sleepCountdown = setInterval(_updateTimerLabel, 1000);
+    sleepTimer = setTimeout(function() {
+        audio.pause();
+        clearInterval(_sleepCountdown); _sleepCountdown = null;  sleepTimer = null;
+        document.getElementById('timerBtn').className  = 'pill-btn';
+        document.getElementById('timerLabel').textContent = '定时';
+        showToast('定时停止');
+    }, ms);
+    showToast('定时 ' + i + ' 分钟后停止（再次点击可取消）');
 }
 
 // ════════════════ FAVOURITES ═════════════
@@ -1634,8 +1695,8 @@ function startStatsTicker() {
     }, false);
 
     audio.addEventListener('pause', function() {
-        // Commit any remaining delta on pause
-        _commitStatsDelta();
+        // Only commit if we were actually counting (audible) up to this pause
+        if (isAudible()) _commitStatsDelta();
         _lastAudioTime = -1;
     }, false);
 
