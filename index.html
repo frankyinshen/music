@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v1.7.2</title>
+    <title>英语精听播放器 v1.7.6</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -15,8 +15,39 @@
             --ios-gray-btn: #eef0f4;
             --ios-blur: rgba(255,255,255,0.95);
             --ios-radius: 12px;
+            --ios-sep: rgba(0,0,0,0.08);
             --safe-top: env(safe-area-inset-top, 24px);
             --safe-bottom: env(safe-area-inset-bottom, 20px);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --ios-bg:      #000000;
+                --ios-card:    #1c1c1e;
+                --ios-text:    #ffffff;
+                --ios-subtext: #8e8e93;
+                --ios-gray-btn:#2c2c2e;
+                --ios-blur:    rgba(28,28,30,0.96);
+                --ios-sep:     rgba(255,255,255,0.08);
+            }
+        }
+
+        @media (prefers-color-scheme: dark) {
+            /* Speed wheel gradient masks */
+            .speed-wheel-mask.top {
+                background: linear-gradient(to bottom, rgba(28,28,30,0.97) 0%, rgba(28,28,30,0) 100%);
+            }
+            .speed-wheel-mask.bottom {
+                background: linear-gradient(to top, rgba(28,28,30,0.97) 0%, rgba(28,28,30,0) 100%);
+            }
+            /* Stats sheet bg colour already via var(--ios-bg) */
+            .st-week-totals { border-top-color: rgba(255,255,255,0.08); }
+            .st-week-total-cell:first-child { border-right-color: rgba(255,255,255,0.08); }
+            .st-files-header { border-bottom-color: rgba(255,255,255,0.06); }
+            .st-file-row { border-bottom-color: rgba(255,255,255,0.04); }
+            /* Playlist modal */
+            .playlist-modal { background: #1c1c1e; }
+            /* Speed sheet */
+            .speed-sheet { background: #1c1c1e; }
         }
         html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
         body {
@@ -79,18 +110,18 @@
             display: -webkit-flex; display: flex;
             -webkit-align-items: center; align-items: center;
             padding: 13px 16px; background-color: var(--ios-card);
-            border-bottom: 0.5px solid rgba(0,0,0,0.08);
+            border-bottom: 0.5px solid var(--ios-sep);
             cursor: pointer; position: relative;
             -webkit-tap-highlight-color: rgba(0,0,0,0.05); box-sizing: border-box;
         }
-        .list-item:active { background-color: #e5e5ea; }
+        .list-item:active { background-color: var(--ios-gray-btn); }
         .list-item.active .item-title { color: var(--ios-blue); font-weight: 600; }
         .list-item.pinned-item { background-color: rgba(0,122,255,0.05); }
         .list-item.dragging { opacity: 0.5; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
         .drag-handle { color: #ccc; margin-right: 12px; font-size: 20px; cursor: grab; padding: 5px; touch-action: none; }
         .item-icon { font-size: 20px; margin-right: 12px; width: 24px; text-align: center; }
         .item-info { -webkit-flex: 1; flex: 1; overflow: hidden; }
-        .item-title { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #000; }
+        .item-title { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ios-text); }
         .item-subtext { font-size: 11px; color: var(--ios-subtext); margin-top: 2px; }
         .item-fav-heart { padding: 10px; font-size: 20px; color: #ddd; }
         .item-fav-heart.fav-on { color: var(--ios-red); }
@@ -99,7 +130,7 @@
         .player-bar {
             position: fixed; bottom: 0; left: 0; right: 0;
             background-color: var(--ios-card);
-            border-top: 0.5px solid rgba(0,0,0,0.1);
+            border-top: 0.5px solid var(--ios-sep);
             padding: 10px 0 calc(10px + var(--safe-bottom)) 0;
             z-index: 200; box-shadow: 0 -8px 30px rgba(0,0,0,0.08);
         }
@@ -121,7 +152,7 @@
         }
         .slider-track-bg {
             position: absolute; left: 0; right: 0;
-            height: 5px; background: #d1d1d6; border-radius: 3px; overflow: hidden;
+            height: 5px; background: var(--ios-gray-btn); border-radius: 3px; overflow: hidden;
         }
         .slider-track-fill {
             height: 100%; background: var(--ios-blue); border-radius: 3px; width: 0%;
@@ -134,7 +165,7 @@
         }
         .ios-slider::-webkit-slider-thumb {
             -webkit-appearance: none; width: 22px; height: 22px;
-            background: white; border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+            background: var(--ios-card); border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
         }
 
         /* Track display */
@@ -142,7 +173,7 @@
         .track-name {
             font-size: 16px; font-weight: 700;
             overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-            color: #000; margin-bottom: 1px;
+            color: var(--ios-text); margin-bottom: 1px;
         }
         .track-time { font-size: 11px; color: var(--ios-subtext); font-variant-numeric: tabular-nums; margin-bottom: 2px; }
         .audio-info { font-size: 10px; color: #b0b0b8; min-height: 13px; letter-spacing: 0.3px; }
@@ -155,7 +186,7 @@
             margin-bottom: 10px;
         }
         .learn-btn {
-            background: none; border: none; color: #333; cursor: pointer;
+            background: none; border: none; color: var(--ios-text); cursor: pointer;
             display: -webkit-flex; display: flex;
             -webkit-flex-direction: column; flex-direction: column;
             -webkit-align-items: center; align-items: center;
@@ -174,7 +205,7 @@
         }
         .basic-controls > * { margin: 0 10px; }
         .icon-btn {
-            background: none; border: none; cursor: pointer; padding: 6px; color: #000;
+            background: none; border: none; cursor: pointer; padding: 6px; color: var(--ios-text);
             display: -webkit-flex; display: flex;
             -webkit-align-items: center; align-items: center;
             -webkit-justify-content: center; justify-content: center;
@@ -272,7 +303,7 @@
             -webkit-align-items: center; align-items: center;
             -webkit-justify-content: center; justify-content: center;
             scroll-snap-align: center;
-            font-size: 20px; font-weight: 400; color: #000;
+            font-size: 20px; font-weight: 400; color: var(--ios-text);
         }
         .speed-wheel-option.sel { font-weight: 700; color: var(--ios-blue); font-size: 22px; }
         .speed-wheel-mask {
@@ -280,13 +311,13 @@
         }
         .speed-wheel-mask.top {
             top: 0;
-            background: -webkit-linear-gradient(top, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 100%);
-            background: linear-gradient(to bottom, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 100%);
+            background: -webkit-linear-gradient(top, var(--ios-card) 0%, rgba(0,0,0,0) 100%);
+            background: linear-gradient(to bottom, var(--ios-card) 0%, rgba(0,0,0,0) 100%);
         }
         .speed-wheel-mask.bottom {
             bottom: 0;
-            background: -webkit-linear-gradient(bottom, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 100%);
-            background: linear-gradient(to top, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0) 100%);
+            background: -webkit-linear-gradient(bottom, var(--ios-card) 0%, rgba(0,0,0,0) 100%);
+            background: linear-gradient(to top, var(--ios-card) 0%, rgba(0,0,0,0) 100%);
         }
         .speed-wheel-selector {
             position: absolute; top: 78px; left: 20px; right: 20px; height: 44px;
@@ -320,147 +351,161 @@
         }
         #noSleepVideo { display: none; width: 1px; height: 1px; }
 
-        /* ── STATS SHEET ─────────────────────────── */
-        .stats-sheet-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.45); z-index: 800; display: none;
-        }
+        /* ══ STATS SHEET (v1.7.3) ══════════════════ */
         .stats-sheet {
             position: fixed; top: 0; left: 0; right: 0; bottom: 0;
             background: var(--ios-bg); z-index: 900; display: none;
             -webkit-flex-direction: column; flex-direction: column;
-            -webkit-animation: slideUp 0.35s ease-out; animation: slideUp 0.35s ease-out;
         }
         .stats-sheet.open { display: -webkit-flex; display: flex; }
 
-        /* stats header */
-        .stats-header {
+        /* header */
+        .st-hdr {
             background: var(--ios-blur);
             -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
-            padding: calc(var(--safe-top) + 6px) 16px 0 16px;
+            padding: calc(var(--safe-top) + 2px) 16px 10px 16px;
             border-bottom: 0.5px solid rgba(0,0,0,0.1);
             -webkit-flex-shrink: 0; flex-shrink: 0;
-        }
-        .stats-header-row {
             display: -webkit-flex; display: flex;
             -webkit-align-items: center; align-items: center;
             -webkit-justify-content: space-between; justify-content: space-between;
-            margin-bottom: 12px;
         }
-        .stats-title { font-size: 20px; font-weight: 700; }
-        .stats-close-btn {
-            background: #e5e5ea; border: none; border-radius: 50%;
-            width: 30px; height: 30px; font-size: 16px; cursor: pointer;
+        .st-back {
+            color: var(--ios-blue); font-size: 16px; font-weight: 600;
+            background: none; border: none; cursor: pointer;
             display: -webkit-flex; display: flex;
             -webkit-align-items: center; align-items: center;
-            -webkit-justify-content: center; justify-content: center;
-            -webkit-tap-highlight-color: transparent; color: #555; font-weight: 700;
+            -webkit-tap-highlight-color: transparent; padding: 4px 0;
         }
-        /* tab bar */
-        .stats-tabs {
-            display: -webkit-flex; display: flex;
-            border-bottom: 0.5px solid rgba(0,0,0,0.1);
-        }
-        .stats-tab {
-            -webkit-flex: 1; flex: 1; text-align: center;
-            padding: 10px 0; font-size: 14px; font-weight: 600;
-            color: var(--ios-subtext); cursor: pointer;
-            border-bottom: 2px solid transparent;
-            -webkit-tap-highlight-color: transparent;
-            background: none; border-top: none; border-left: none; border-right: none;
-        }
-        .stats-tab.active { color: var(--ios-blue); border-bottom: 2px solid var(--ios-blue); }
+        .st-hdr-title { font-size: 17px; font-weight: 700; }
+        .st-hdr-spacer { width: 60px; }
 
-        /* stats body */
-        .stats-body {
+        /* scrollable body */
+        .st-body {
             -webkit-flex: 1; flex: 1;
             overflow-y: scroll; -webkit-overflow-scrolling: touch;
-            padding: 16px 16px 30px 16px;
+            padding: 14px 14px calc(30px + var(--safe-bottom)) 14px;
         }
 
-        /* summary card */
-        .stats-summary-card {
-            background: var(--ios-blue);
-            border-radius: 16px; padding: 18px 20px; margin-bottom: 16px;
+        /* cumulative total card */
+        .st-cumul {
+            background: var(--ios-card); border-radius: 16px;
+            padding: 16px 20px 14px 20px; margin-bottom: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .st-cumul-label { font-size: 14px; font-weight: 700; color: var(--ios-text); margin-bottom: 6px; }
+        .st-cumul-value {
+            display: -webkit-flex; display: flex;
+            -webkit-align-items: flex-end; align-items: flex-end;
+        }
+        .st-cumul-num { font-size: 38px; font-weight: 700; color: #27ae60; letter-spacing: -1px; line-height: 1; }
+        .st-cumul-unit { font-size: 15px; font-weight: 600; color: #27ae60; margin-left: 3px; margin-bottom: 4px; }
+        .st-cumul-sub { font-size: 11px; color: var(--ios-subtext); margin-top: 4px; }
+
+        /* week chart card */
+        .st-week-card {
+            background: var(--ios-card); border-radius: 16px;
+            padding: 14px 16px 16px 16px; margin-bottom: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        /* week nav row */
+        .st-week-nav {
+            display: -webkit-flex; display: flex;
+            -webkit-align-items: center; align-items: center;
+            -webkit-justify-content: space-between; justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .st-week-arrow {
+            background: none; border: none; cursor: pointer;
+            color: var(--ios-blue); font-size: 20px; font-weight: 700;
+            padding: 4px 10px; -webkit-tap-highlight-color: transparent;
+        }
+        .st-week-arrow:disabled { color: #ccc; }
+        .st-week-label { font-size: 15px; font-weight: 700; color: var(--ios-text); }
+        .st-week-range { font-size: 13px; color: var(--ios-subtext); text-align: center; }
+
+        /* bar chart labels row */
+        .st-bar-meta {
             display: -webkit-flex; display: flex;
             -webkit-justify-content: space-between; justify-content: space-between;
             -webkit-align-items: center; align-items: center;
+            margin-bottom: 4px;
         }
-        .stats-summary-label { font-size: 13px; color: rgba(255,255,255,0.75); margin-bottom: 4px; }
-        .stats-summary-value { font-size: 32px; font-weight: 700; color: #fff; letter-spacing: -0.5px; }
-        .stats-summary-unit  { font-size: 14px; color: rgba(255,255,255,0.8); margin-left: 4px; }
-        .stats-summary-sub   { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 3px; }
+        .st-bar-meta-l { font-size: 12px; color: var(--ios-subtext); font-weight: 600; }
+        .st-bar-meta-r { font-size: 12px; color: var(--ios-subtext); }
 
-        /* notice when no data */
-        .stats-empty {
-            text-align: center; padding: 50px 20px;
-            color: var(--ios-subtext); font-size: 15px; line-height: 1.6;
-        }
-        .stats-empty-icon { font-size: 44px; margin-bottom: 12px; }
+        /* canvas bar chart */
+        #stBarCanvas { display: block; width: 100%; touch-action: none; }
 
-        /* today table */
-        .stats-section-title {
-            font-size: 13px; font-weight: 700; color: var(--ios-subtext);
-            text-transform: uppercase; letter-spacing: 0.5px;
-            margin-bottom: 8px; margin-top: 16px;
+        /* week totals row */
+        .st-week-totals {
+            display: -webkit-flex; display: flex;
+            border-top: 0.5px solid var(--ios-sep); margin-top: 14px; padding-top: 12px;
         }
-        .stats-table {
-            background: var(--ios-card); border-radius: 12px; overflow: hidden;
+        .st-week-total-cell {
+            -webkit-flex: 1; flex: 1; text-align: center;
         }
-        .stats-row {
+        .st-week-total-cell:first-child {
+            border-right: 0.5px solid var(--ios-sep);
+        }
+        .st-week-total-label { font-size: 12px; color: var(--ios-subtext); font-weight: 600; margin-bottom: 4px; }
+        .st-week-total-value { font-size: 18px; font-weight: 700; color: var(--ios-blue); }
+        .st-week-compare { font-size: 13px; font-weight: 600; }
+        .st-compare-up   { color: #27ae60; }
+        .st-compare-down { color: var(--ios-red); }
+        .st-compare-same { color: var(--ios-subtext); }
+
+        /* daily files card */
+        .st-files-card {
+            background: var(--ios-card); border-radius: 16px;
+            overflow: hidden; margin-bottom: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .st-files-header {
+            display: -webkit-flex; display: flex;
+            -webkit-justify-content: space-between; justify-content: space-between;
+            -webkit-align-items: center; align-items: center;
+            padding: 14px 16px 10px 16px;
+            border-bottom: 0.5px solid var(--ios-sep);
+        }
+        .st-files-title {
+            display: -webkit-flex; display: flex;
+            -webkit-align-items: center; align-items: center;
+            font-size: 15px; font-weight: 700; color: var(--ios-text);
+        }
+        .st-files-date { font-size: 13px; color: var(--ios-subtext); }
+        .st-file-row {
             display: -webkit-flex; display: flex;
             -webkit-align-items: center; align-items: center;
             padding: 12px 16px;
-            border-bottom: 0.5px solid rgba(0,0,0,0.07);
+            border-bottom: 0.5px solid var(--ios-sep);
         }
-        .stats-row:last-child { border-bottom: none; }
-        .stats-row-rank {
-            width: 22px; height: 22px; border-radius: 11px;
-            background: var(--ios-blue); color: #fff;
-            font-size: 11px; font-weight: 700; text-align: center; line-height: 22px;
-            margin-right: 12px; -webkit-flex-shrink: 0; flex-shrink: 0;
+        .st-file-row:last-child { border-bottom: none; }
+        .st-file-icon {
+            width: 42px; height: 42px; border-radius: 10px;
+            background: -webkit-linear-gradient(135deg, #f5a623, #f0932b);
+            background: linear-gradient(135deg, #f5a623, #f0932b);
+            display: -webkit-flex; display: flex;
+            -webkit-align-items: center; align-items: center;
+            -webkit-justify-content: center; justify-content: center;
+            font-size: 20px; margin-right: 12px;
+            -webkit-flex-shrink: 0; flex-shrink: 0;
         }
-        .stats-row-rank.gold   { background: #f5a623; }
-        .stats-row-rank.silver { background: #9b9b9b; }
-        .stats-row-rank.bronze { background: #c47c3d; }
-        .stats-row-name {
-            -webkit-flex: 1; flex: 1;
-            font-size: 14px; overflow: hidden;
-            text-overflow: ellipsis; white-space: nowrap; color: #000;
+        .st-file-info { -webkit-flex: 1; flex: 1; overflow: hidden; }
+        .st-file-name {
+            font-size: 15px; font-weight: 600; color: var(--ios-text);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
         }
-        .stats-row-time {
-            font-size: 13px; font-weight: 600; color: var(--ios-blue);
-            margin-left: 10px; -webkit-flex-shrink: 0; flex-shrink: 0;
-        }
-        .stats-row-bar-wrap {
-            width: 100%; height: 4px; background: #f0f0f5;
-            border-radius: 2px; margin-top: 5px;
-        }
-        .stats-row-bar-fill {
-            height: 100%; background: var(--ios-blue);
-            border-radius: 2px; -webkit-transition: width 0.5s ease; transition: width 0.5s ease;
+        .st-file-dur { font-size: 12px; color: var(--ios-subtext); margin-top: 2px; }
+        .st-empty-files {
+            text-align: center; padding: 28px 20px;
+            color: var(--ios-subtext); font-size: 14px;
         }
 
-        /* chart */
-        .stats-chart-wrap {
-            background: var(--ios-card); border-radius: 16px;
-            padding: 16px 8px 8px 8px; margin-bottom: 16px; position: relative;
-        }
-        .stats-chart-title {
-            font-size: 13px; font-weight: 700; color: var(--ios-subtext);
-            text-align: center; margin-bottom: 12px;
-        }
-        #statsCanvas { display: block; width: 100%; touch-action: none; }
-        .stats-chart-tooltip {
-            position: absolute; background: rgba(0,0,0,0.82); color: #fff;
-            font-size: 12px; font-weight: 600; padding: 5px 10px;
-            border-radius: 8px; pointer-events: none; display: none;
-            white-space: nowrap; z-index: 10;
-            -webkit-transform: translate(-50%, -130%); transform: translate(-50%, -130%);
-        }
-        .stats-notice {
-            font-size: 11px; color: #b0b0b8; text-align: center;
-            margin-top: 8px; padding: 0 8px;
+        /* notice */
+        .st-notice {
+            font-size: 11px; color: var(--ios-subtext); text-align: center;
+            padding: 0 8px 4px 8px; line-height: 1.6;
         }
     </style>
 </head>
@@ -481,22 +526,17 @@
     </div>
 </div>
 
-<!-- Stats Sheet -->
-<div class="stats-sheet-overlay" id="statsOverlay" onclick="closeStats()"></div>
+<!-- Stats Sheet (v1.7.3) -->
 <div class="stats-sheet" id="statsSheet">
-    <div class="stats-header">
-        <div class="stats-header-row">
-            <div class="stats-title">📊 听力统计</div>
-            <button class="stats-close-btn" onclick="closeStats()">✕</button>
-        </div>
-        <div class="stats-tabs">
-            <button class="stats-tab active" onclick="switchStatsTab('today',this)">今日</button>
-            <button class="stats-tab" onclick="switchStatsTab('7d',this)">近7日</button>
-            <button class="stats-tab" onclick="switchStatsTab('30d',this)">近30日</button>
-            <button class="stats-tab" onclick="switchStatsTab('180d',this)">近半年</button>
-        </div>
+    <div class="st-hdr">
+        <button class="st-back" onclick="closeStats()" aria-label="关闭统计">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="pointer-events:none"><path d="M15 18l-6-6 6-6"/></svg>
+            返回
+        </button>
+        <div class="st-hdr-title">学习状况</div>
+        <div class="st-hdr-spacer"></div>
     </div>
-    <div class="stats-body" id="statsBody"></div>
+    <div class="st-body" id="stBody"></div>
 </div>
 
 <!-- Speed Sheet -->
@@ -504,7 +544,7 @@
 <div class="speed-sheet" id="speedSheet">
     <div class="speed-sheet-header">
         <div class="speed-sheet-title">播放速度</div>
-        <button class="speed-done-btn" onclick="closeSpeedSheet()">完成</button>
+        <button class="speed-done-btn" onclick="closeSpeedSheet()" aria-label="关闭速度选择">完成</button>
     </div>
     <div class="speed-live-badge" id="speedLiveBadge">1.0x</div>
     <div class="speed-wheel-wrap">
@@ -518,7 +558,7 @@
 <!-- HEADER -->
 <div class="header">
     <div class="path-nav">
-        <button class="back-btn" onclick="goBack()">
+        <button class="back-btn" onclick="goBack()" aria-label="返回上级目录">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="pointer-events:none"><path d="M15 18l-6-6 6-6"/></svg>
             返回
         </button>
@@ -527,7 +567,7 @@
     </div>
     <div class="search-bar">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" style="-webkit-flex-shrink:0;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" class="search-input" id="searchInput" placeholder="搜索..." oninput="filterList()">
+        <input type="text" class="search-input" id="searchInput" placeholder="搜索..." oninput="onSearchInput()">
     </div>
 </div>
 
@@ -557,15 +597,15 @@
     <!-- Learning controls (hidden compact) -->
     <div class="pf">
         <div class="learning-controls">
-            <button class="learn-btn" onclick="seekRelative(-15)">
+            <button class="learn-btn" onclick="seekRelative(-15)" aria-label="快退15秒">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>
                 15s
             </button>
-            <button class="learn-btn" id="abBtn" onclick="handleABRepeat()">
+            <button class="learn-btn" id="abBtn" onclick="handleABRepeat()" aria-label="A-B重复">
                 <svg viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M7 7h10v2H7zM7 11h10v2H7zM7 15h10v2H7z"/></svg>
                 <span id="abText">A-B重复</span>
             </button>
-            <button class="learn-btn" onclick="seekRelative(15)">
+            <button class="learn-btn" onclick="seekRelative(15)" aria-label="快进15秒">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="pointer-events:none"><path d="M15 14l4-4-4-4"/><path d="M19 10H8a4 4 0 1 0 0 8h1"/></svg>
                 15s
             </button>
@@ -578,7 +618,7 @@
           cycleBtn: 3-state cycle button (list → single → shuffle)
           Uses data-mode attribute to track state
         -->
-        <button class="cycle-wrap" id="cycleBtn" onclick="cyclPlayMode()" data-mode="list">
+        <button class="cycle-wrap" id="cycleBtn" onclick="cyclPlayMode()" data-mode="list" aria-label="切换循环模式">
             <!-- List repeat icon (default) -->
             <svg id="cycleIconList" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
@@ -595,42 +635,42 @@
         </button>
 
         <!-- Prev -->
-        <button class="icon-btn side-btn" onclick="playPrev()">
+        <button class="icon-btn side-btn" onclick="playPrev()" aria-label="上一首">
             <svg viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
         </button>
         <!-- Play/Pause -->
-        <button class="icon-btn play-btn" onclick="togglePlay()">
+        <button class="icon-btn play-btn" onclick="togglePlay()" aria-label="播放/暂停">
             <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M8 5v14l11-7z"/></svg>
             <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" style="display:none;pointer-events:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
         </button>
         <!-- Next -->
-        <button class="icon-btn side-btn" onclick="playNext()">
+        <button class="icon-btn side-btn" onclick="playNext()" aria-label="下一首">
             <svg viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
         </button>
         <!-- Favourite -->
-        <button class="fav-btn" id="mainFavBtn" onclick="openPlaylistModal()">🤍</button>
+        <button class="fav-btn" id="mainFavBtn" onclick="openPlaylistModal()" aria-label="收藏">🤍</button>
     </div>
 
     <!-- Feature grid (hidden compact) -->
     <div class="pf">
         <div class="feature-grid">
-            <button class="pill-btn" id="speedBtn" onclick="openSpeedSheet()">
+            <button class="pill-btn" id="speedBtn" onclick="openSpeedSheet()" aria-label="播放速度">
                 <span>⚡️</span><span id="speedLabel">1.0x</span>
             </button>
-            <button class="pill-btn" id="wakeLockBtn" onclick="toggleWakeLock()">
+            <button class="pill-btn" id="wakeLockBtn" onclick="toggleWakeLock()" aria-label="屏幕常亮">
                 <span>💡</span><span id="wakeLockLabel">常亮关</span>
             </button>
-            <button class="pill-btn" id="timerBtn" onclick="setTimer()">
+            <button class="pill-btn" id="timerBtn" onclick="setTimer()" aria-label="定时停止">
                 <span>🌙</span><span>定时</span>
             </button>
-            <button class="pill-btn" onclick="fetchDirectory('virtual:folders')">
+            <button class="pill-btn" onclick="fetchDirectory('virtual:folders')" aria-label="我的收藏">
                 <span>📂</span><span>收藏</span>
             </button>
-            <button class="pill-btn" onclick="openStats()">
+            <button class="pill-btn" onclick="openStats()" aria-label="听力统计">
                 <span>📊</span><span>统计</span>
             </button>
         </div>
-        <div class="version-tag">Build v1.7.2</div>
+        <div class="version-tag">Build v1.7.6</div>
     </div>
 </div>
 
@@ -725,6 +765,7 @@ function setupAudioEvents() {
         saveProgress();
     });
     audio.addEventListener('ended',  function() {
+        clearMediaSession();
         try { delete progressDB[audio.src]; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e) {}
         if (playMode === 'single') { playTrack(currentTrackIndex); }
         else { playNext(); }
@@ -750,6 +791,7 @@ function setupAudioEvents() {
 
 function onTU() {
     if (!audio.duration || isNaN(audio.duration)) return;
+    updateMediaPositionState();
     if (!isDraggingSlider) {
         var pct = (audio.currentTime / audio.duration) * 100;
         slider.value = pct;
@@ -760,13 +802,74 @@ function onTU() {
 }
 
 // ════════════════ PLAY CONTROLS ═════════
+// ── Autoplay error handler ──────────────────────────────
+// NotAllowedError = browser blocked autoplay (no user gesture yet)
+// AbortError      = normal interruption when switching tracks quickly → ignore silently
+function safePlay(targetAudio) {
+    return (targetAudio || audio).play().catch(function(e) {
+        if (e && e.name === 'NotAllowedError') {
+            showToast('请点击播放按钮开始播放');
+            // Ensure UI stays in paused state
+            document.getElementById('iconPlay').style.display  = 'block';
+            document.getElementById('iconPause').style.display = 'none';
+        }
+        // AbortError and others: silent — normal when switching tracks
+    });
+}
+
 function togglePlay() {
     if (!audio.src || audio.src === window.location.href) {
         if (playList.length > 0) playTrack(0);
         return;
     }
-    if (audio.paused) { audio.play().catch(function(e) {}); }
+    if (audio.paused) { safePlay(); }
     else { audio.pause(); }
+}
+
+
+// ════════════════ MEDIA SESSION API ═════
+// Enables lock-screen title display and Bluetooth headset controls
+function updateMediaSession(track) {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+        title:  track.name,
+        artist: '英语精听播放器',
+        album:  currentPath.indexOf('virtual:list:') === 0
+                    ? currentPath.replace('virtual:list:', '')
+                    : '听力材料'
+    });
+    navigator.mediaSession.setActionHandler('play',          function() { safePlay(); });
+    navigator.mediaSession.setActionHandler('pause',         function() { audio.pause(); });
+    navigator.mediaSession.setActionHandler('previoustrack', function() { playPrev(); });
+    navigator.mediaSession.setActionHandler('nexttrack',     function() { playNext(); });
+    navigator.mediaSession.setActionHandler('seekbackward',  function(d) { seekRelative(-(d && d.seekOffset || 15)); });
+    navigator.mediaSession.setActionHandler('seekforward',   function(d) { seekRelative(+(d && d.seekOffset || 15)); });
+    // seekto: allows scrubbing from Control Center
+    try {
+        navigator.mediaSession.setActionHandler('seekto', function(d) {
+            if (d.seekTime !== undefined && audio.duration) {
+                audio.currentTime = d.seekTime;
+                saveProgress();
+            }
+        });
+    } catch(e) {}  // 'seekto' not supported on all platforms
+}
+
+function clearMediaSession() {
+    if (!('mediaSession' in navigator)) return;
+    navigator.mediaSession.metadata = null;
+}
+
+// Keep Media Session position state in sync (for Control Center scrubber)
+function updateMediaPositionState() {
+    if (!('mediaSession' in navigator) || !audio.duration || isNaN(audio.duration)) return;
+    try {
+        navigator.mediaSession.setPositionState({
+            duration:     audio.duration,
+            playbackRate: audio.playbackRate,
+            position:     audio.currentTime
+        });
+    } catch(e) {}
 }
 
 function playTrack(index) {
@@ -777,6 +880,7 @@ function playTrack(index) {
     audio.src = track.url;
     audio.playbackRate = playbackRate;
     document.getElementById('trackName').textContent = track.name;
+    updateMediaSession(track);
     document.getElementById('trackTime').textContent = '--:-- / --:--';
     document.getElementById('audioInfo').textContent = '';
 
@@ -796,7 +900,7 @@ function playTrack(index) {
     };
     audio.addEventListener('loadedmetadata', metaHandler);
     audio.load();
-    audio.play().catch(function() {});
+    safePlay();
 }
 
 function playNext() {
@@ -877,7 +981,9 @@ function startAudioInfoLoad(url) {
     var ext = url.split('.').pop().toUpperCase();
     document.getElementById('audioInfo').textContent = ext + ' · 读取中…';
 
-    // Try HEAD first, fall back to Range 0-0
+    // Try HEAD first, fall back to Range 0-0.
+    // If server doesn't expose Content-Length / Content-Range via CORS
+    // (Access-Control-Expose-Headers), headers will be null — show format only.
     var fetched = false;
     function tryHead() {
         var xhr = new XMLHttpRequest();
@@ -890,6 +996,7 @@ function startAudioInfoLoad(url) {
                 fetched = true;
                 updateAudioInfo();
             } else if (!fetched) {
+                // Content-Length missing: either not exposed via CORS or server omitted it
                 tryRange();
             }
         };
@@ -902,7 +1009,6 @@ function startAudioInfoLoad(url) {
         try { xhr2.setRequestHeader('Range', 'bytes=0-0'); } catch(e) {}
         xhr2.onreadystatechange = function() {
             if (xhr2.readyState !== 4) return;
-            // Content-Range: bytes 0-0/TOTAL
             var cr = xhr2.getResponseHeader('Content-Range') || '';
             var m  = cr.match(/\/(\d+)/);
             if (m) {
@@ -910,7 +1016,8 @@ function startAudioInfoLoad(url) {
                 fetched = true;
                 updateAudioInfo();
             } else {
-                // Can't get size – just show format
+                // Headers not exposed — show format only (CORS: add
+                // Access-Control-Expose-Headers: Content-Length,Content-Range on server)
                 document.getElementById('audioInfo').textContent = ext;
             }
         };
@@ -995,12 +1102,18 @@ function openSpeedSheet() {
     var wheel = document.getElementById('speedWheelScroll');
     var idx   = SPEED_OPTIONS.indexOf(playbackRate);
     if (idx < 0) idx = SPEED_OPTIONS.indexOf(1.0);
-    wheel.scrollTop = idx * WHEEL_ITEM_H;
-    document.getElementById('speedLiveBadge').textContent = fmtSpeed(SPEED_OPTIONS[idx]);
-    applyWheelSpeed();
+    if (idx < 0) idx = 4; // hard fallback to 1.0x
 
+    // Show the sheet FIRST — scrollTop is ignored while display:none
     document.getElementById('speedOverlay').style.display = 'block';
     document.getElementById('speedSheet').className = 'speed-sheet open';
+
+    // Then set scroll position after the browser has painted the element
+    setTimeout(function() {
+        wheel.scrollTop = idx * WHEEL_ITEM_H;
+        document.getElementById('speedLiveBadge').textContent = fmtSpeed(SPEED_OPTIONS[idx]);
+        applyWheelSpeed();
+    }, 0);
 }
 
 function closeSpeedSheet() {
@@ -1009,36 +1122,51 @@ function closeSpeedSheet() {
 }
 
 // ════════════════ WAKE LOCK ══════════════
-function toggleWakeLock() {
-    isWakeLockEnabled = !isWakeLockEnabled;
+function _setWakeLockUI(on) {
     var btn   = document.getElementById('wakeLockBtn');
     var label = document.getElementById('wakeLockLabel');
+    if (!btn) return;
+    btn.className   = on ? 'pill-btn active' : 'pill-btn';
+    label.textContent = on ? '常亮开' : '常亮关';
+}
+
+function _requestWakeLock(silent) {
+    if (!('wakeLock' in navigator)) return;
+    navigator.wakeLock.request('screen').then(function(wl) {
+        wakeLockObj = wl;
+        // Re-request if system releases the lock (e.g. tab goes background then returns)
+        wl.addEventListener('release', function() {
+            wakeLockObj = null;
+            if (isWakeLockEnabled && document.visibilityState === 'visible') {
+                _requestWakeLock(true);
+            }
+        });
+        if (!silent) showToast('已开启屏幕常亮');
+    }).catch(function(err) {
+        // System denied (low battery mode, power-saving policy, etc.)
+        // Roll back UI so button reflects reality
+        isWakeLockEnabled = false;
+        _setWakeLockUI(false);
+        if (!silent) showToast('⚠️ 系统拒绝常亮请求（可能正在省电模式）');
+    });
+}
+
+function toggleWakeLock() {
+    isWakeLockEnabled = !isWakeLockEnabled;
+    _setWakeLockUI(isWakeLockEnabled);
     if (isWakeLockEnabled) {
-        btn.className   = 'pill-btn active';
-        label.textContent = '常亮开';
-        if ('wakeLock' in navigator) {
-            navigator.wakeLock.request('screen').then(function(wl) {
-                wakeLockObj = wl;
-                wl.addEventListener('release', function() {
-                    if (isWakeLockEnabled && document.visibilityState === 'visible') {
-                        navigator.wakeLock.request('screen').then(function(w2) { wakeLockObj = w2; }).catch(function(){});
-                    }
-                });
-            }).catch(function(){});
-        }
+        _requestWakeLock(false);
         noSleepV.play().catch(function(){});
-        showToast('已开启屏幕常亮');
     } else {
-        btn.className   = 'pill-btn';
-        label.textContent = '常亮关';
         if (wakeLockObj) { try { wakeLockObj.release(); } catch(e){} wakeLockObj = null; }
         noSleepV.pause();
         showToast('已关闭屏幕常亮');
     }
 }
+
 document.addEventListener('visibilitychange', function() {
-    if (isWakeLockEnabled && document.visibilityState === 'visible' && 'wakeLock' in navigator) {
-        navigator.wakeLock.request('screen').then(function(wl) { wakeLockObj = wl; }).catch(function(){});
+    if (isWakeLockEnabled && document.visibilityState === 'visible') {
+        _requestWakeLock(true);   // silent retry on return from background
     }
 });
 
@@ -1171,8 +1299,10 @@ function fetchDirectory(url) {
     if (url.indexOf('virtual:list:') === 0) { renderTracksInPlaylist(url.replace('virtual:list:', '')); return; }
     currentPath = url;
     document.getElementById('fileList').innerHTML = '<div style="text-align:center;padding:20px;color:gray;">连接中...</div>';
-    var disp = url.replace(SITE_ROOT, '/'); if (!disp) disp = '/';
-    document.getElementById('currentFolder').textContent = disp;
+    var rawDisp = url.replace(SITE_ROOT, '/');
+    if (!rawDisp || rawDisp === '') rawDisp = '/';
+    try { rawDisp = decodeURIComponent(rawDisp); } catch(e) {}
+    document.getElementById('currentFolder').textContent = rawDisp;
 
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
@@ -1265,7 +1395,7 @@ function renderList(items, isPlaylist) {
             div.innerHTML =
                 (isPlaylist ? '<div class="drag-handle">≡</div>' : '') +
                 '<div class="item-icon">' + (item.isFolder ? '📁' : '🎵') + '</div>' +
-                '<div class="item-info"><div class="item-title">' + item.name + '</div>' + sub + '</div>' +
+                '<div class="item-info"><div class="item-title">' + escHtml(item.name) + '</div>' + sub + '</div>' +
                 (item.isAudio ? '<div class="item-fav-heart ' + (isFav ? 'fav-on' : '') + '" onclick="toggleQuickFav(event,\'' + enc + '\')">' + (isFav ? '❤️' : '🤍') + '</div>' : '');
 
             div.onclick = function(e) {
@@ -1320,7 +1450,7 @@ function renderPlaylistFolders() {
             var esc = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
             div.innerHTML =
                 '<div class="item-icon">📁</div>' +
-                '<div class="item-info"><div class="item-title">' + name + '</div><div class="item-subtext">' + playlists[name].length + ' 首</div></div>' +
+                '<div class="item-info"><div class="item-title">' + escHtml(name) + '</div><div class="item-subtext">' + playlists[name].length + ' 首</div></div>' +
                 '<div style="font-size:12px;color:var(--ios-blue);padding:8px;cursor:pointer;" onclick="event.stopPropagation();renamePlaylist(\'' + esc + '\')">重命名</div>' +
                 '<div style="font-size:12px;color:var(--ios-red);padding:8px;cursor:pointer;" onclick="event.stopPropagation();deletePlaylist(\'' + esc + '\')">删除</div>';
             div.onclick = function() { fetchDirectory('virtual:list:' + name); };
@@ -1365,6 +1495,13 @@ function goBack() {
         fetchDirectory(u.origin + '/' + parts.join('/') + (parts.length ? '/' : ''));
     } catch(e) { fetchDirectory(SITE_ROOT); }
 }
+// ── Search debounce ─────────────────────────────────────
+var _searchTimer = null;
+function onSearchInput() {
+    clearTimeout(_searchTimer);
+    _searchTimer = setTimeout(filterList, 280);
+}
+
 function filterList() {
     if (currentPath === 'virtual:folders') { renderPlaylistFolders(); return; }
     if (currentPath.indexOf('virtual:list:') === 0) { renderTracksInPlaylist(currentPath.replace('virtual:list:', '')); return; }
@@ -1451,46 +1588,186 @@ function showToast(msg) {
     showToast._t = setTimeout(function() { t.style.display = 'none'; }, 1800);
 }
 
-// ════════════════════════════════════════════════════
-//  LISTENING STATS  (v1.7.2)
+// ══════════════════════════════════════════════════════════
+//  LISTENING STATS  v1.7.3
 //
-//  Storage key:  stats_db_v1
-//  Structure:    { "YYYY-MM-DD": { "urlKey": { name, url, sec } } }
+//  Storage:  stats_db_v1  →  { "YYYY-MM-DD": { urlHash: {name,url,sec} } }
 //
-//  Tracking rule: add 1 second every second only when
-//    audio is playing  AND  audio.volume >= 0.4  AND  !audio.muted
-// ════════════════════════════════════════════════════
-var statsDB = {};
-var _statsFlushCounter = 0;
-var MIN_VOLUME = 0.4;
+//  Volume gate (cross-platform best-effort):
+//    • audio.muted         → reliable everywhere
+//    • audio.volume < 0.4  → reliable on Android/Windows/macOS
+//    • AudioContext RMS    → catches near-silence & soft-mute on iOS Safari
+//      (iOS system volume slider is undetectable in JS by design)
+// ══════════════════════════════════════════════════════════
+var statsDB   = {};
+var _stFlush  = 0;
+var MIN_VOL   = 0.4;
+var MIN_RMS   = 0.03;
+
+var _audioCtx    = null;
+var _analyser    = null;
+var _anlBuf      = null;
+var _acConnected = false;
 
 try { statsDB = JSON.parse(localStorage.getItem('stats_db_v1') || '{}'); } catch(e) {}
 
-// --- Tracking ticker (runs every second) ---
-function startStatsTicker() {
-    setInterval(function() {
-        if (audio.paused) return;
-        if (audio.muted || audio.volume < MIN_VOLUME) return;
-        var track = playList[currentTrackIndex];
-        if (!track) return;
+function setupAudioContext() {
+    if (_acConnected) return;
+    try {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        _audioCtx = new AC();
+        var src = _audioCtx.createMediaElementSource(audio);
+        _analyser = _audioCtx.createAnalyser();
+        _analyser.fftSize = 256;
+        _anlBuf = new Uint8Array(_analyser.frequencyBinCount);
+        src.connect(_analyser);
+        _analyser.connect(_audioCtx.destination);
+        _acConnected = true;
+    } catch(e) {}
+}
 
+audio.addEventListener('play', function() {
+    if (_audioCtx && _audioCtx.state === 'suspended') _audioCtx.resume().catch(function(){});
+    setupAudioContext();
+}, false);
+
+function getSignalRMS() {
+    if (!_analyser || !_anlBuf) return 1.0;
+    _analyser.getByteTimeDomainData(_anlBuf);
+    var s = 0;
+    for (var i = 0; i < _anlBuf.length; i++) { var v = (_anlBuf[i] - 128) / 128; s += v * v; }
+    return Math.sqrt(s / _anlBuf.length);
+}
+
+function isAudible() {
+    if (audio.muted) return false;
+    if (audio.volume < MIN_VOL) return false;
+    if (_acConnected && getSignalRMS() < MIN_RMS) return false;
+    return true;
+}
+
+// ── Stats Ticker: timeupdate delta (replaces setInterval) ──
+// Using timeupdate avoids iOS background timer throttling.
+// Delta-time approach stays accurate even when events are throttled.
+var _lastAudioTime  = -1;   // last audio.currentTime seen
+var _lastWallClock  = -1;   // performance.now() or Date.now() at that moment
+
+function startStatsTicker() {
+    audio.addEventListener('play', function() {
+        // Reset reference points when playback (re)starts
+        _lastAudioTime = audio.currentTime;
+        _lastWallClock = _nowMs();
+    }, false);
+
+    audio.addEventListener('pause', function() {
+        // Commit any remaining delta on pause
+        _commitStatsDelta();
+        _lastAudioTime = -1;
+    }, false);
+
+    audio.addEventListener('seeked', function() {
+        // Discard stale reference after seeking to avoid giant delta
+        _lastAudioTime = audio.currentTime;
+        _lastWallClock = _nowMs();
+    }, false);
+
+    audio.addEventListener('timeupdate', function() {
+        if (audio.paused) return;
+        if (!isAudible()) {
+            // Volume dropped below threshold – reset reference, don't count
+            _lastAudioTime = audio.currentTime;
+            _lastWallClock = _nowMs();
+            return;
+        }
+        _commitStatsDelta();
+    }, false);
+
+    // Safety net: wall-clock fallback every 5 s for browsers that
+    // suspend timeupdate while backgrounded (rare but possible)
+    setInterval(function() {
+        if (audio.paused || _lastWallClock < 0) return;
+        if (!isAudible()) return;
+        // If no timeupdate fired for > 3 s, use wall-clock delta
+        var wall = _nowMs() - _lastWallClock;
+        if (wall > 3000) _commitStatsDelta(true);
+    }, 5000);
+}
+
+function _nowMs() {
+    return (window.performance && performance.now) ? performance.now() : Date.now();
+}
+
+function _commitStatsDelta(useWallClock) {
+    if (_lastAudioTime < 0) return;
+    var track = playList[currentTrackIndex];
+    if (!track) return;
+
+    var delta;
+    if (useWallClock) {
+        // Fallback: estimate from wall clock (capped at 10s for safety)
+        delta = Math.min((_nowMs() - _lastWallClock) / 1000, 10);
+    } else {
+        delta = audio.currentTime - _lastAudioTime;
+    }
+
+    // Accept only plausible forward-progress deltas (0 < delta < 2s)
+    // Larger values indicate seeks or page resuming from long sleep
+    if (delta > 0 && delta < 2) {
         var today = todayKey();
         if (!statsDB[today]) statsDB[today] = {};
-        // Use a short hash of URL as key (to avoid giant keys)
-        var k = urlKey(track.url);
+        var k = urlHash(track.url);
         if (!statsDB[today][k]) statsDB[today][k] = { name: track.name, url: track.url, sec: 0 };
-        statsDB[today][k].sec += 1;
-        // Flush to localStorage every 10 seconds
-        _statsFlushCounter++;
-        if (_statsFlushCounter >= 10) {
-            _statsFlushCounter = 0;
-            flushStats();
-        }
-    }, 1000);
+        statsDB[today][k].sec += delta;  // fractional seconds, more accurate
+
+        if (++_stFlush >= 30) { _stFlush = 0; flushStats(); }
+    }
+
+    _lastAudioTime = audio.currentTime;
+    _lastWallClock = _nowMs();
+}
+
+// Auto-prune: keep only last 180 days of stats (well within 5 MB budget)
+function pruneStatsDB() {
+    var cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 180);
+    var cutKey = cutoff.getFullYear() + '-' + pad2(cutoff.getMonth()+1) + '-' + pad2(cutoff.getDate());
+    var days   = Object.keys(statsDB);
+    var pruned = 0;
+    for (var i = 0; i < days.length; i++) {
+        if (days[i] < cutKey) { delete statsDB[days[i]]; pruned++; }
+    }
+    return pruned;
+}
+
+// Auto-prune progress records older than 90 days
+function pruneProgressDB() {
+    var keys = Object.keys(progressDB);
+    // progress keys are URLs; we can only size-trim, not date-trim
+    // if > 500 entries, drop the oldest half (by insertion order approximation)
+    if (keys.length > 500) {
+        for (var i = 0; i < Math.floor(keys.length / 2); i++) delete progressDB[keys[i]];
+    }
 }
 
 function flushStats() {
-    try { localStorage.setItem('stats_db_v1', JSON.stringify(statsDB)); } catch(e) {}
+    try {
+        localStorage.setItem('stats_db_v1', JSON.stringify(statsDB));
+    } catch(e) {
+        // QuotaExceededError: prune old data and retry once
+        if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) {
+            var pruned = pruneStatsDB();
+            pruneProgressDB();
+            try {
+                localStorage.setItem('stats_db_v1',        JSON.stringify(statsDB));
+                localStorage.setItem('audio_progress_v2',  JSON.stringify(progressDB));
+                if (pruned > 0) showToast('已自动清理' + pruned + '天历史记录');
+            } catch(e2) {
+                // Still failing — notify user
+                showToast('⚠️ 存储空间不足，请清理浏览器缓存');
+            }
+        }
+    }
 }
 
 function todayKey() {
@@ -1498,366 +1775,322 @@ function todayKey() {
     return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
 }
 
-function dateKey(daysAgo) {
-    var d = new Date(); d.setDate(d.getDate() - daysAgo);
-    return d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate());
+// Week dates: Mon–Sun for a given offset (0=this week, -1=last…)
+function getWeekDates(wOff) {
+    var td  = new Date();
+    var dow = td.getDay();
+    var toM = (dow === 0) ? -6 : 1 - dow;
+    var mon = new Date(td.getFullYear(), td.getMonth(), td.getDate() + toM + wOff * 7);
+    var out = [];
+    for (var i = 0; i < 7; i++) {
+        var d = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i);
+        out.push(d.getFullYear() + '-' + pad2(d.getMonth()+1) + '-' + pad2(d.getDate()));
+    }
+    return out;
 }
 
-function urlKey(url) {
-    // Simple djb2 hash
+function fmtMD(k) { return k.slice(5).replace('-', '.'); }
+function fmtHM(sec) {
+    sec = Math.floor(sec);
+    var h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60);
+    if (h > 0 && m > 0) return h + '小时' + m + '分钟';
+    if (h > 0)          return h + '小时';
+    return m + '分钟';
+}
+
+function urlHash(url) {
     var h = 5381;
     for (var i = 0; i < url.length; i++) h = ((h << 5) + h) ^ url.charCodeAt(i);
     return String(h >>> 0);
 }
 
-function pad2(n) { return n < 10 ? '0' + n : String(n); }
-
-function secToHms(s) {
-    s = Math.floor(s);
-    var h = Math.floor(s / 3600);
-    var m = Math.floor((s % 3600) / 60);
-    var sec = s % 60;
-    if (h > 0) return h + '小时 ' + m + '分';
-    if (m > 0) return m + '分 ' + sec + '秒';
-    return sec + '秒';
+function getCumulativeTotal() {
+    var tot = 0, days = Object.keys(statsDB);
+    for (var i = 0; i < days.length; i++) {
+        var ks = Object.keys(statsDB[days[i]]);
+        for (var j = 0; j < ks.length; j++) tot += statsDB[days[i]][ks[j]].sec;
+    }
+    return Math.floor(tot);
+}
+function getDaySec(key) {
+    var day = statsDB[key] || {}, s = 0, ks = Object.keys(day);
+    for (var i = 0; i < ks.length; i++) s += day[ks[i]].sec;
+    return Math.floor(s);
+}
+function getDayTracks(key) {
+    var day = statsDB[key] || {}, ks = Object.keys(day), arr = [];
+    for (var i = 0; i < ks.length; i++) {
+        var e = day[ks[i]];
+        if (e.sec >= 1) arr.push({ name: e.name, url: e.url, sec: Math.floor(e.sec) });
+    }
+    arr.sort(function(a,b){ return b.sec - a.sec; });
+    return arr;
 }
 
-function secToMin(s) {
-    var m = s / 60;
-    return m >= 10 ? Math.round(m) + ' 分钟' : m.toFixed(1) + ' 分钟';
-}
-
-// --- Open / Close ---
-var _statsCurrentTab = 'today';
+// ── Open / Close ────────────────────────────────────────
+var _stWeekOff = 0;
+var _stSelDay  = null;
 
 function openStats() {
     flushStats();
+    _stWeekOff = 0;
+    _stSelDay  = todayKey();
     document.getElementById('statsSheet').className = 'stats-sheet open';
-    document.getElementById('statsOverlay').style.display = 'block';
-    _statsCurrentTab = 'today';
-    // Reset tabs
-    var tabs = document.querySelectorAll('.stats-tab');
-    for (var i = 0; i < tabs.length; i++) tabs[i].className = 'stats-tab';
-    tabs[0].className = 'stats-tab active';
-    renderStatsToday();
+    renderStats();
 }
-
 function closeStats() {
     document.getElementById('statsSheet').className = 'stats-sheet';
-    document.getElementById('statsOverlay').style.display = 'none';
     flushStats();
 }
 
-function switchStatsTab(tab, btn) {
-    _statsCurrentTab = tab;
-    var tabs = document.querySelectorAll('.stats-tab');
-    for (var i = 0; i < tabs.length; i++) tabs[i].className = 'stats-tab';
-    btn.className = 'stats-tab active';
-    if (tab === 'today')     renderStatsToday();
-    else if (tab === '7d')   renderStatsRange(7);
-    else if (tab === '30d')  renderStatsRange(30);
-    else if (tab === '180d') renderStatsRange(180);
-}
+// ── Main render ─────────────────────────────────────────
+function renderStats() {
+    var body   = document.getElementById('stBody');
+    var dates  = getWeekDates(_stWeekOff);
+    if (_stSelDay === null || dates.indexOf(_stSelDay) < 0) _stSelDay = dates[0];
 
-// --- TODAY VIEW ---
-function renderStatsToday() {
-    var body = document.getElementById('statsBody');
-    var today = todayKey();
-    var dayData = statsDB[today] || {};
-    var tracks = [];
-    var totalSec = 0;
-    var keys = Object.keys(dayData);
-    for (var i = 0; i < keys.length; i++) {
-        var entry = dayData[keys[i]];
-        if (entry.sec > 0) { tracks.push(entry); totalSec += entry.sec; }
+    var values = [];
+    for (var i = 0; i < 7; i++) values.push(Math.round(getDaySec(dates[i]) / 60));
+
+    var thisWeekSec = 0, prevDates = getWeekDates(_stWeekOff - 1), prevWeekSec = 0;
+    for (var i = 0; i < 7; i++) {
+        thisWeekSec += getDaySec(dates[i]);
+        prevWeekSec += getDaySec(prevDates[i]);
     }
-    tracks.sort(function(a, b) { return b.sec - a.sec; });
+    var diffSec = thisWeekSec - prevWeekSec;
 
-    var html = '';
+    var totalSec = getCumulativeTotal();
+    var totalH   = Math.floor(totalSec / 3600);
+    var totalM   = Math.floor((totalSec % 3600) / 60);
 
-    // Summary card
-    html += '<div class="stats-summary-card">' +
-        '<div>' +
-            '<div class="stats-summary-label">今日有效听力时长</div>' +
-            '<div style="display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;">' +
-                '<div class="stats-summary-value">' + Math.floor(totalSec / 60) + '</div>' +
-                '<div class="stats-summary-unit">分钟</div>' +
-            '</div>' +
-            '<div class="stats-summary-sub">' + secToHms(totalSec) + ' · ' + tracks.length + ' 首音频</div>' +
+    var weekLabel = _stWeekOff === 0 ? '本周' : (_stWeekOff === -1 ? '上周' : Math.abs(_stWeekOff) + '周前');
+    var weekRange = fmtMD(dates[0]) + '–' + fmtMD(dates[6]);
+    var isCurWeek = (_stWeekOff === 0);
+
+    // ── Cumulative card ──────────────────────
+    var html = '<div class="st-cumul">' +
+        '<div class="st-cumul-label">累计收听总时长：</div>' +
+        '<div class="st-cumul-value">' +
+            '<div class="st-cumul-num">' + totalH + '</div><div class="st-cumul-unit">小时</div>' +
+            '<div class="st-cumul-num" style="margin-left:8px;">' + totalM + '</div><div class="st-cumul-unit">分钟</div>' +
         '</div>' +
-        '<div style="font-size:44px;opacity:0.25;">🎧</div>' +
+        '<div class="st-cumul-sub">每日 00:00 更新 · 仅统计音量≥40%的有效播放</div>' +
     '</div>';
 
-    if (tracks.length === 0) {
-        html += '<div class="stats-empty"><div class="stats-empty-icon">🎵</div>今天还没有听力记录<br><span style="font-size:13px;">开始播放后自动记录（音量≥40%）</span></div>';
-    } else {
-        var maxSec = tracks[0].sec;
-        html += '<div class="stats-section-title">今日播放详情</div>';
-        html += '<div class="stats-table">';
-        var rankClasses = ['gold','silver','bronze'];
-        for (var i = 0; i < tracks.length; i++) {
-            var pct = maxSec > 0 ? Math.round((tracks[i].sec / maxSec) * 100) : 0;
-            var rc  = i < 3 ? rankClasses[i] : '';
-            html += '<div class="stats-row" style="-webkit-flex-direction:column;flex-direction:column;-webkit-align-items:flex-start;align-items:flex-start;">' +
-                '<div style="display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;width:100%;">' +
-                    '<div class="stats-row-rank ' + rc + '">' + (i+1) + '</div>' +
-                    '<div class="stats-row-name">' + escHtml(tracks[i].name) + '</div>' +
-                    '<div class="stats-row-time">' + secToMin(tracks[i].sec) + '</div>' +
+    // ── Week chart card ──────────────────────
+    html += '<div class="st-week-card">' +
+        '<div class="st-week-nav">' +
+            '<button class="st-week-arrow" onclick="stNavWeek(-1)" aria-label="查看上周">◀ 上周</button>' +
+            '<div style="text-align:center;">' +
+                '<div class="st-week-label">' + weekLabel + '</div>' +
+                '<div class="st-week-range">' + weekRange + '</div>' +
+            '</div>' +
+            '<button class="st-week-arrow" onclick="stNavWeek(1)" ' + (isCurWeek ? 'disabled style="color:#ccc;"' : '') + '>下周 ▶</button>' +
+        '</div>' +
+        '<div class="st-bar-meta"><div class="st-bar-meta-l">本周收听时长</div><div class="st-bar-meta-r">单位：分钟</div></div>' +
+        '<canvas id="stBarCanvas" height="210"></canvas>' +
+        '<div class="st-week-totals">' +
+            '<div class="st-week-total-cell">' +
+                '<div class="st-week-total-label">' + weekLabel + '收听总时长</div>' +
+                '<div class="st-week-total-value">' + fmtHM(thisWeekSec) + '</div>' +
+            '</div>' +
+            '<div class="st-week-total-cell">' +
+                '<div class="st-week-total-label">同比' + (_stWeekOff === 0 ? '上周' : '前一周') + '时长</div>' +
+                '<div class="st-week-compare ' +
+                    (diffSec > 0 ? 'st-compare-up' : diffSec < 0 ? 'st-compare-down' : 'st-compare-same') + '">' +
+                    (diffSec > 0 ? '↑ ' + fmtHM(diffSec) : diffSec < 0 ? '↓ ' + fmtHM(-diffSec) : '— 持平') +
                 '</div>' +
-                '<div class="stats-row-bar-wrap" style="margin-left:34px;">' +
-                    '<div class="stats-row-bar-fill" style="width:' + pct + '%;"></div>' +
+            '</div>' +
+        '</div>' +
+    '</div>';
+
+    // ── Files card ───────────────────────────
+    var dayTracks = getDayTracks(_stSelDay);
+    var dayLabel  = _stSelDay ? _stSelDay.replace(/-/g, '-') : '';
+    html += '<div class="st-files-card">' +
+        '<div class="st-files-header">' +
+            '<div class="st-files-title">🎧 &nbsp;收听文件</div>' +
+            '<div class="st-files-date">' + dayLabel + '</div>' +
+        '</div>';
+    if (dayTracks.length === 0) {
+        html += '<div class="st-empty-files">该日暂无听力记录</div>';
+    } else {
+        for (var i = 0; i < dayTracks.length; i++) {
+            var tr = dayTracks[i];
+            var tm = Math.floor(tr.sec / 60);
+            var ts = tr.sec % 60;
+            var dur = '播放时长：' + (tm > 0 ? tm + '分钟' : '') + (ts > 0 ? ts + '秒' : '');
+            html += '<div class="st-file-row">' +
+                '<div class="st-file-icon">🎵</div>' +
+                '<div class="st-file-info">' +
+                    '<div class="st-file-name">' + escHtml(tr.name) + '</div>' +
+                    '<div class="st-file-dur">' + dur + '</div>' +
                 '</div>' +
             '</div>';
         }
-        html += '</div>';
     }
-
-    html += '<div class="stats-notice">⚠️ 仅统计音量≥40%的有效播放时间</div>';
-    body.innerHTML = html;
-}
-
-// --- RANGE VIEW (7 / 30 / 180 days) ---
-function renderStatsRange(days) {
-    var body = document.getElementById('statsBody');
-
-    // Build per-day array (most recent last)
-    var labels = [], values = [];
-    var totalSec = 0;
-    var activeDays = 0;
-    for (var i = days - 1; i >= 0; i--) {
-        var key = dateKey(i);
-        var dayData = statsDB[key] || {};
-        var s = 0;
-        var ks = Object.keys(dayData);
-        for (var j = 0; j < ks.length; j++) s += dayData[ks[j]].sec;
-        labels.push(key.slice(5)); // MM-DD
-        values.push(Math.round(s / 60)); // minutes
-        totalSec += s;
-        if (s > 0) activeDays++;
-    }
-
-    var avgMin = activeDays > 0 ? Math.round((totalSec / 60) / activeDays) : 0;
-
-    var html = '';
-    // Summary card
-    html += '<div class="stats-summary-card">' +
-        '<div>' +
-            '<div class="stats-summary-label">近' + days + '日总听力时长</div>' +
-            '<div style="display:-webkit-flex;display:flex;-webkit-align-items:flex-end;align-items:flex-end;">' +
-                '<div class="stats-summary-value">' + Math.floor(totalSec / 60) + '</div>' +
-                '<div class="stats-summary-unit">分钟</div>' +
-            '</div>' +
-            '<div class="stats-summary-sub">有记录 ' + activeDays + ' 天 · 日均 ' + avgMin + ' 分钟</div>' +
-        '</div>' +
-        '<div style="font-size:44px;opacity:0.25;">📈</div>' +
-    '</div>';
-
-    // Chart area
-    html += '<div class="stats-chart-wrap" id="chartWrap">' +
-        '<div class="stats-chart-title">每日听力时长（分钟）</div>' +
-        '<canvas id="statsCanvas" height="180"></canvas>' +
-        '<div class="stats-chart-tooltip" id="chartTooltip"></div>' +
-    '</div>';
-    html += '<div class="stats-notice">⚠️ 仅统计音量≥40%的有效播放时间</div>';
+    html += '</div>';
+    html += '<div class="st-notice">⚠️ 仅统计音量≥40%有效播放时间。iOS系统音量无法通过JS检测，已通过音频信号分析作补充判断。</div>';
 
     body.innerHTML = html;
-
-    // Draw chart after DOM is ready
-    setTimeout(function() { drawLineChart(labels, values, days); }, 30);
+    setTimeout(function() { drawBarChart(values, dates); }, 30);
 }
 
-// --- CANVAS CHART ---
-function drawLineChart(labels, values, days) {
-    var canvas = document.getElementById('statsCanvas');
+function stNavWeek(dir) {
+    var next = _stWeekOff + dir;
+    if (next > 0) return;
+    _stWeekOff = next;
+    _stSelDay  = getWeekDates(_stWeekOff)[0];
+    renderStats();
+}
+
+// AbortController for bar chart event listeners (avoids cloneNode hack)
+var _chartAC = null;
+var DAY_ZH = ['一','二','三','四','五','六','日'];
+
+// Detect system dark mode for canvas rendering
+function isDark() {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+}
+
+function drawBarChart(values, dates) {
+    var canvas = document.getElementById('stBarCanvas');
     if (!canvas) return;
-    var wrap   = document.getElementById('chartWrap');
-    var W      = wrap ? wrap.clientWidth - 16 : 300;
-    var H      = 180;
-    var dpr    = window.devicePixelRatio || 1;
-    canvas.width  = W * dpr;
-    canvas.height = H * dpr;
+    var dark = isDark();
+    var colText     = dark ? '#ebebf5' : '#333';
+    var colSubtext  = dark ? '#8e8e93' : '#999';
+    var colGrid     = dark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)';
+    var colCircleTxt= dark ? '#000'    : '#fff';
+    var W   = canvas.parentNode.clientWidth - 32;
+    var H   = 210;
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width  = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
     canvas.style.width  = W + 'px';
     canvas.style.height = H + 'px';
 
     var ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
 
-    var PAD_L = 36, PAD_R = 12, PAD_T = 10, PAD_B = 28;
-    var cW = W - PAD_L - PAD_R;
-    var cH = H - PAD_T - PAD_B;
+    var PAD_T  = 26;
+    var PAD_B  = 46;
+    var PAD_LR = 4;
+    var cH     = H - PAD_T - PAD_B;
+    var colW   = (W - PAD_LR * 2) / 7;
+    var barW   = Math.min(colW * 0.54, 30);
 
     var maxVal = 0;
     for (var i = 0; i < values.length; i++) if (values[i] > maxVal) maxVal = values[i];
     if (maxVal === 0) maxVal = 10;
+    // Round maxVal up for cleaner grid
+    var gridStep = maxVal <= 30 ? 10 : maxVal <= 120 ? 30 : maxVal <= 300 ? 60 : 120;
+    maxVal = Math.ceil(maxVal / gridStep) * gridStep;
 
-    // Grid lines + Y labels
-    ctx.font = '10px -apple-system, sans-serif';
-    ctx.fillStyle = '#8e8e93';
-    ctx.textAlign = 'right';
-    var gridCount = 4;
-    for (var gi = 0; gi <= gridCount; gi++) {
-        var gVal = Math.round((maxVal / gridCount) * gi);
-        var gY   = PAD_T + cH - (cH * gi / gridCount);
-        ctx.strokeStyle = 'rgba(0,0,0,0.06)';
-        ctx.lineWidth   = 0.5;
-        ctx.beginPath(); ctx.moveTo(PAD_L, gY); ctx.lineTo(W - PAD_R, gY); ctx.stroke();
-        ctx.fillText(String(gVal), PAD_L - 4, gY + 3);
+    // Grid
+    var gridLines = 4;
+    ctx.setLineDash([3, 3]);
+    for (var gi = 0; gi <= gridLines; gi++) {
+        var gy = PAD_T + cH - (cH * gi / gridLines);
+        ctx.strokeStyle = colGrid; ctx.lineWidth = 0.5;
+        ctx.beginPath(); ctx.moveTo(PAD_LR, gy); ctx.lineTo(W - PAD_LR, gy); ctx.stroke();
     }
+    ctx.setLineDash([]);
 
-    // X labels (show ~5 evenly spaced)
-    ctx.textAlign = 'center';
-    var xStep = Math.ceil(days / 5);
-    for (var xi = 0; xi < labels.length; xi++) {
-        if (xi % xStep !== 0 && xi !== labels.length - 1) continue;
-        var xPos = PAD_L + (xi / (labels.length - 1)) * cW;
-        ctx.fillStyle = '#8e8e93';
-        ctx.fillText(labels[xi], xPos, H - 6);
-    }
+    var selIdx = dates.indexOf(_stSelDay);
 
-    // Build points
-    var pts = [];
-    for (var i = 0; i < values.length; i++) {
-        pts.push({
-            x: PAD_L + (i / Math.max(values.length - 1, 1)) * cW,
-            y: PAD_T + cH - (values[i] / maxVal) * cH,
-            v: values[i], lbl: labels[i]
-        });
-    }
+    for (var i = 0; i < 7; i++) {
+        var cx  = PAD_LR + colW * i + colW / 2;
+        var bh  = values[i] > 0 ? Math.max((values[i] / maxVal) * cH, barW) : 0;
+        var bx  = cx - barW / 2;
+        var by  = PAD_T + cH - bh;
+        var sel = (i === selIdx);
 
-    // Filled gradient area
-    var grad = ctx.createLinearGradient(0, PAD_T, 0, PAD_T + cH);
-    grad.addColorStop(0,   'rgba(0,122,255,0.28)');
-    grad.addColorStop(0.6, 'rgba(0,122,255,0.05)');
-    grad.addColorStop(1,   'rgba(0,122,255,0)');
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(pts[0].x, PAD_T + cH);
-    ctx.lineTo(pts[0].x, pts[0].y);
-    for (var i = 1; i < pts.length; i++) {
-        // Smooth bezier
-        var cpx = (pts[i-1].x + pts[i].x) / 2;
-        ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
-    }
-    ctx.lineTo(pts[pts.length-1].x, PAD_T + cH);
-    ctx.closePath(); ctx.fill();
+        if (bh > 0) {
+            var r = barW / 2;
+            var gr = ctx.createLinearGradient(bx, by, bx, by + bh);
+            if (sel) {
+                gr.addColorStop(0, '#54b3ff');
+                gr.addColorStop(1, '#007aff');
+            } else {
+                gr.addColorStop(0, '#a0d4ff');
+                gr.addColorStop(1, '#5aadff');
+            }
+            ctx.fillStyle = gr;
+            ctx.beginPath();
+            if (bh >= barW * 1.1) {
+                // Full pill (top+bottom rounded)
+                ctx.arc(cx, by + r,      r, Math.PI, 0, false);
+                ctx.lineTo(cx + r, by + bh - r);
+                ctx.arc(cx, by + bh - r, r, 0, Math.PI, false);
+                ctx.closePath();
+            } else {
+                ctx.arc(cx, by + bh/2, bh/2, 0, Math.PI*2);
+            }
+            ctx.fill();
 
-    // Line
-    ctx.strokeStyle = '#007aff';
-    ctx.lineWidth   = 2;
-    ctx.lineJoin    = 'round';
-    ctx.lineCap     = 'round';
-    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
-    for (var i = 1; i < pts.length; i++) {
-        var cpx = (pts[i-1].x + pts[i].x) / 2;
-        ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
-    }
-    ctx.stroke();
-
-    // Dots for non-zero days
-    for (var i = 0; i < pts.length; i++) {
-        if (pts[i].v === 0) continue;
-        ctx.beginPath();
-        ctx.arc(pts[i].x, pts[i].y, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle   = '#fff';
-        ctx.strokeStyle = '#007aff';
-        ctx.lineWidth   = 2;
-        ctx.fill(); ctx.stroke();
-    }
-
-    // Touch / click interaction for tooltip
-    var tooltip = document.getElementById('chartTooltip');
-    var wrap2   = document.getElementById('chartWrap');
-
-    function showTip(clientX, clientY) {
-        var rect   = canvas.getBoundingClientRect();
-        var relX   = clientX - rect.left;
-        // Find nearest point
-        var nearest = null, nearDist = 9999;
-        for (var i = 0; i < pts.length; i++) {
-            var d = Math.abs(pts[i].x - relX);
-            if (d < nearDist) { nearDist = d; nearest = pts[i]; }
+            // Value label
+            ctx.fillStyle   = sel ? '#007aff' : colText;
+            ctx.font        = 'bold ' + (sel ? 13 : 11) + 'px -apple-system,sans-serif';
+            ctx.textAlign   = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(String(values[i]), cx, by - 2);
         }
-        if (!nearest || !tooltip || !wrap2) return;
-        var wRect   = wrap2.getBoundingClientRect();
-        var tipLeft = nearest.x + wrap2.getBoundingClientRect().left - wRect.left + 8;
-        var tipTop  = nearest.y + wrap2.getBoundingClientRect().top  - wRect.top;
 
-        tooltip.textContent = nearest.lbl + '  ' + nearest.v + ' 分钟';
-        tooltip.style.left    = (nearest.x + 8) + 'px';
-        tooltip.style.top     = (nearest.y + (PAD_T > 0 ? 16 : 16)) + 'px';
-        tooltip.style.display = 'block';
+        // Day label
+        ctx.fillStyle    = sel ? '#007aff' : colSubtext;
+        ctx.font         = 'bold 12px -apple-system,sans-serif';
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(DAY_ZH[i], cx, H - PAD_B + 14);
 
-        // Draw crosshair
-        ctx.clearRect(0, 0, W, H);
-        // Redraw everything (just grid + chart) then add crosshair
-        drawLineChartBase(ctx, W, H, PAD_L, PAD_R, PAD_T, PAD_B, cW, cH, labels, values, maxVal, pts, days);
-        ctx.strokeStyle = 'rgba(0,122,255,0.4)';
-        ctx.lineWidth   = 1;
-        ctx.setLineDash([4, 3]);
-        ctx.beginPath(); ctx.moveTo(nearest.x, PAD_T); ctx.lineTo(nearest.x, PAD_T + cH); ctx.stroke();
-        ctx.setLineDash([]);
-        // Highlighted dot
-        ctx.beginPath();
-        ctx.arc(nearest.x, nearest.y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = '#007aff'; ctx.fill();
+        // Selected indicator circle
+        if (sel) {
+            ctx.beginPath();
+            ctx.arc(cx, H - 10, 9, 0, Math.PI * 2);
+            ctx.fillStyle = '#007aff'; ctx.fill();
+            ctx.fillStyle    = colCircleTxt;
+            ctx.font         = 'bold 9px -apple-system,sans-serif';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(DAY_ZH[i], cx, H - 10);
+        }
     }
 
-    canvas.addEventListener('touchmove', function(e) {
-        e.preventDefault();
-        showTip(e.touches[0].clientX, e.touches[0].clientY);
-    }, false);
-    canvas.addEventListener('touchend', function() {
-        if (tooltip) setTimeout(function() { tooltip.style.display = 'none'; }, 1200);
-    }, false);
-    canvas.addEventListener('mousemove', function(e) { showTip(e.clientX, e.clientY); });
-    canvas.addEventListener('mouseleave', function() { if (tooltip) tooltip.style.display = 'none'; });
-}
+    // ── Tap/click: use AbortController to cleanly remove old listeners ──
+    if (_chartAC) _chartAC.abort();
+    // AbortController supported in all modern browsers; iOS 15+, Android 5+
+    // For iOS 12 fallback: if not supported, use the flag-guard approach below
+    var useAC = (typeof AbortController !== 'undefined');
+    if (useAC) {
+        _chartAC = new AbortController();
+    } else {
+        _chartAC = null;
+    }
 
-// Re-draw static chart (used during crosshair interaction)
-function drawLineChartBase(ctx, W, H, PL, PR, PT, PB, cW, cH, labels, values, maxVal, pts, days) {
-    ctx.clearRect(0, 0, W, H);
-    // grid
-    ctx.font = '10px -apple-system, sans-serif';
-    ctx.fillStyle = '#8e8e93'; ctx.textAlign = 'right';
-    for (var gi = 0; gi <= 4; gi++) {
-        var gVal = Math.round((maxVal / 4) * gi);
-        var gY   = PT + cH - (cH * gi / 4);
-        ctx.strokeStyle = 'rgba(0,0,0,0.06)'; ctx.lineWidth = 0.5;
-        ctx.beginPath(); ctx.moveTo(PL, gY); ctx.lineTo(W - PR, gY); ctx.stroke();
-        ctx.fillText(String(gVal), PL - 4, gY + 3);
+    function pickBar(clientX) {
+        var r   = canvas.getBoundingClientRect();
+        var x   = (clientX - r.left) / r.width * W;
+        var idx = Math.floor((x - PAD_LR) / colW);
+        if (idx < 0) idx = 0; if (idx > 6) idx = 6;
+        _stSelDay = dates[idx];
+        renderStats();
     }
-    ctx.textAlign = 'center';
-    var xStep = Math.ceil(days / 5);
-    for (var xi = 0; xi < labels.length; xi++) {
-        if (xi % xStep !== 0 && xi !== labels.length - 1) continue;
-        var xPos = PL + (xi / (labels.length - 1)) * cW;
-        ctx.fillStyle = '#8e8e93'; ctx.fillText(labels[xi], xPos, H - 6);
-    }
-    // fill
-    var grad2 = ctx.createLinearGradient(0, PT, 0, PT + cH);
-    grad2.addColorStop(0,   'rgba(0,122,255,0.28)');
-    grad2.addColorStop(0.6, 'rgba(0,122,255,0.05)');
-    grad2.addColorStop(1,   'rgba(0,122,255,0)');
-    ctx.fillStyle = grad2;
-    ctx.beginPath(); ctx.moveTo(pts[0].x, PT + cH); ctx.lineTo(pts[0].x, pts[0].y);
-    for (var i = 1; i < pts.length; i++) {
-        var cpx = (pts[i-1].x + pts[i].x) / 2;
-        ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
-    }
-    ctx.lineTo(pts[pts.length-1].x, PT + cH); ctx.closePath(); ctx.fill();
-    // line
-    ctx.strokeStyle = '#007aff'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
-    for (var i = 1; i < pts.length; i++) {
-        var cpx = (pts[i-1].x + pts[i].x) / 2;
-        ctx.bezierCurveTo(cpx, pts[i-1].y, cpx, pts[i].y, pts[i].x, pts[i].y);
-    }
-    ctx.stroke();
-    // dots
-    for (var i = 0; i < pts.length; i++) {
-        if (pts[i].v === 0) continue;
-        ctx.beginPath(); ctx.arc(pts[i].x, pts[i].y, 3.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#fff'; ctx.strokeStyle = '#007aff'; ctx.lineWidth = 2; ctx.fill(); ctx.stroke();
+
+    if (useAC) {
+        canvas.addEventListener('click', function(e) { pickBar(e.clientX); },
+            { signal: _chartAC.signal });
+        canvas.addEventListener('touchend', function(e) {
+            e.preventDefault(); pickBar(e.changedTouches[0].clientX);
+        }, { signal: _chartAC.signal, passive: false });
+    } else {
+        // iOS 12 fallback: one-time cloneNode (safe because renderStats() replaces DOM anyway)
+        var newC = canvas.cloneNode(false);
+        var tmpCtx = newC.getContext('2d');
+        tmpCtx.drawImage(canvas, 0, 0);
+        canvas.parentNode.replaceChild(newC, canvas);
+        newC.addEventListener('click', function(e) { pickBar(e.clientX); });
+        newC.addEventListener('touchend', function(e) {
+            e.preventDefault(); pickBar(e.changedTouches[0].clientX);
+        }, false);
     }
 }
 
