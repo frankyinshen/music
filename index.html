@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v1.7.8</title>
+    <title>英语精听播放器 v1.8.0</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -517,7 +517,7 @@
 </head>
 <body class="player-compact">
 
-<audio id="audioPlayer" preload="metadata"></audio>
+<audio id="audioPlayer" preload="metadata" playsinline webkit-playsinline x5-playsinline></audio>
 <video id="noSleepVideo" loop muted playsinline src="data:video/mp4;base64,AAAAHGZ0eXBpc29tAAACAGlzb21pc28yYXZjMQAAAAhmcmVlAAAAG21kYXQAAAGzABAHAAABthAwwgRUwu11AAIAAAFVbW9vdgAAAGxtdmhkAAAAAMw11LPMNdSzAAACWAAAAKAAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAANh0cmFrAAAAXHRraGQAAAADzDXUs8w11LMAAAABAAAAAAAoAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAEAAAABAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAACgAAAAAAABAAAAAAHcbWRpYQAAACBtZGhkAAAAAMw11LPMNdSzAAACWAAAAKBBVxAAAAAAAC1oZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAAVBtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAADsc3RibAAAALhzdHNkAAAAAAAAAAEAAACoYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAABAAABAEgAAABIAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoAP//AAAAQmF2Y0MAAgwL//tYn/4CAwz+/v7+///+gP20P/11AABaOAAACtAAAeEAAQAAAAMAAgAAAwQAAAIAC7x+OQAEAEQAEQAAAQABAAABvWcAAAAQc3R0cwAAAAAAAAABAAAAAQAAAKAAAAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAUc3RzejAAAAAAAAAAAAAAAQAAABIAAAAUc3RjbwAAAAAAAAABAAAAMAAAAGB1ZHRhAAAAWG1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAAK2lsc3QAAAAjqXRvbwAAABtkYXRhAAAAAQAAAABMYXZmNTkuMjcuMTAw"></video>
 
 <div id="toast"></div>
@@ -676,7 +676,7 @@
                 <span>📊</span><span>统计</span>
             </button>
         </div>
-        <div class="version-tag">Build v1.7.8</div>
+        <div class="version-tag">Build v1.8.0</div>
     </div>
 </div>
 
@@ -714,6 +714,80 @@ var progressDB  = {};
 try { playlists  = JSON.parse(localStorage.getItem('my_playlists_v3') || '{}'); } catch(e) {}
 try { progressDB = JSON.parse(localStorage.getItem('audio_progress_v2') || '{}'); } catch(e) {}
 
+// ── Last-Session State ────────────────────────────────────────────────────────
+// Saves: path the user was browsing + which track was playing + its position.
+// On next open, navigates back to that directory, highlights the track,
+// and pre-loads it in PAUSED state so the user can just tap ▶ to continue.
+var _SESSION_KEY = 'player_last_session_v1';
+var _pendingSession = null;   // { trackUrl, trackTime } to apply after directory loads
+
+function saveSession() {
+    if (currentTrackIndex < 0 || !playList[currentTrackIndex]) return;
+    var track = playList[currentTrackIndex];
+    try {
+        localStorage.setItem(_SESSION_KEY, JSON.stringify({
+            path:      currentPath,
+            trackUrl:  track.url,
+            trackName: track.name,
+            trackTime: audio.currentTime || 0,
+            ts:        Date.now()
+        }));
+    } catch(e) {}
+}
+
+function restoreSession() {
+    try {
+        var raw = localStorage.getItem(_SESSION_KEY);
+        if (!raw) return false;
+        var s = JSON.parse(raw);
+        if (!s || !s.trackUrl || !s.path) return false;
+        // Only restore if session was saved within 30 days
+        if (Date.now() - (s.ts || 0) > 30 * 86400000) return false;
+        _pendingSession = { trackUrl: s.trackUrl, trackTime: s.trackTime || 0, trackName: s.trackName || '' };
+        // Navigate to the saved directory (parseDirectory will call _applyPendingSession)
+        fetchDirectory(s.path);
+        return true;
+    } catch(e) { return false; }
+}
+
+// Called after parseDirectory populates playList — checks if a session is pending
+function _applyPendingSession() {
+    if (!_pendingSession) return;
+    var ps = _pendingSession;
+    _pendingSession = null;
+    // Find the track in playList
+    var idx = -1;
+    for (var i = 0; i < playList.length; i++) {
+        if (playList[i].url === ps.trackUrl) { idx = i; break; }
+    }
+    if (idx < 0) return;   // track no longer exists in directory
+    currentTrackIndex = idx;
+    var track = playList[idx];
+    // Load track into player but do NOT auto-play — let user press ▶
+    audio.src = track.url;
+    audio.playbackRate = playbackRate;
+    document.getElementById('trackName').textContent = track.name;
+    updateMediaSession(track);
+    document.getElementById('trackTime').textContent = fmtTime(ps.trackTime) + ' / --:--';
+    document.getElementById('audioInfo').textContent = '';
+    startAudioInfoLoad(track.url);
+    renderListHighlight();
+    updateFavHeart();
+    setCompact(false);   // expand player bar to show the track
+    // Seek to saved position once metadata is ready
+    var mh = function() {
+        audio.removeEventListener('loadedmetadata', mh);
+        audio.playbackRate = playbackRate;
+        if (ps.trackTime > 2 && audio.duration && !isNaN(audio.duration)) {
+            audio.currentTime = ps.trackTime;
+        }
+        updateAudioInfo();
+    };
+    audio.addEventListener('loadedmetadata', mh);
+    audio.load();
+    showToast('上次播放：' + (track.name.length > 16 ? track.name.slice(0,16)+'…' : track.name));
+}
+
 var audio     = document.getElementById('audioPlayer');
 var slider    = document.getElementById('progressSlider');
 var fillEl    = document.getElementById('sliderFill');
@@ -721,13 +795,14 @@ var noSleepV  = document.getElementById('noSleepVideo');
 
 // ════════════════ INIT ══════════════════
 function init() {
-    fetchDirectory(currentPath);
     setupAudioEvents();
     setupSlider();
     buildSpeedWheel();
     setCompact(true);
     startStatsTicker();
     setupMediaSession();
+    // Try to restore last session; if none, just load root directory
+    if (!restoreSession()) fetchDirectory(currentPath);
 }
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -740,22 +815,30 @@ function setCompact(c) {
 
 // ════════════════ SLIDER ════════════════
 function setupSlider() {
-    slider.addEventListener('touchstart', function() { isDraggingSlider = true; }, false);
-    slider.addEventListener('mousedown',  function() { isDraggingSlider = true; });
-    slider.addEventListener('input', function() {
+    // HarmonyOS / some Android WebViews fire 'change' but not 'input' during drag.
+    // We listen to both; isDraggingSlider prevents double-commit.
+    slider.addEventListener('touchstart',   function() { isDraggingSlider = true; }, { passive: true });
+    slider.addEventListener('mousedown',    function() { isDraggingSlider = true; });
+    slider.addEventListener('pointerdown',  function() { isDraggingSlider = true; });   // HarmonyOS pointer events
+
+    function onSliderMove() {
         isDraggingSlider = true;
         setFill(slider.value);
         if (audio.duration) {
             var t = (slider.value / 100) * audio.duration;
             document.getElementById('trackTime').textContent = fmtTime(t) + ' / ' + fmtTime(audio.duration);
         }
-    });
+    }
+    slider.addEventListener('input',  onSliderMove);
+    slider.addEventListener('change', onSliderMove);   // HarmonyOS fallback
+
     function commitSeek() {
         if (audio.duration) { audio.currentTime = (slider.value / 100) * audio.duration; saveProgress(); }
         isDraggingSlider = false;
     }
-    slider.addEventListener('change',   commitSeek);
-    slider.addEventListener('touchend', commitSeek, false);
+    slider.addEventListener('touchend',    commitSeek, false);
+    slider.addEventListener('mouseup',     commitSeek);
+    slider.addEventListener('pointerup',   commitSeek);   // HarmonyOS pointer events
 }
 function setFill(pct) { fillEl.style.width = pct + '%'; }
 
@@ -855,20 +938,18 @@ function updateMediaSession(track) {
 function setupMediaSession() {
     if (!('mediaSession' in navigator)) return;
     var ms = navigator.mediaSession;
-    ms.setActionHandler('play',          function() { safePlay(); });
-    ms.setActionHandler('pause',         function() { audio.pause(); });
-    ms.setActionHandler('previoustrack', function() { playPrev(); });
-    ms.setActionHandler('nexttrack',     function() { playNext(); });
-    ms.setActionHandler('seekbackward',  function(d) { seekRelative(-(d && d.seekOffset ? d.seekOffset : 15)); });
-    ms.setActionHandler('seekforward',   function(d) { seekRelative(+(d && d.seekOffset ? d.seekOffset : 15)); });
-    try {
-        ms.setActionHandler('seekto', function(d) {
-            if (d && d.seekTime !== undefined && audio.duration) {
-                audio.currentTime = d.seekTime;
-                saveProgress();
-            }
-        });
-    } catch(e) {}   // 'seekto' unsupported on some platforms — safe to ignore
+    var handlers = [
+        ['play',          function() { safePlay(); }],
+        ['pause',         function() { audio.pause(); }],
+        ['previoustrack', function() { playPrev(); }],
+        ['nexttrack',     function() { playNext(); }],
+        ['seekbackward',  function(d) { seekRelative(-(d && d.seekOffset ? d.seekOffset : 15)); }],
+        ['seekforward',   function(d) { seekRelative(+(d && d.seekOffset ? d.seekOffset : 15)); }],
+        ['seekto',        function(d) { if (d && d.seekTime !== undefined && audio.duration) { audio.currentTime = d.seekTime; saveProgress(); } }]
+    ];
+    for (var i = 0; i < handlers.length; i++) {
+        try { ms.setActionHandler(handlers[i][0], handlers[i][1]); } catch(e) {}
+    }
 }
 
 function clearMediaSession() {
@@ -1203,11 +1284,34 @@ function toggleWakeLock() {
     }
 }
 
+// ── Visibility / Background handling ─────────────────────────────────────────
+// HarmonyOS 4.x (and iOS) forcibly pause audio when page goes to background.
+// We track whether audio was playing so we can offer to resume on return.
+var _wasPlayingBeforeHide = false;
+
 document.addEventListener('visibilitychange', function() {
-    if (isWakeLockEnabled && document.visibilityState === 'visible') {
-        _requestWakeLock(true);   // silent retry on return from background
+    if (document.visibilityState === 'hidden') {
+        _wasPlayingBeforeHide = !audio.paused;
+        saveSession();   // persist state before potential kill
+        if (isWakeLockEnabled && wakeLockObj) {
+            try { wakeLockObj.release(); } catch(e) {}
+            wakeLockObj = null;
+        }
+    } else {
+        // Page became visible again
+        if (isWakeLockEnabled) _requestWakeLock(true);
+        // HarmonyOS / some Android WebViews pause audio on hide even with wakeLock off.
+        // If user was playing, resume automatically.
+        if (_wasPlayingBeforeHide && audio.src && audio.paused) {
+            safePlay();
+        }
     }
 });
+
+// pagehide fires on HarmonyOS when the mini-window is swept away
+window.addEventListener('pagehide', function() { saveSession(); });
+// beforeunload for desktop browsers
+window.addEventListener('beforeunload', function() { saveSession(); });
 
 // ════════════════ A-B REPEAT ═════════════
 function handleABRepeat() {
@@ -1358,6 +1462,7 @@ function savePlaylists() { try { localStorage.setItem('my_playlists_v3', JSON.st
 function saveProgress() {
     if (audio.src && audio.currentTime > 0) {
         try { progressDB[audio.src] = audio.currentTime; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e) {}
+        saveSession();
     }
 }
 
@@ -1412,6 +1517,7 @@ function parseDirectory(htmlText, baseUrl) {
     }
     if (playMode === 'shuffle') genShuffle();
     renderList(fileList, false);
+    _applyPendingSession();   // restore last session if one is pending
 }
 
 function renderList(items, isPlaylist) {
