@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v1.8.2</title>
+    <title>英语精听播放器 v1.8.5</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -633,7 +633,7 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
 
 <!-- Basic Controls -->
 
-<div class="basic-controls">
+<div class="basic-controls" id="basicControls">
     <button class="cycle-wrap" id="cycleBtn" onclick="cyclPlayMode()" data-mode="list" aria-label="切换循环模式">
         <svg id="cycleIconList" viewBox="0 0 24 24" fill="currentColor">
             <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
@@ -646,25 +646,17 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
         </svg>
         <div class="cycle-badge" id="cycleBadge">1</div>
     </button>
-
-```
-<!-- Prev -->
-<button class="icon-btn side-btn" onclick="playPrev()" aria-label="上一首">
-    <svg viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-</button>
-<!-- Play/Pause -->
-<button class="icon-btn play-btn" onclick="togglePlay()" aria-label="播放/暂停">
-    <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M8 5v14l11-7z"/></svg>
-    <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" style="display:none;pointer-events:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
-</button>
-<!-- Next -->
-<button class="icon-btn side-btn" onclick="playNext()" aria-label="下一首">
-    <svg viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-</button>
-<!-- Favourite -->
-<button class="fav-btn" id="mainFavBtn" onclick="openPlaylistModal()" aria-label="收藏">🤍</button>
-```
-
+    <button class="icon-btn side-btn" onclick="playPrev()" aria-label="上一首">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+    </button>
+    <button class="icon-btn play-btn" onclick="togglePlay()" aria-label="播放/暂停">
+        <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M8 5v14l11-7z"/></svg>
+        <svg id="iconPause" viewBox="0 0 24 24" fill="currentColor" style="display:none;pointer-events:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+    <button class="icon-btn side-btn" onclick="playNext()" aria-label="下一首">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="pointer-events:none"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+    </button>
+    <button class="fav-btn" id="mainFavBtn" onclick="openPlaylistModal()" aria-label="收藏">🤍</button>
 </div>
 
 <!-- Feature grid (hidden compact) -->
@@ -687,7 +679,7 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
             <span>📊</span><span>统计</span>
         </button>
     </div>
-    <div class="version-tag">Build v1.8.2</div>
+    <div class="version-tag">Build v1.8.5</div>
 </div>
 
 </div>
@@ -796,38 +788,12 @@ function _applyPendingSession() {
     // Shared guard: ensures only the first successful seek is applied
     var seekApplied = false;
 
-    function doSeek() {
-        if (seekApplied) return;
-        if (targetTime <= 2) { seekApplied = true; updateAudioInfo(); return; }
-        var dur = audio.duration;
-        if (audio.readyState >= 2 && dur && !isNaN(dur) && isFinite(dur)) {
-            seekApplied = true;
-            try {
-                audio.currentTime = Math.min(targetTime, dur - 1);
-            } catch(e) {
-                // HarmonyOS may raise InvalidStateError — ignore
-            }
-            updateAudioInfo();
-        }
-    }
-
-    // Polling fallback: called when neither loadedmetadata nor canplay
-    // delivered a valid duration (HarmonyOS 4.3 edge case)
-    function retrySeek(retries) {
-        if (seekApplied) return;
-        doSeek();
-        if (!seekApplied && retries > 0) {
-            setTimeout(function() { retrySeek(retries - 1); }, 200);
-        }
-    }
-
-    // Primary: loadedmetadata
+    // Use unified _doSeek for HarmonyOS 4.3 retry logic
     var mh = function() {
         audio.removeEventListener('loadedmetadata', mh);
         audio.playbackRate = playbackRate;
-        doSeek();
-        // If duration still NaN here, start 2-second polling window
-        if (!seekApplied) retrySeek(10);
+        if (targetTime > 2) _doSeek(targetTime);
+        updateAudioInfo();
         try {
             navigator.mediaSession && navigator.mediaSession.setPositionState &&
             navigator.mediaSession.setPositionState({
@@ -837,13 +803,12 @@ function _applyPendingSession() {
     };
     audio.addEventListener('loadedmetadata', mh);
 
-    // Secondary: canplay fires after the decoder is actually ready on HarmonyOS 4.3
+    // canplay: HarmonyOS 4.3 decoder may not be ready at loadedmetadata
     var cp = function() {
         audio.removeEventListener('canplay', cp);
-        doSeek();
+        if (targetTime > 2) _doSeek(targetTime);
     };
     audio.addEventListener('canplay', cp);
-
     audio.load();
     showToast('上次播放：' + (track.name.length > 16 ? track.name.slice(0,16)+'…' : track.name));
 }
@@ -890,8 +855,17 @@ function setupSlider() {
     slider.addEventListener('change', onSliderMove);
 
     function commitSeek() {
-        if (audio.duration) { audio.currentTime = (slider.value / 100) * audio.duration; saveProgress(); }
-        isDraggingSlider = false;
+        // HarmonyOS 4.3: use _doSeek with retry instead of direct assignment.
+        // Delay isDraggingSlider reset by 600ms so timeupdate cannot snap the
+        // slider back to 0 before the seek has landed.
+        if (audio.src && audio.src !== window.location.href) {
+            var dur = audio.duration;
+            if (dur && !isNaN(dur) && isFinite(dur)) {
+                _doSeek((slider.value / 100) * dur);
+            }
+            saveProgress();
+        }
+        setTimeout(function() { isDraggingSlider = false; }, 600);
     }
     slider.addEventListener('touchend',    commitSeek, false);
     slider.addEventListener('mouseup',     commitSeek);
@@ -1034,8 +1008,9 @@ function playTrack(index) {
     var metaHandler = function() {
         audio.removeEventListener('loadedmetadata', metaHandler);
         audio.playbackRate = playbackRate;
-        if (savedTime > 2 && audio.duration && !isNaN(audio.duration)) {
-            audio.currentTime = savedTime;
+        // Use _doSeek so HarmonyOS 4.3 retry logic handles late-arriving duration
+        if (savedTime > 2) {
+            _doSeek(savedTime);
             showToast('恢复进度: ' + fmtTime(savedTime));
         }
         updateAudioInfo();
@@ -1075,6 +1050,34 @@ function playPrev() {
     }
 }
 
+// ── _doSeek: 统一跳转辅助函数（鸿蒙4.3核心修复）─────────────────────────────
+// 鸿蒙 4.3 WebView 在 readyState < HAVE_FUTURE_DATA(3) 时
+// audio.currentTime 赋值会被静默忽略。
+// 解决方案：赋值后 150ms 验证是否生效，最多重试 5 次（共~750ms）。
+var _doSeekTarget  = null;
+var _doSeekTimer   = null;
+
+function _doSeek(targetTime) {
+    clearTimeout(_doSeekTimer);
+    _doSeekTarget = targetTime;
+
+    function attempt(left) {
+        if (_doSeekTarget !== targetTime) return;   // superseded by newer seek
+        try { audio.currentTime = targetTime; } catch(e) {}
+        if (left <= 0) { _doSeekTarget = null; return; }
+        _doSeekTimer = setTimeout(function() {
+            if (_doSeekTarget !== targetTime) return;
+            // Success threshold: within 3 s of target
+            if (Math.abs(audio.currentTime - targetTime) <= 3) {
+                _doSeekTarget = null;
+            } else {
+                attempt(left - 1);
+            }
+        }, 150);
+    }
+    attempt(5);
+}
+
 // ── FIX 1: seekRelative — 鸿蒙4.3 ±15秒按钮修复 ─────────────────────────────
 // 根因：HarmonyOS 4.3 上即使音频正在播放，audio.duration 也可能为 NaN 或 0，
 // 导致原来的 if (!audio.duration) return 直接返回，seek 永远不执行。
@@ -1083,7 +1086,7 @@ function playPrev() {
 // 并用 try-catch 吸收 HarmonyOS 可能抛出的 InvalidStateError。
 function seekRelative(sec) {
     // HarmonyOS 4.3: audio.duration can be NaN/0 even while playing.
-    // Guard only against missing src or clearly invalid currentTime.
+    // Use _doSeek() for reliable retry logic instead of direct assignment.
     if (!audio.src || audio.src === window.location.href) return;
     var cur = audio.currentTime;
     if (isNaN(cur)) return;
@@ -1092,11 +1095,7 @@ function seekRelative(sec) {
     if (dur && !isNaN(dur) && isFinite(dur)) {
         newTime = Math.min(dur, newTime);
     }
-    try {
-        audio.currentTime = newTime;
-    } catch(e) {
-        // HarmonyOS may raise InvalidStateError on rapid seek — ignore silently
-    }
+    _doSeek(newTime);
     saveProgress();
 }
 
