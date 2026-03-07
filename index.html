@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v1.8.5</title>
+    <title>英语精听播放器 v1.8.6</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -679,7 +679,7 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
             <span>📊</span><span>统计</span>
         </button>
     </div>
-    <div class="version-tag">Build v1.8.5</div>
+    <div class="version-tag">Build v1.8.6</div>
 </div>
 
 </div>
@@ -712,6 +712,7 @@ var isWakeLockEnabled  = false;
 var wakeLockObj        = null;
 var _speedScrollTimer  = null;
 var _fileSizeCache     = {};   // url → bytes
+var _rangeChecked      = {};   // url → bool (server Range support check)
 
 var playlists   = {};
 var progressDB  = {};
@@ -788,11 +789,19 @@ function _applyPendingSession() {
     // Shared guard: ensures only the first successful seek is applied
     var seekApplied = false;
 
-    // Use unified _doSeek for HarmonyOS 4.3 retry logic
-    var mh = function() {
-        audio.removeEventListener('loadedmetadata', mh);
+    // 鸿蒙4.3: 使用 canplay 事件（解码器就绪后）再设置 currentTime
+    // _applyPendingSession 不自动播放，只定位位置等用户手动按播放
+    var apCpHandler = function() {
+        audio.removeEventListener('canplay', apCpHandler);
         audio.playbackRate = playbackRate;
-        if (targetTime > 2) _doSeek(targetTime);
+        if (targetTime > 2) {
+            try { audio.currentTime = targetTime; } catch(e) {}
+            // 二次赋值确保鸿蒙WebView实际接受
+            setTimeout(function() {
+                try { audio.currentTime = targetTime; } catch(e) {}
+                updateAudioInfo();
+            }, 300);
+        }
         updateAudioInfo();
         try {
             navigator.mediaSession && navigator.mediaSession.setPositionState &&
@@ -801,14 +810,7 @@ function _applyPendingSession() {
             });
         } catch(e) {}
     };
-    audio.addEventListener('loadedmetadata', mh);
-
-    // canplay: HarmonyOS 4.3 decoder may not be ready at loadedmetadata
-    var cp = function() {
-        audio.removeEventListener('canplay', cp);
-        if (targetTime > 2) _doSeek(targetTime);
-    };
-    audio.addEventListener('canplay', cp);
+    audio.addEventListener('canplay', apCpHandler);
     audio.load();
     showToast('上次播放：' + (track.name.length > 16 ? track.name.slice(0,16)+'…' : track.name));
 }
@@ -839,9 +841,18 @@ function setCompact(c) {
 
 // ════════════════ SLIDER ════════════════
 function setupSlider() {
-    slider.addEventListener('touchstart',   function() { isDraggingSlider = true; }, { passive: true });
-    slider.addEventListener('mousedown',    function() { isDraggingSlider = true; });
-    slider.addEventListener('pointerdown',  function() { isDraggingSlider = true; });
+    // Track whether audio was playing when drag started
+    // so _doSeek knows to resume after seek
+    var _sliderDragWasPlaying = false;
+
+    function onDragStart() {
+        isDraggingSlider = true;
+        _sliderDragWasPlaying = !audio.paused;
+        // Do NOT pause here — _doSeek will handle pause→seek→play internally
+    }
+    slider.addEventListener('touchstart',   onDragStart, { passive: true });
+    slider.addEventListener('mousedown',    onDragStart);
+    slider.addEventListener('pointerdown',  onDragStart);
 
     function onSliderMove() {
         isDraggingSlider = true;
@@ -855,17 +866,14 @@ function setupSlider() {
     slider.addEventListener('change', onSliderMove);
 
     function commitSeek() {
-        // HarmonyOS 4.3: use _doSeek with retry instead of direct assignment.
-        // Delay isDraggingSlider reset by 600ms so timeupdate cannot snap the
-        // slider back to 0 before the seek has landed.
-        if (audio.src && audio.src !== window.location.href) {
-            var dur = audio.duration;
-            if (dur && !isNaN(dur) && isFinite(dur)) {
-                _doSeek((slider.value / 100) * dur);
-            }
+        var dur = audio.duration;
+        if (audio.src && audio.src !== window.location.href && dur && !isNaN(dur) && isFinite(dur)) {
+            // 明确传入 forcePlay，避免 onDragStart 的 pause() 影响判断
+            _doSeek((slider.value / 100) * dur, _sliderDragWasPlaying);
             saveProgress();
         }
-        setTimeout(function() { isDraggingSlider = false; }, 600);
+        // 延迟 650ms 释放（_doSeek 内 500ms 延迟 + 余量）
+        setTimeout(function() { isDraggingSlider = false; }, 650);
     }
     slider.addEventListener('touchend',    commitSeek, false);
     slider.addEventListener('mouseup',     commitSeek);
@@ -1005,15 +1013,28 @@ function playTrack(index) {
     startAudioInfoLoad(track.url);
 
     var savedTime = progressDB[track.url] || 0;
-    var metaHandler = function() {
-        audio.removeEventListener('loadedmetadata', metaHandler);
+
+    // ── 鸿蒙4.3 恢复进度修复 ─────────────────────────────────────────
+    // 原方案：load() → safePlay()（立即从0播） → loadedmetadata → seek
+    //   问题：loadedmetadata 在鸿蒙上 duration 可能是 NaN，seek 失败
+    // 新方案：load() → 等 canplay → 先 seek（if needed）→ 再 safePlay()
+    //   canplay 触发时 WebView 解码器已就绪，currentTime 赋值可靠
+    var cpHandler = function() {
+        audio.removeEventListener('canplay', cpHandler);
         audio.playbackRate = playbackRate;
-        // Use _doSeek so HarmonyOS 4.3 retry logic handles late-arriving duration
         if (savedTime > 2) {
-            _doSeek(savedTime);
+            // 先设定位置，再延迟播放（pause→seek→play 模式）
+            try { audio.currentTime = savedTime; } catch(e) {}
             showToast('恢复进度: ' + fmtTime(savedTime));
+            setTimeout(function() {
+                try { audio.currentTime = savedTime; } catch(e) {} // 二次赋值确保生效
+                safePlay();
+                updateAudioInfo();
+            }, 500);
+        } else {
+            safePlay();
+            updateAudioInfo();
         }
-        updateAudioInfo();
         try {
             navigator.mediaSession && navigator.mediaSession.setPositionState &&
             navigator.mediaSession.setPositionState({
@@ -1021,9 +1042,9 @@ function playTrack(index) {
             });
         } catch(e) {}
     };
-    audio.addEventListener('loadedmetadata', metaHandler);
+    audio.addEventListener('canplay', cpHandler);
     audio.load();
-    safePlay();
+    // 注意：safePlay() 已移入 cpHandler，此处不再立即调用
 }
 
 function playNext() {
@@ -1050,32 +1071,38 @@ function playPrev() {
     }
 }
 
-// ── _doSeek: 统一跳转辅助函数（鸿蒙4.3核心修复）─────────────────────────────
-// 鸿蒙 4.3 WebView 在 readyState < HAVE_FUTURE_DATA(3) 时
-// audio.currentTime 赋值会被静默忽略。
-// 解决方案：赋值后 150ms 验证是否生效，最多重试 5 次（共~750ms）。
-var _doSeekTarget  = null;
-var _doSeekTimer   = null;
+// ── _doSeek: 统一跳转辅助函数（鸿蒙4.3确认可用方案）──────────────────────
+// ══ 根因与方案来源 ══
+// 鸿蒙4.3 / 安卓 WebView: 'seeked' 事件不可靠，不能作为 seek 完成信号
+// 多个开发者社区（微信开放社区、掘金、CSDN）确认唯一可靠方案：
+//   pause → currentTime = t → 固定延迟 500ms → currentTime = t（再赋一次）→ play
+// 参考：https://developers.weixin.qq.com/community/develop/article/doc/0004ce806443f01bd07ca12aa50013
+// 参考：https://blog.csdn.net/csdn_chengpeng/article/details/113502816
+// 注意：服务器必须支持 HTTP Range / Accept-Ranges: bytes，否则 seek 从头播
+//       这是服务器端要求，客户端已无法绕过
 
-function _doSeek(targetTime) {
+var _doSeekTimer = null;
+
+function _doSeek(targetTime, forcePlay) {
     clearTimeout(_doSeekTimer);
-    _doSeekTarget = targetTime;
+    // forcePlay: 明确指定seek后是否恢复播放；未传则根据当前状态判断
+    var shouldPlay = (forcePlay !== undefined) ? forcePlay : !audio.paused;
 
-    function attempt(left) {
-        if (_doSeekTarget !== targetTime) return;   // superseded by newer seek
-        try { audio.currentTime = targetTime; } catch(e) {}
-        if (left <= 0) { _doSeekTarget = null; return; }
+    // Step 1: 先暂停（鸿蒙/安卓 WebView 必须先暂停才能 seek 生效）
+    try { audio.pause(); } catch(e) {}
+
+    // Step 2: 设置目标时间
+    try { audio.currentTime = targetTime; } catch(e) {}
+
+    // Step 3: 500ms 后再次设置并恢复播放
+    // 固定延迟让 WebView 解码器有时间处理 seek
+    if (shouldPlay) {
         _doSeekTimer = setTimeout(function() {
-            if (_doSeekTarget !== targetTime) return;
-            // Success threshold: within 3 s of target
-            if (Math.abs(audio.currentTime - targetTime) <= 3) {
-                _doSeekTarget = null;
-            } else {
-                attempt(left - 1);
-            }
-        }, 150);
+            // 二次赋值：部分鸿蒙/安卓设备第一次赋值被忽略，第二次生效
+            try { audio.currentTime = targetTime; } catch(e) {}
+            safePlay();
+        }, 500);
     }
-    attempt(5);
 }
 
 // ── FIX 1: seekRelative — 鸿蒙4.3 ±15秒按钮修复 ─────────────────────────────
@@ -1085,17 +1112,18 @@ function _doSeek(targetTime) {
 // duration 只用来做上限裁剪（缺失时允许向前/后跳而不裁上限），
 // 并用 try-catch 吸收 HarmonyOS 可能抛出的 InvalidStateError。
 function seekRelative(sec) {
-    // HarmonyOS 4.3: audio.duration can be NaN/0 even while playing.
-    // Use _doSeek() for reliable retry logic instead of direct assignment.
+    // 鸿蒙/安卓 WebView: pause → currentTime → 500ms → play
     if (!audio.src || audio.src === window.location.href) return;
     var cur = audio.currentTime;
     if (isNaN(cur)) return;
     var dur = audio.duration;
     var newTime = Math.max(0, cur + sec);
     if (dur && !isNaN(dur) && isFinite(dur)) {
-        newTime = Math.min(dur, newTime);
+        newTime = Math.min(dur - 0.5, newTime);
     }
-    _doSeek(newTime);
+    // 强制 forcePlay=true：±15s 按钮点击时用户肯定是在播放中的
+    // 不能让 _doSeek 自己判断（pause()已使audio.paused=true）
+    _doSeek(newTime, true);
     saveProgress();
 }
 
@@ -1149,6 +1177,27 @@ function startAudioInfoLoad(url) {
     var ext = url.split('.').pop().toUpperCase();
     document.getElementById('audioInfo').textContent = ext + ' · 读取中…';
     if (_fileSizeCache[url]) { updateAudioInfo(); }
+
+    // ── 检查服务器是否支持 Range 请求（seek 的前提）──────────────────────
+    // 鸿蒙/iOS: 服务器必须返回 Accept-Ranges: bytes 并支持 206 响应
+    // 否则进度条拖动和 ±15s 均无法生效（从头播放）
+    if (!_rangeChecked[url]) {
+        _rangeChecked[url] = true;
+        var rxhr = new XMLHttpRequest();
+        rxhr.open('GET', url, true);
+        try { rxhr.setRequestHeader('Range', 'bytes=0-0'); } catch(e) {}
+        rxhr.onreadystatechange = function() {
+            if (rxhr.readyState !== 4) return;
+            var ok = (rxhr.status === 206) ||
+                     (rxhr.getResponseHeader('Accept-Ranges') || '').indexOf('bytes') > -1 ||
+                     (rxhr.getResponseHeader('Content-Range') || '').length > 0;
+            if (!ok) {
+                document.getElementById('audioInfo').textContent =
+                    '⚠️ 服务器不支持Range请求，跳转功能可能失效';
+            }
+        };
+        try { rxhr.send(); } catch(e) {}
+    }
 
     var perfTries = 0;
     function tryPerf() {
@@ -1828,6 +1877,13 @@ function startStatsTicker() {
         _lastAudioTime = audio.currentTime;
         _lastWallClock = _nowMs();
     }, false);
+
+    // Update UI immediately when seek completes (HarmonyOS fix)
+    audio.addEventListener('seeked', function() {
+        updateAudioInfo();
+        // Force re-activation of timeupdate on HarmonyOS (玄学: read paused)
+        void audio.paused;
+    });
 
     audio.addEventListener('timeupdate', function() {
         if (audio.paused) return;
