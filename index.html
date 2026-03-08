@@ -525,6 +525,35 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
     cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .sp-cancel:active { opacity: 0.6; }
+/* Week extra fields */
+.sp-week-extra {
+    display: none;
+    padding: 12px 20px 4px;
+    border-top: 1px solid var(--ios-divider);
+    background: var(--ios-bg);
+}
+.sp-week-extra.open { display: block; }
+.sp-week-extra-title {
+    font-size: 13px; color: #999; margin-bottom: 10px;
+}
+.sp-coin-row {
+    display: -webkit-flex; display: flex;
+    -webkit-align-items: center; align-items: center;
+    gap: 8px; margin-bottom: 12px;
+}
+.sp-coin-row label { font-size: 14px; color: #555; white-space: nowrap; }
+.sp-coin-input {
+    -webkit-flex: 1; flex: 1;
+    padding: 8px 12px;
+    border: 1.5px solid var(--ios-divider);
+    border-radius: 10px;
+    font-size: 15px;
+    background: var(--ios-card);
+    color: var(--ios-text);
+    outline: none;
+    width: 80px;
+}
+.sp-coin-hint { font-size: 12px; color: #bbb; margin-top: -6px; margin-bottom: 10px; }
 /* Custom range picker */
 .sp-range-area {
     padding: 12px 20px 8px;
@@ -2197,20 +2226,42 @@ function closeSharePicker() {
     document.getElementById('sharePickerOverlay').classList.remove('open');
     document.getElementById('sharePickerSheet').classList.remove('open');
 }
+function toggleWeekExtra() {
+    var area  = document.getElementById('spWeekExtra');
+    var arrow = document.getElementById('spWeekArrow');
+    var open  = area.classList.toggle('open');
+    arrow.textContent = open ? '▼' : '▶';
+    // Close range if open
+    document.getElementById('spRangeArea').classList.remove('open');
+}
 function toggleRangePicker() {
     document.getElementById('spRangeArea').classList.toggle('open');
 }
+// ── Programme week number ────────────────────────────────────────────
+// Week 1 = the natural Mon-Sun week that contains 2026-03-09
+var PROGRAMME_EPOCH = new Date('2026-03-09T00:00:00');  // Monday
+function getProgrammeWeekNum(mondayDate) {
+    // mondayDate: 'YYYY-MM-DD' string of the Mon of the chosen week
+    var mon = new Date(mondayDate + 'T00:00:00');
+    var diffMs = mon - PROGRAMME_EPOCH;
+    if (diffMs < 0) return null;   // before programme start
+    return Math.floor(diffMs / (7 * 86400 * 1000)) + 1;
+}
+
 function doShareDay() {
     closeSharePicker();
     var day = _stSelDay || todayKey();
     buildShareImage([day], day, false);
 }
 function doShareWeek() {
+    var coinVal = (document.getElementById('spCoinInput').value || '').trim();
+    var coins   = coinVal !== '' ? parseInt(coinVal, 10) : null;
     closeSharePicker();
     var dates     = getWeekDates(_stWeekOff);
     var weekLabel = _stWeekOff === 0 ? '本周' : (_stWeekOff === -1 ? '上周' : Math.abs(_stWeekOff) + '周前');
     var label     = weekLabel + '  ' + fmtMD(dates[0]) + '–' + fmtMD(dates[6]);
-    buildShareImage(dates, label, true);
+    var weekNum   = getProgrammeWeekNum(dates[0]);
+    buildShareImage(dates, label, true, { weekNum: weekNum, coins: coins });
 }
 function doShareRange() {
     var s = document.getElementById('spRangeStart').value;
@@ -2234,7 +2285,7 @@ function doShareRange() {
 // label: header subtitle string
 // showBarChart: true → draw 7-bar week chart, false → skip bars (single day)
 
-function buildShareImage(dates, label, showBarChart) {
+function buildShareImage(dates, label, showBarChart, weekExtra) {
     // ── Collect track data across all dates ──────────────────────────────────
     var trackMap = {};
     var dayTotals = {};  // date → seconds
@@ -2284,8 +2335,11 @@ function buildShareImage(dates, label, showBarChart) {
     var SECTION_H = 54;
     var ROW_H     = 70;
     var FOOTER_H  = 56;
+    // Week info card (weekNum / avg / coins) — only for weekly share
+    var hasWeekCard = !!(weekExtra && weekExtra.weekNum);
+    var WEEK_CARD_H = hasWeekCard ? 160 : 0;
 
-    var H = HEADER_H + CHART_H
+    var H = HEADER_H + WEEK_CARD_H + CHART_H
           + SECTION_H + Math.max(tracks.length, 1) * ROW_H
           + FOOTER_H + PAD * 2;
 
@@ -2341,6 +2395,48 @@ function buildShareImage(dates, label, showBarChart) {
     ctx.font='17px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.85)';
     ctx.fillText(label, W/2, 94);
     y = HEADER_H;
+
+    // ── 2b. Week info card (听力进程 / 平均时长 / 金币) ─────────────────────────
+    if (hasWeekCard) {
+        var we     = weekExtra;
+        var avgMin = Math.round(totalSec / 60 / dates.length);
+        var wNum   = we.weekNum;
+        // Date range string e.g. "3月9日–3月15日"
+        var wRange = fmtMD(dates[0]) + '–' + fmtMD(dates[6]);
+
+        y += 16;
+        rr(PAD, y, cardW, WEEK_CARD_H - 16, 18);
+        ctx.fillStyle = C_CARD; ctx.fill();
+
+        // Row height inside card
+        var iR = (WEEK_CARD_H - 16) / 4;
+
+        // Line 1: 听力进程
+        txt('听力进程', PAD+20, y + iR*0.8, '13px sans-serif', C_META);
+        txt('Week' + wNum + '  （' + wRange + '）', PAD+20, y + iR*1.5, 'bold 17px sans-serif', C_LBL);
+
+        // Divider
+        ctx.strokeStyle = C_DIV; ctx.lineWidth = 0.5;
+        ctx.beginPath(); ctx.moveTo(PAD+20, y+iR*2); ctx.lineTo(PAD+cardW-20, y+iR*2); ctx.stroke();
+
+        // Line 2: 听力内容
+        txt('听力内容', PAD+20, y + iR*2.45, '13px sans-serif', C_META);
+        txt('见截图', PAD+20, y + iR*3.1, 'bold 17px sans-serif', C_LBL);
+
+        // Divider
+        ctx.beginPath(); ctx.moveTo(PAD+20, y+iR*3.5); ctx.lineTo(PAD+cardW-20, y+iR*3.5); ctx.stroke();
+
+        // Line 3: 平均时长 (left) + 金币 (right, optional)
+        txt('平均听力时长', PAD+20, y + iR*3.85, '13px sans-serif', C_META);
+        txt(avgMin + ' 分钟/天', PAD+20, y + iR*4.55, 'bold 17px sans-serif', C_BLUE);
+
+        if (we.coins !== null && we.coins !== undefined) {
+            txt('截止本周累计听力资产', W - PAD - 20, y + iR*3.85, '13px sans-serif', C_META, 'right');
+            txt(we.coins + ' 金币', W - PAD - 20, y + iR*4.55, 'bold 17px sans-serif', '#FF9500', 'right');
+        }
+
+        y += WEEK_CARD_H;
+    }
 
     // ── 3. Bar chart + totals (only if showBarChart) ──────────────────────────
     if (showBarChart) {
@@ -2745,12 +2841,22 @@ function escHtml(s) {
     </div>
 </div>
 
-<div class="sp-row" onclick="doShareWeek()">
+<div class="sp-row" onclick="toggleWeekExtra()">
     <span class="sp-row-icon">📊</span>
     <div>
         <div>本周分享</div>
         <div class="sp-row-sub" id="spWeekLabel">本周</div>
     </div>
+    <span style="margin-left:auto;font-size:13px;color:#ccc" id="spWeekArrow">▶</span>
+</div>
+<div class="sp-week-extra" id="spWeekExtra">
+    <div class="sp-week-extra-title">填写额外信息（选填，不填则不显示）</div>
+    <div class="sp-coin-row">
+        <label>💰 截止本周累计金币</label>
+        <input type="number" id="spCoinInput" class="sp-coin-input" placeholder="如：14" min="0" inputmode="numeric">
+    </div>
+    <div class="sp-coin-hint">不填则隐藏金币一栏</div>
+    <button class="sp-range-confirm" onclick="doShareWeek()">生成本周分享长图</button>
 </div>
 
 <div class="sp-row" onclick="toggleRangePicker()">
