@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v1.8.6</title>
+    <title>英语精听播放器 v1.8.5</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -464,6 +464,19 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
 .st-compare-same { color: var(--ios-subtext); }
 
 /* daily files card */
+.st-share-btn {
+    display: -webkit-flex; display: flex;
+    -webkit-align-items: center; align-items: center;
+    gap: 4px;
+    background: none; border: none;
+    color: var(--ios-blue); font-size: 15px;
+    padding: 4px 0; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.st-file-count {
+    font-size: 12px; color: #888; margin-top: 2px;
+}
+.st-file-count b { color: var(--ios-blue); }
 .st-files-card {
     background: var(--ios-card); border-radius: 16px;
     overflow: hidden; margin-bottom: 12px;
@@ -546,7 +559,10 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
             返回
         </button>
         <div class="st-hdr-title">学习状况</div>
-        <div class="st-hdr-spacer"></div>
+        <button class="st-share-btn" onclick="shareStats()" aria-label="分享统计报告">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="pointer-events:none"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            分享
+        </button>
     </div>
     <div class="st-body" id="stBody"></div>
 </div>
@@ -679,7 +695,7 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
             <span>📊</span><span>统计</span>
         </button>
     </div>
-    <div class="version-tag">Build v1.8.6</div>
+    <div class="version-tag">Build v1.8.5</div>
 </div>
 
 </div>
@@ -1013,6 +1029,8 @@ function playTrack(index) {
     startAudioInfoLoad(track.url);
 
     var savedTime = progressDB[track.url] || 0;
+    _sessionCounted = false;   // 新曲目开始，重置计次
+    _sessionSec     = 0;
 
     // ── 鸿蒙4.3 恢复进度修复 ─────────────────────────────────────────
     // 原方案：load() → safePlay()（立即从0播） → loadedmetadata → seek
@@ -1023,15 +1041,17 @@ function playTrack(index) {
         audio.removeEventListener('canplay', cpHandler);
         audio.playbackRate = playbackRate;
         if (savedTime > 2) {
-            // 先设定位置，再延迟播放（pause→seek→play 模式）
+            // 先设定位置再播放（鸿蒙/安卓 pause→seek→play）
             try { audio.currentTime = savedTime; } catch(e) {}
             showToast('恢复进度: ' + fmtTime(savedTime));
+            // iOS锁屏setTimeout节流问题：缩短到100ms，仅保证WebView稳定
             setTimeout(function() {
-                try { audio.currentTime = savedTime; } catch(e) {} // 二次赋值确保生效
+                try { audio.currentTime = savedTime; } catch(e) {}
                 safePlay();
                 updateAudioInfo();
-            }, 500);
+            }, 100);
         } else {
+            // 无进度恢复：直接播放，不用setTimeout（iOS锁屏兼容）
             safePlay();
             updateAudioInfo();
         }
@@ -1094,14 +1114,15 @@ function _doSeek(targetTime, forcePlay) {
     // Step 2: 设置目标时间
     try { audio.currentTime = targetTime; } catch(e) {}
 
-    // Step 3: 500ms 后再次设置并恢复播放
-    // 固定延迟让 WebView 解码器有时间处理 seek
+    // Step 3: 延迟后再次赋值并恢复播放
+    // 锁屏时iOS setTimeout被节流，使用短延迟以兼容两种场景
     if (shouldPlay) {
+        var delay = (document.visibilityState === 'hidden') ? 50 : 500;
         _doSeekTimer = setTimeout(function() {
             // 二次赋值：部分鸿蒙/安卓设备第一次赋值被忽略，第二次生效
             try { audio.currentTime = targetTime; } catch(e) {}
             safePlay();
-        }, 500);
+        }, delay);
     }
 }
 
@@ -1388,8 +1409,14 @@ document.addEventListener('visibilitychange', function() {
         }
     } else {
         if (isWakeLockEnabled) _requestWakeLock(true);
-        if (_wasPlayingBeforeHide && audio.src && audio.paused) {
-            safePlay();
+        if (_wasPlayingBeforeHide && audio.src) {
+            if (audio.ended) {
+                // 锁屏期间曲目播完，需要播下一首
+                playNext();
+            } else if (audio.paused) {
+                // 锁屏期间被系统暂停，恢复播放
+                safePlay();
+            }
         }
     }
 });
@@ -1847,9 +1874,11 @@ function showToast(msg) {
 // ══════════════════════════════════════════════════════════
 //  LISTENING STATS  v1.7.7
 // ══════════════════════════════════════════════════════════
-var statsDB   = {};
-var _stFlush  = 0;
-var MIN_VOL   = 0.4;
+var statsDB        = {};
+var _stFlush       = 0;
+var MIN_VOL        = 0.4;
+var _sessionCounted = false;   // 当前曲目本次会话是否已计入次数
+var _sessionSec     = 0;       // 当前会话累计有效秒数（≥10s才计次）
 
 try { statsDB = JSON.parse(localStorage.getItem('stats_db_v1') || '{}'); } catch(e) {}
 
@@ -1923,8 +1952,16 @@ function _commitStatsDelta(useWallClock) {
         var today = todayKey();
         if (!statsDB[today]) statsDB[today] = {};
         var k = urlHash(track.url);
-        if (!statsDB[today][k]) statsDB[today][k] = { name: track.name, url: track.url, sec: 0 };
+        if (!statsDB[today][k]) statsDB[today][k] = { name: track.name, url: track.url, sec: 0, count: 0 };
+        if (!statsDB[today][k].count) statsDB[today][k].count = 0;  // 兼容旧数据
         statsDB[today][k].sec += delta;
+
+        // 播放次数：本次会话累计≥10秒才计一次
+        _sessionSec += delta;
+        if (!_sessionCounted && _sessionSec >= 10) {
+            statsDB[today][k].count += 1;
+            _sessionCounted = true;
+        }
 
         if (++_stFlush >= 30) { _stFlush = 0; flushStats(); }
     }
@@ -2020,7 +2057,7 @@ function getDayTracks(key) {
     var day = statsDB[key] || {}, ks = Object.keys(day), arr = [];
     for (var i = 0; i < ks.length; i++) {
         var e = day[ks[i]];
-        if (e.sec >= 1) arr.push({ name: e.name, url: e.url, sec: Math.floor(e.sec) });
+        if (e.sec >= 1) arr.push({ name: e.name, url: e.url, sec: Math.floor(e.sec), count: e.count || 0 });
     }
     arr.sort(function(a,b){ return b.sec - a.sec; });
     return arr;
@@ -2036,6 +2073,361 @@ function openStats() {
     document.getElementById('statsSheet').className = 'stats-sheet open';
     renderStats();
 }
+
+// ════════════════ STATS SHARE / 学习报告长图分享 ══════════════════════════
+// 生成一张Canvas长图，包含：周导航、柱状图、周汇总、本周与上周对比、曲目明细
+// 每个曲目显示：名称 + 次数 + 时长（支持当天明细或全周汇总）
+
+function shareStats() {
+    // ── 收集本周所有曲目汇总（跨7天合并） ──────────────────────────────
+    var dates     = getWeekDates(_stWeekOff);
+    var prevDates = getWeekDates(_stWeekOff - 1);
+    var weekLabel = _stWeekOff === 0 ? '本周' : (_stWeekOff === -1 ? '上周' : Math.abs(_stWeekOff) + '周前');
+    var weekRange = fmtMD(dates[0]) + ' – ' + fmtMD(dates[6]);
+
+    // 当天明细
+    var selDate   = _stSelDay || dates[0];
+    var dayTracks = getDayTracks(selDate);
+
+    // 本周汇总（按曲目合并）
+    var weekMap = {};
+    for (var d = 0; d < 7; d++) {
+        var day = statsDB[dates[d]] || {};
+        Object.keys(day).forEach(function(k) {
+            var e = day[k];
+            if (!weekMap[k]) weekMap[k] = { name: e.name, sec: 0, count: 0 };
+            weekMap[k].sec   += e.sec || 0;
+            weekMap[k].count += e.count || 0;
+        });
+    }
+    var weekTracks = Object.values(weekMap).filter(function(t){ return t.sec >= 1; });
+    weekTracks.sort(function(a,b){ return b.sec - a.sec; });
+
+    // 上周汇总
+    var prevMap = {};
+    for (var d = 0; d < 7; d++) {
+        var day = statsDB[prevDates[d]] || {};
+        Object.keys(day).forEach(function(k) {
+            var e = day[k];
+            if (!prevMap[k]) prevMap[k] = { name: e.name, sec: 0, count: 0 };
+            prevMap[k].sec   += e.sec || 0;
+            prevMap[k].count += e.count || 0;
+        });
+    }
+
+    // 时长柱状图数据
+    var barValues = [];
+    var thisWeekSec = 0, prevWeekSec = 0;
+    for (var i = 0; i < 7; i++) {
+        var v = Math.round(getDaySec(dates[i]) / 60);
+        barValues.push(v);
+        thisWeekSec += getDaySec(dates[i]);
+        prevWeekSec += getDaySec(prevDates[i]);
+    }
+    var diffSec = thisWeekSec - prevWeekSec;
+
+    // ── Canvas 尺寸 ────────────────────────────────────────────────────
+    var W    = 750;
+    var PAD  = 40;
+    var dpr  = Math.min(window.devicePixelRatio || 2, 3);
+
+    // 计算内容高度
+    var HEADER_H    = 130;
+    var CHART_LABEL = 50;
+    var CHART_H     = 200;
+    var TOTALS_H    = 100;
+    var SECTION_H   = 52;   // 每个section标题
+    var ROW_H       = 68;   // 每个曲目行
+    var FOOTER_H    = 60;
+
+    var H = HEADER_H + CHART_LABEL + CHART_H + TOTALS_H
+          + SECTION_H + (weekTracks.length || 1) * ROW_H
+          + SECTION_H + (dayTracks.length  || 1) * ROW_H
+          + FOOTER_H + PAD * 2;
+
+    var canvas = document.createElement('canvas');
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    canvas.style.width  = W + 'px';
+    canvas.style.height = H + 'px';
+    var ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    // ── 颜色 ──────────────────────────────────────────────────────────
+    var C_BG       = '#F2F5FA';
+    var C_CARD     = '#FFFFFF';
+    var C_BLUE     = '#2979FF';
+    var C_LIGHTBLUE= '#E8EFFE';
+    var C_GREEN    = '#34C759';
+    var C_RED      = '#FF3B30';
+    var C_TITLE    = '#1A1A2E';
+    var C_SUB      = '#666688';
+    var C_TRACK    = '#333355';
+    var C_META     = '#8888AA';
+    var C_BAR_SEL  = '#2979FF';
+    var C_BAR_OFF  = '#90CAF9';
+    var C_BAR_TXT  = '#444';
+    var C_DIVIDER  = '#E8EAF0';
+
+    // ── 工具函数 ──────────────────────────────────────────────────────
+    function roundRect(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+    }
+    function text(t, x, y, font, color, align) {
+        ctx.font = font;
+        ctx.fillStyle = color;
+        ctx.textAlign = align || 'left';
+        ctx.fillText(t, x, y);
+    }
+    function fmtHM2(sec) {
+        var h = Math.floor(sec / 3600);
+        var m = Math.floor((sec % 3600) / 60);
+        return h > 0 ? h + '小时' + m + '分钟' : m + '分钟';
+    }
+    function fmtDurShort(sec) {
+        var m = Math.floor(sec / 60);
+        var s = Math.floor(sec % 60);
+        return m > 0 ? m + '分' + (s > 0 ? s + '秒' : '') : s + '秒';
+    }
+
+    var y = 0;
+
+    // ── 1. 背景 ────────────────────────────────────────────────────────
+    ctx.fillStyle = C_BG;
+    ctx.fillRect(0, 0, W, H);
+
+    // ── 2. 顶部渐变 Header ─────────────────────────────────────────────
+    var grad = ctx.createLinearGradient(0, 0, W, HEADER_H);
+    grad.addColorStop(0, '#3A5FF8');
+    grad.addColorStop(1, '#5B86FF');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, HEADER_H);
+    y = 30;
+    text('📊 英语精听学习报告', W/2, y + 28, 'bold 26px sans-serif', '#FFF', 'center');
+    text('学习统计 · ' + weekLabel + '  ' + weekRange, W/2, y + 62, '18px sans-serif', 'rgba(255,255,255,0.85)', 'center');
+    y = HEADER_H;
+
+    // ── 3. 本周时长柱状图卡片 ──────────────────────────────────────────
+    var CARD_PAD = PAD;
+    var cardX = CARD_PAD, cardW = W - CARD_PAD*2;
+
+    y += 20;
+    roundRect(cardX, y, cardW, CHART_LABEL + CHART_H + TOTALS_H, 18);
+    ctx.fillStyle = C_CARD;
+    ctx.fill();
+
+    // 柱状图标题
+    y += 20;
+    text(weekLabel + '收听时长', cardX + 20, y + 20, 'bold 17px sans-serif', C_TITLE);
+    text('单位：分钟', W - CARD_PAD - 20, y + 20, '13px sans-serif', C_META, 'right');
+    y += CHART_LABEL;
+
+    // 绘制柱子
+    var DAYS_ZH = ['一','二','三','四','五','六','日'];
+    var maxV    = Math.max.apply(null, barValues.concat([1]));
+    var barAreaW = cardW - 40;
+    var barSlot  = barAreaW / 7;
+    var barW     = Math.max(barSlot * 0.52, 22);
+    var chartTop = y;
+    var chartH2  = CHART_H - 40;
+
+    for (var i = 0; i < 7; i++) {
+        var bx  = cardX + 20 + i * barSlot + (barSlot - barW) / 2;
+        var bh  = maxV > 0 ? (barValues[i] / maxV) * chartH2 : 0;
+        var by  = chartTop + chartH2 - bh;
+        var isSelected = (dates[i] === selDate);
+        var bColor = isSelected ? C_BAR_SEL : C_BAR_OFF;
+
+        // bar
+        roundRect(bx, by, barW, bh > 0 ? bh : 2, 6);
+        ctx.fillStyle = bColor;
+        ctx.fill();
+
+        // value label above bar
+        if (barValues[i] > 0) {
+            text(barValues[i], bx + barW/2, by - 6, 'bold 13px sans-serif', isSelected ? C_BLUE : C_BAR_TXT, 'center');
+        }
+
+        // day label
+        var dayLbl  = DAYS_ZH[i];
+        var isToday = (dates[i] === todayKey());
+        if (isSelected || isToday) {
+            ctx.beginPath();
+            ctx.arc(bx + barW/2, chartTop + chartH2 + 22, 13, 0, Math.PI*2);
+            ctx.fillStyle = isSelected ? C_BLUE : '#AAB';
+            ctx.fill();
+            text(dayLbl, bx + barW/2, chartTop + chartH2 + 27, 'bold 13px sans-serif', '#FFF', 'center');
+        } else {
+            text(dayLbl, bx + barW/2, chartTop + chartH2 + 27, '13px sans-serif', C_META, 'center');
+        }
+    }
+    y = chartTop + CHART_H - 10;
+
+    // 汇总行
+    var totY = y;
+    var halfW = cardW / 2;
+
+    // 本周总时长
+    text(weekLabel + '收听总时长', cardX + 20, totY + 20, '13px sans-serif', C_META);
+    text(fmtHM2(thisWeekSec), cardX + 20, totY + 48, 'bold 22px sans-serif', C_BLUE);
+
+    // 同比对比
+    var diffLabel = _stWeekOff === 0 ? '同比上周' : '同比前一周';
+    var diffColor = diffSec > 0 ? C_GREEN : (diffSec < 0 ? C_RED : C_META);
+    var diffTxt   = diffSec > 0 ? '↑ ' + fmtHM2(diffSec)
+                  : diffSec < 0 ? '↓ ' + fmtHM2(-diffSec) : '— 持平';
+    text(diffLabel + '时长', cardX + halfW + 10, totY + 20, '13px sans-serif', C_META);
+    text(diffTxt,   cardX + halfW + 10, totY + 48, 'bold 22px sans-serif', diffColor);
+    y = totY + TOTALS_H - 10;
+
+    // ── 4. 本周曲目汇总卡片 ───────────────────────────────────────────
+    var weekCardH = SECTION_H + (weekTracks.length || 1) * ROW_H;
+    y += 16;
+    roundRect(cardX, y, cardW, weekCardH, 18);
+    ctx.fillStyle = C_CARD;
+    ctx.fill();
+
+    // Section header
+    text('🎧  本周收听明细', cardX + 20, y + 34, 'bold 17px sans-serif', C_TITLE);
+    text(weekRange, W - CARD_PAD - 20, y + 34, '13px sans-serif', C_META, 'right');
+    y += SECTION_H;
+
+    // Divider
+    ctx.strokeStyle = C_DIVIDER; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cardX+20, y); ctx.lineTo(cardX+cardW-20, y); ctx.stroke();
+
+    if (weekTracks.length === 0) {
+        text('本周暂无听力记录', W/2, y + ROW_H/2 + 6, '15px sans-serif', C_META, 'center');
+        y += ROW_H;
+    } else {
+        for (var i = 0; i < weekTracks.length; i++) {
+            var tr  = weekTracks[i];
+            var ry  = y + i * ROW_H;
+            var cnt = tr.count || 0;
+
+            // track name (truncate)
+            var name = tr.name;
+            ctx.font = 'bold 15px sans-serif';
+            if (ctx.measureText(name).width > cardW - 160) {
+                while (ctx.measureText(name + '…').width > cardW - 160 && name.length > 1) name = name.slice(0,-1);
+                name += '…';
+            }
+            text(name, cardX + 20, ry + 26, 'bold 15px sans-serif', C_TRACK);
+
+            // count + duration
+            var meta = cnt + '次收听  ·  ' + fmtDurShort(tr.sec);
+            text(meta, cardX + 20, ry + 50, '13px sans-serif', C_META);
+
+            // duration bar (right side)
+            var barPct = thisWeekSec > 0 ? tr.sec / thisWeekSec : 0;
+            var miniW  = Math.max(barPct * 120, 3);
+            roundRect(W - CARD_PAD - 20 - 120, ry + 30, 120, 8, 4);
+            ctx.fillStyle = C_LIGHTBLUE; ctx.fill();
+            roundRect(W - CARD_PAD - 20 - 120, ry + 30, miniW, 8, 4);
+            ctx.fillStyle = C_BLUE; ctx.fill();
+
+            // divider (except last)
+            if (i < weekTracks.length - 1) {
+                ctx.strokeStyle = C_DIVIDER; ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(cardX+20, ry + ROW_H);
+                ctx.lineTo(cardX+cardW-20, ry + ROW_H);
+                ctx.stroke();
+            }
+        }
+        y += weekTracks.length * ROW_H;
+    }
+
+    // ── 5. 当日明细卡片 ───────────────────────────────────────────────
+    var dayCardH = SECTION_H + (dayTracks.length || 1) * ROW_H;
+    y += 16;
+    roundRect(cardX, y, cardW, dayCardH, 18);
+    ctx.fillStyle = C_CARD;
+    ctx.fill();
+
+    text('📅  当日收听明细', cardX + 20, y + 34, 'bold 17px sans-serif', C_TITLE);
+    text(selDate, W - CARD_PAD - 20, y + 34, '13px sans-serif', C_META, 'right');
+    y += SECTION_H;
+
+    ctx.strokeStyle = C_DIVIDER; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(cardX+20, y); ctx.lineTo(cardX+cardW-20, y); ctx.stroke();
+
+    if (dayTracks.length === 0) {
+        text('该日暂无听力记录', W/2, y + ROW_H/2 + 6, '15px sans-serif', C_META, 'center');
+        y += ROW_H;
+    } else {
+        var dayTotalSec = dayTracks.reduce(function(a,t){ return a+t.sec; }, 0);
+        for (var i = 0; i < dayTracks.length; i++) {
+            var tr  = dayTracks[i];
+            var ry  = y + i * ROW_H;
+            var cnt = tr.count || 0;
+
+            var name = tr.name;
+            ctx.font = 'bold 15px sans-serif';
+            if (ctx.measureText(name).width > cardW - 160) {
+                while (ctx.measureText(name + '…').width > cardW - 160 && name.length > 1) name = name.slice(0,-1);
+                name += '…';
+            }
+            text(name, cardX + 20, ry + 26, 'bold 15px sans-serif', C_TRACK);
+            var meta = cnt + '次收听  ·  ' + fmtDurShort(tr.sec);
+            text(meta, cardX + 20, ry + 50, '13px sans-serif', C_META);
+
+            var barPct = dayTotalSec > 0 ? tr.sec / dayTotalSec : 0;
+            var miniW  = Math.max(barPct * 120, 3);
+            roundRect(W - CARD_PAD - 20 - 120, ry + 30, 120, 8, 4);
+            ctx.fillStyle = C_LIGHTBLUE; ctx.fill();
+            roundRect(W - CARD_PAD - 20 - 120, ry + 30, miniW, 8, 4);
+            ctx.fillStyle = C_BLUE; ctx.fill();
+
+            if (i < dayTracks.length - 1) {
+                ctx.strokeStyle = C_DIVIDER; ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(cardX+20, ry + ROW_H);
+                ctx.lineTo(cardX+cardW-20, ry + ROW_H);
+                ctx.stroke();
+            }
+        }
+        y += dayTracks.length * ROW_H;
+    }
+
+    // ── 6. Footer ──────────────────────────────────────────────────────
+    y += 20;
+    var now = new Date();
+    var tsStr = now.getFullYear() + '/' + pad2(now.getMonth()+1) + '/' + pad2(now.getDate())
+              + '  ' + pad2(now.getHours()) + ':' + pad2(now.getMinutes());
+    text('生成时间：' + tsStr + '  ·  英语精听播放器', W/2, y + 28, '13px sans-serif', C_META, 'center');
+
+    // ── 7. 导出 / 分享 ─────────────────────────────────────────────────
+    canvas.toBlob(function(blob) {
+        var fname = '听力报告_' + weekLabel + '_' + weekRange.replace(' – ', '-') + '.png';
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], fname, { type: 'image/png' })] })) {
+            navigator.share({
+                title: '英语精听学习报告',
+                text: weekLabel + ' ' + weekRange,
+                files: [new File([blob], fname, { type: 'image/png' })]
+            }).catch(function(){});
+        } else {
+            // 回退：下载
+            var url = URL.createObjectURL(blob);
+            var a   = document.createElement('a');
+            a.href  = url;
+            a.download = fname;
+            a.click();
+            setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+        }
+    }, 'image/png');
+}
+
 function closeStats() {
     document.getElementById('statsSheet').className = 'stats-sheet';
     flushStats();
@@ -2113,12 +2505,13 @@ function renderStats() {
             var tr = dayTracks[i];
             var tm = Math.floor(tr.sec / 60);
             var ts = tr.sec % 60;
-            var dur = '播放时长：' + (tm > 0 ? tm + '分钟' : '') + (ts > 0 ? ts + '秒' : '');
+            var dur = '时长：' + (tm > 0 ? tm + '分' : '') + (ts > 0 ? ts + '秒' : '0秒');
+            var cnt = tr.count || 0;
             html += '<div class="st-file-row">' +
                 '<div class="st-file-icon">🎵</div>' +
                 '<div class="st-file-info">' +
                     '<div class="st-file-name">' + escHtml(tr.name) + '</div>' +
-                    '<div class="st-file-dur">' + dur + '</div>' +
+                    '<div class="st-file-count"><b>' + cnt + '次收听</b> · ' + dur + '</div>' +
                 '</div>' +
             '</div>';
         }
