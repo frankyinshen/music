@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v1.8.5</title>
+    <title>英语精听播放器 v1.8.9</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -881,7 +881,7 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
             <span>📊</span><span>统计</span>
         </button>
     </div>
-    <div class="version-tag">Build v1.8.5</div>
+    <div class="version-tag">Build v1.8.9</div>
 </div>
 
 </div>
@@ -1309,24 +1309,28 @@ var _doSeekTimer = null;
 
 function _doSeek(targetTime, forcePlay) {
     clearTimeout(_doSeekTimer);
-    // forcePlay: 明确指定seek后是否恢复播放；未传则根据当前状态判断
     var shouldPlay = (forcePlay !== undefined) ? forcePlay : !audio.paused;
+    var isLockScreen = (document.visibilityState === 'hidden');
 
-    // Step 1: 先暂停（鸿蒙/安卓 WebView 必须先暂停才能 seek 生效）
-    try { audio.pause(); } catch(e) {}
-
-    // Step 2: 设置目标时间
-    try { audio.currentTime = targetTime; } catch(e) {}
-
-    // Step 3: 延迟后再次赋值并恢复播放
-    // 锁屏时iOS setTimeout被节流，使用短延迟以兼容两种场景
-    if (shouldPlay) {
-        var delay = (document.visibilityState === 'hidden') ? 50 : 500;
-        _doSeekTimer = setTimeout(function() {
-            // 二次赋值：部分鸿蒙/安卓设备第一次赋值被忽略，第二次生效
-            try { audio.currentTime = targetTime; } catch(e) {}
-            safePlay();
-        }, delay);
+    if (isLockScreen) {
+        // ── iOS 锁屏路径 ──────────────────────────────────────────────
+        // 锁屏时绝对不能调 audio.pause()：
+        //   pause() 会终止 iOS 音频会话，之后 play() 会被系统拒绝（无声）
+        // 正确做法：直接设 currentTime，立即同步调 play()
+        //   iOS 锁屏允许在持有音频焦点时直接 seek + play
+        try { audio.currentTime = targetTime; } catch(e) {}
+        if (shouldPlay) { safePlay(); }
+    } else {
+        // ── 前台路径（鸿蒙4.3 / 安卓）───────────────────────────────
+        // 必须先 pause → seek → 延迟 play，否则鸿蒙 seek 不生效
+        try { audio.pause(); } catch(e) {}
+        try { audio.currentTime = targetTime; } catch(e) {}
+        if (shouldPlay) {
+            _doSeekTimer = setTimeout(function() {
+                try { audio.currentTime = targetTime; } catch(e) {}
+                safePlay();
+            }, 500);
+        }
     }
 }
 
