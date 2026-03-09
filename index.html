@@ -1371,25 +1371,22 @@ function startAudioInfoLoad(url) {
     document.getElementById('audioInfo').textContent = ext + ' · 读取中…';
     if (_fileSizeCache[url]) { updateAudioInfo(); }
 
-    // ── 检查服务器是否支持 Range 请求（seek 的前提）──────────────────────
-    // 鸿蒙/iOS: 服务器必须返回 Accept-Ranges: bytes 并支持 206 响应
-    // 否则进度条拖动和 ±15s 均无法生效（从头播放）
+    // ── Range 支持检测（使用 audio.seekable，避免 CORS 误报）─────────────
+    // Cloudflare / 标准静态服务器均支持 Range，但 XHR 跨域检测受 CORS 限制
+    // 误判率极高。改为监听 audio 的 seekable 属性：
+    // canplay 后 audio.seekable.length > 0 表示浏览器已确认服务器支持 Range
     if (!_rangeChecked[url]) {
         _rangeChecked[url] = true;
-        var rxhr = new XMLHttpRequest();
-        rxhr.open('GET', url, true);
-        try { rxhr.setRequestHeader('Range', 'bytes=0-0'); } catch(e) {}
-        rxhr.onreadystatechange = function() {
-            if (rxhr.readyState !== 4) return;
-            var ok = (rxhr.status === 206) ||
-                     (rxhr.getResponseHeader('Accept-Ranges') || '').indexOf('bytes') > -1 ||
-                     (rxhr.getResponseHeader('Content-Range') || '').length > 0;
-            if (!ok) {
+        var _rangeUrl = url;
+        var _rangeHandler = function() {
+            audio.removeEventListener('canplay', _rangeHandler);
+            if (audio.src.split('#')[0] !== _rangeUrl.split('#')[0]) return;
+            if (!audio.seekable || audio.seekable.length === 0) {
                 document.getElementById('audioInfo').textContent =
                     '⚠️ 服务器不支持Range请求，跳转功能可能失效';
             }
         };
-        try { rxhr.send(); } catch(e) {}
+        audio.addEventListener('canplay', _rangeHandler);
     }
 
     var perfTries = 0;
