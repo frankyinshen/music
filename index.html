@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.0.0</title>
+    <title>英语精听播放器 v2.0.8</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -55,7 +55,6 @@
         }
 
 ```
-    /* ── HEADER ─────────────────────────────── */
     .header {
         background-color: var(--ios-blur);
         -webkit-backdrop-filter: blur(25px); backdrop-filter: blur(25px);
@@ -97,7 +96,7 @@
         font-size: 16px; margin-left: 6px; outline: none; -webkit-appearance: none;
     }
 
-    /* ── CONTENT ─────────────────────────────── */
+    
     .content {
         -webkit-flex: 1; flex: 1;
         overflow-y: scroll; -webkit-overflow-scrolling: touch;
@@ -129,7 +128,7 @@
     .item-fav-heart { padding: 10px; font-size: 20px; color: #ddd; }
     .item-fav-heart.fav-on { color: var(--ios-red); }
 
-    /* ── PLAYER BAR ──────────────────────────── */
+    
     .player-bar {
         position: fixed; bottom: 0; left: 0; right: 0;
         background-color: var(--ios-card);
@@ -256,7 +255,7 @@
     .pill-btn.active { background-color: rgba(0,122,255,0.1); color: var(--ios-blue); }
     .version-tag { font-size: 10px; color: #c6c6c8; text-align: center; margin-top: 5px; }
 
-    /* ── SPEED SHEET ─────────────────────────── */
+    
     .sheet-overlay {
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         background: rgba(0,0,0,0.35); z-index: 500; display: none;
@@ -324,7 +323,7 @@
         pointer-events: none; z-index: 3; border-radius: 4px;
     }
 
-    /* ── PLAYLIST MODAL ──────────────────────── */
+    
     .modal-overlay {
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         background: rgba(0,0,0,0.4); z-index: 1000; display: none;
@@ -463,7 +462,7 @@
         -webkit-tap-highlight-color: transparent;
     }
 
-    /* ── Share Picker Sheet ── */
+    /* Share Picker Sheet */
     .share-picker-overlay {
         position: fixed; inset: 0;
         background: rgba(0,0,0,0.35);
@@ -578,7 +577,7 @@
         -webkit-tap-highlight-color: transparent;
     }
 
-    /* ── Backup Sheet ── */
+    /* Backup Sheet */
     .backup-sheet-overlay {
         position: fixed; inset: 0;
         background: rgba(0,0,0,0.35);
@@ -648,7 +647,7 @@
     .bs-import-preview.show { display: block; }
     .bs-import-preview b { color: var(--ios-blue); }
 
-    /* Partial Export Sheet (v2.0.0 NEW) */
+    /* Partial Export Sheet (v2.0.8 NEW) */
     .bs-range-section {
         padding: 12px 24px;
         border-top: 1px solid var(--ios-divider);
@@ -770,8 +769,6 @@
 
 <div id="toast"></div>
 
-<!-- Playlist Modal -->
-
 <div class="modal-overlay" id="playlistModal" onclick="if(event.target===this)closePlaylistModal()">
     <div class="playlist-modal">
         <div style="font-size:18px;font-weight:700;text-align:center;margin-bottom:15px;">添加到收藏夹</div>
@@ -780,8 +777,6 @@
         <div style="padding:16px 25px;text-align:center;color:var(--ios-red);font-weight:600;cursor:pointer;" onclick="closePlaylistModal()">取消</div>
     </div>
 </div>
-
-<!-- Stats Sheet -->
 
 <div class="stats-sheet" id="statsSheet">
     <div class="st-hdr">
@@ -802,8 +797,6 @@
     <div class="st-body" id="stBody"></div>
 </div>
 
-<!-- Speed Sheet -->
-
 <div class="sheet-overlay" id="speedOverlay" onclick="closeSpeedSheet()"></div>
 <div class="speed-sheet" id="speedSheet">
     <div class="speed-sheet-header">
@@ -818,8 +811,6 @@
         <div class="speed-wheel-scroll" id="speedWheelScroll"></div>
     </div>
 </div>
-
-<!-- HEADER -->
 
 <div class="header">
     <div class="path-nav">
@@ -836,13 +827,9 @@
     </div>
 </div>
 
-<!-- CONTENT -->
-
 <div class="content" id="scrollContent">
     <div class="list-group" id="fileList"></div>
 </div>
-
-<!-- PLAYER BAR -->
 
 <div class="player-bar" id="playerBar">
     <div class="slider-container">
@@ -920,13 +907,11 @@
             <span>📊</span><span>统计</span>
         </button>
     </div>
-    <div class="version-tag">Build v2.0.3</div>
+    <div class="version-tag">Build v2.0.8</div>
 </div>
 ```
 
 </div>
-
-<!-- Share Picker Sheet -->
 
 <div class="share-picker-overlay" id="sharePickerOverlay" onclick="closeSharePicker()"></div>
 <div class="share-picker-sheet" id="sharePickerSheet">
@@ -985,8 +970,6 @@
 
 </div>
 
-<!-- Backup Sheet (v2.0.0) -->
-
 <div class="backup-sheet-overlay" id="backupOverlay" onclick="closeBackupSheet()"></div>
 <div class="backup-sheet" id="backupSheet">
     <div class="bs-handle"></div>
@@ -1025,8 +1008,6 @@
 
 </div>
 
-<!-- Partial Export Sheet (v2.0.0 NEW) -->
-
 <div class="backup-sheet-overlay" id="partialExportOverlay" onclick="closePartialExport()"></div>
 <div class="backup-sheet" id="partialExportSheet">
     <div class="bs-handle"></div>
@@ -1057,8 +1038,6 @@
 ```
 
 </div>
-
-<!-- Hidden file input for import -->
 
 <input type="file" id="bsFileInput" accept=".json" style="display:none" onchange="onImportFileChosen(event)">
 
@@ -1095,7 +1074,7 @@ var progressDB  = {};
 try { playlists  = JSON.parse(localStorage.getItem('my_playlists_v3') || '{}'); } catch(e) {}
 try { progressDB = JSON.parse(localStorage.getItem('audio_progress_v2') || '{}'); } catch(e) {}
 
-// ── Session State ────────────────────────────────────────────────────────
+// Session State
 var _SESSION_KEY = 'player_last_session_v1';
 var _pendingSession = null;
 
@@ -1132,8 +1111,8 @@ function restoreSession() {
     } catch(e) { return false; }
 }
 
-// ── v2.0.0 优化：快速展示上次播放曲目（不等目录加载）──────────────────
-// 🔥 核心优化：立即恢复 audio.src + UI，不阻塞目录加载
+// v2.0.8 优化：快速展示上次播放曲目
+// 核心优化：立即恢复 audio.src + UI，不阻塞目录加载
 function _quickRestoreUI() {
     if (!_pendingSession) return;
     var ps = _pendingSession;
@@ -1219,7 +1198,7 @@ function init() {
     startStatsTicker();
     setupMediaSession();
     
-    // 🔥 v2.0.0 优化初始化：
+    // 🔥 v2.0.8 优化初始化：
     // 1. 如果有上次会话，立即恢复 UI + 开始加载音频（<100ms）
     // 2. 异步加载目录（不阻塞，最多几秒）
     if (!restoreSession()) {
@@ -1548,7 +1527,7 @@ function genShuffle() {
 // ════════════════ AUDIO INFO ════════════
 function startAudioInfoLoad(url) {
     var ext = url.split('.').pop().toUpperCase();
-    document.getElementById('audioInfo').textContent = ext + ' · 读取中';
+    document.getElementById('audioInfo').textContent = ext + ' 读取中';
     if (_fileSizeCache[url]) { updateAudioInfo(); }
 
     if (!_rangeChecked[url]) {
@@ -1629,7 +1608,7 @@ function updateAudioInfo() {
     } else if (size > 0) {
         parts.push(fmtSize(size));
     }
-    document.getElementById('audioInfo').textContent = parts.join(' · ');
+    document.getElementById('audioInfo').textContent = parts.join(' | ');
 }
 
 function fmtSize(b) {
@@ -1983,7 +1962,7 @@ function renderList(items, isPlaylist) {
     if (currentPath !== 'virtual:folders' && currentPath.indexOf('virtual:list:') !== 0) {
         appendPinnedItem(container, '⭐️', '我的收藏夹', '', function() { fetchDirectory('virtual:folders'); });
         if (playList.length > 1) {
-            var sLabel = playMode === 'shuffle' ? '关闭随机 · 改为列表循环' : '随机播放此目录';
+            var sLabel = playMode === 'shuffle' ? '关闭随机 改为列表循环' : '随机播放此目录';
             appendPinnedItem(container, '🔀', sLabel, playList.length + ' 首', function() {
                 if (playMode !== 'shuffle') {
                     playMode = 'shuffle';
@@ -2099,7 +2078,7 @@ function renderTracksInPlaylist(name) {
     appendPinnedItem(container, '⬅️', '返回文件夹列表', '', function() { fetchDirectory('virtual:folders'); });
 
     if (playList.length > 1) {
-        var sLabel = playMode === 'shuffle' ? '关闭随机 · 改为列表循环' : '随机播放此收藏夹';
+        var sLabel = playMode === 'shuffle' ? '关闭随机 改为列表循环' : '随机播放此收藏夹';
         appendPinnedItem(container, '🔀', sLabel, playList.length + ' 首', function() {
             if (playMode !== 'shuffle') {
                 playMode = 'shuffle'; genShuffle(); updateCycleBtn();
@@ -2217,7 +2196,7 @@ function showToast(msg) {
 }
 
 // ══════════════════════════════════════════════════════════
-//  LISTENING STATS  v2.0.0
+//  LISTENING STATS  v2.0.8
 // ══════════════════════════════════════════════════════════
 var statsDB        = {};
 var _stFlush       = 0;
@@ -2727,7 +2706,7 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
             if (name !== tr.name && name.length > 0) name += '..';
             txt(name, PAD+20, ry+30, 'bold 15px sans-serif', C_TRK);
 
-            var meta = (tr.count||0) + '次收听  ·  ' + fmtDur(tr.sec);
+            var meta = (tr.count||0) + '次收听  ' + fmtDur(tr.sec);
             txt(meta, PAD+20, ry+54, '13px sans-serif', C_META);
 
             if (totalSec > 0) {
@@ -2748,7 +2727,7 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
     var ts=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()
          +'  '+pad2(now.getHours())+':'+pad2(now.getMinutes());
     ctx.font='13px sans-serif'; ctx.fillStyle=C_META; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-    ctx.fillText('生成时间：'+ts+'  ·  英语精听播放器', W/2, y+28);
+    ctx.fillText('生成时间：'+ts+'   英语精听播放器', W/2, y+28);
 
     canvas.toBlob(function(blob) {
         var fname = '听力报告_'+label.replace(/[\s\/–\-]+/g,'_')+'.png';
@@ -2775,7 +2754,7 @@ function openBackupSheet() {
     var size  = JSON.stringify(statsDB).length;
     var sizeK = (size / 1024).toFixed(1);
     document.getElementById('bsInfo').textContent =
-        '当前数据：' + days + ' 天记录  ·  累计 ' + h + ' 小时 ' + m + ' 分钟  ·  约 ' + sizeK + ' KB';
+        '当前数据' + days + ' 天记录   累计 ' + h + ' 小时 ' + m + ' 分钟   约 ' + sizeK + ' KB';
     document.getElementById('bsExportSub').textContent =
         '下载完整 stats_backup.json（' + sizeK + ' KB）';
     
@@ -2817,7 +2796,7 @@ function doExportStats() {
     showToast('备份已导出：' + fname);
 }
 
-// ── v2.0.0 NEW: 按日期/文件导出 ────────────────────────────────────────────
+// v2.0.8 NEW: 按日期/文件导出
 var _peSelectedFiles = {};
 
 function openPartialExport() {
@@ -2926,7 +2905,7 @@ function loadFilesForDateRange() {
             escHtml(file.name) + 
             '</div>' +
             '<div style="font-size:12px;color:var(--ios-subtext);margin-top:2px;">' +
-            file.days.length + ' 天  ·  ' + fmtHM(totalSec) +
+            file.days.length + ' 天   ' + fmtHM(totalSec) +
             '</div>';
         
         div.appendChild(checkbox);
@@ -3018,7 +2997,11 @@ function onImportFileChosen(evt) {
             if (typeof incoming !== 'object' || Array.isArray(incoming)) throw new Error('格式错误');
 
             var previewText = '即将导入：<b>' + dateRange + '</b><br>' +
-                '共 <b>' + Object.keys(incoming).length + '</b> 天，<b>' + fileCount + '</b> 条记录';
+                '共 <b>' + Object.keys(incoming).length + '</b> 天，<b>' + fileCount + '</b> 条记录' +
+                '<div style="display:flex;gap:8px;margin-top:12px;">' +
+                '<button style="flex:1;padding:12px;background:#007aff;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;" onclick="confirmImportData()">确认导入</button>' +
+                '<button style="flex:1;padding:12px;background:#e8e8e8;color:#333;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;" onclick="cancelImport()">取消</button>' +
+                '</div>';
             
             var previewEl = document.getElementById('bsImportPreview');
             previewEl.innerHTML = previewText;
@@ -3077,6 +3060,15 @@ function confirmImportData() {
     window._pendingImportData = null;
 }
 
+function cancelImport() {
+    var previewEl = document.getElementById('bsImportPreview');
+    previewEl.innerHTML = '';
+    previewEl.classList.remove('show');
+    window._pendingImportData = null;
+    document.getElementById('bsFileInput').value = '';
+    showToast('已取消导入');
+}
+
 function closeStats() {
     document.getElementById('statsSheet').className = 'stats-sheet';
     flushStats();
@@ -3111,7 +3103,7 @@ function renderStats() {
             '<div class="st-cumul-num">' + totalH + '</div><div class="st-cumul-unit">小时</div>' +
             '<div class="st-cumul-num" style="margin-left:8px;">' + totalM + '</div><div class="st-cumul-unit">分钟</div>' +
         '</div>' +
-        '<div class="st-cumul-sub">每日 00:00 更新 · 仅统计音量≥40%的有效播放</div>' +
+        '<div class="st-cumul-sub">每日 00:00 更新 仅统计音量≥40%的有效播放</div>' +
     '</div>';
 
     html += '<div class="st-week-card">' +
@@ -3160,7 +3152,7 @@ function renderStats() {
                 '<div class="st-file-icon">🎵</div>' +
                 '<div class="st-file-info">' +
                     '<div class="st-file-name">' + escHtml(tr.name) + '</div>' +
-                    '<div class="st-file-count"><b>' + cnt + '次收听</b> · ' + dur + '</div>' +
+                    '<div class="st-file-count"><b>' + cnt + '次收听</b> ' + dur + '</div>' +
                 '</div>' +
             '</div>';
         }
