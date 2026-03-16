@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.0.2</title>
+    <title>英语精听播放器 v2.0.0</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -776,7 +776,7 @@
     <div class="playlist-modal">
         <div style="font-size:18px;font-weight:700;text-align:center;margin-bottom:15px;">添加到收藏夹</div>
         <div id="playlistOptions" style="overflow-y:auto;max-height:45vh;"></div>
-        <div style="padding:16px 25px;border-top:0.5px solid #eee;color:var(--ios-blue);font-weight:600;font-size:17px;cursor:pointer;" onclick="createNewPlaylistFromModal()">➕ 新建收藏夹...</div>
+        <div style="padding:16px 25px;border-top:0.5px solid #eee;color:var(--ios-blue);font-weight:600;font-size:17px;cursor:pointer;" onclick="createNewPlaylistFromModal()">➕ 新建收藏夹</div>
         <div style="padding:16px 25px;text-align:center;color:var(--ios-red);font-weight:600;cursor:pointer;" onclick="closePlaylistModal()">取消</div>
     </div>
 </div>
@@ -832,7 +832,7 @@
     </div>
     <div class="search-bar">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8e8e93" stroke-width="2" style="-webkit-flex-shrink:0;flex-shrink:0;"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-        <input type="text" class="search-input" id="searchInput" placeholder="搜索..." oninput="onSearchInput()">
+        <input type="text" class="search-input" id="searchInput" placeholder="搜索" oninput="onSearchInput()">
     </div>
 </div>
 
@@ -920,7 +920,7 @@
             <span>📊</span><span>统计</span>
         </button>
     </div>
-    <div class="version-tag">Build v2.0.0</div>
+    <div class="version-tag">Build v2.0.3</div>
 </div>
 ```
 
@@ -1139,7 +1139,7 @@ function _quickRestoreUI() {
     var ps = _pendingSession;
     
     // 1. 立即更新 UI（100ms 内完成）
-    document.getElementById('trackName').textContent = ps.trackName || '恢复中...';
+    document.getElementById('trackName').textContent = ps.trackName || '恢复中';
     document.getElementById('trackTime').textContent = fmtTime(ps.trackTime) + ' / --:--';
     
     // 2. 恢复播放速度
@@ -1924,7 +1924,7 @@ function fetchDirectory(url) {
     if (url === 'virtual:folders') { renderPlaylistFolders(); return; }
     if (url.indexOf('virtual:list:') === 0) { renderTracksInPlaylist(url.replace('virtual:list:', '')); return; }
     currentPath = url;
-    document.getElementById('fileList').innerHTML = '<div style="text-align:center;padding:20px;color:gray;">连接中...</div>';
+    document.getElementById('fileList').innerHTML = '<div style="text-align:center;padding:20px;color:gray;">连接中</div>';
     var rawDisp = url.replace(SITE_ROOT, '/');
     if (!rawDisp || rawDisp === '') rawDisp = '/';
     try { rawDisp = decodeURIComponent(rawDisp); } catch(e) {}
