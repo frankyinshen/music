@@ -1019,7 +1019,7 @@
 </div>
 
 <div class="bs-import-preview" id="bsImportPreview"></div>
-<div class="bs-info" id="bsInfo">正在读取数据…</div>
+<div class="bs-info" id="bsInfo">正在读取数据</div>
 <div class="bs-cancel" onclick="closeBackupSheet()">取消</div>
 ```
 
@@ -1548,7 +1548,7 @@ function genShuffle() {
 // ════════════════ AUDIO INFO ════════════
 function startAudioInfoLoad(url) {
     var ext = url.split('.').pop().toUpperCase();
-    document.getElementById('audioInfo').textContent = ext + ' · 读取中…';
+    document.getElementById('audioInfo').textContent = ext + ' · 读取中';
     if (_fileSizeCache[url]) { updateAudioInfo(); }
 
     if (!_rangeChecked[url]) {
@@ -2724,7 +2724,7 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
             var name = tr.name;
             var maxNameW = cardW - 180;
             while (ctx.measureText(name).width > maxNameW && name.length > 1) name = name.slice(0,-1);
-            if (name !== tr.name) name += '…';
+            if (name !== tr.name && name.length > 0) name += '..';
             txt(name, PAD+20, ry+30, 'bold 15px sans-serif', C_TRK);
 
             var meta = (tr.count||0) + '次收听  ·  ' + fmtDur(tr.sec);
