@@ -348,8 +348,7 @@
     }
     #noSleepVideo { display: none; width: 1px; height: 1px; }
 
-    /* ══ STATS SHEET ═══════════════════════════════════ */
-    .stats-sheet {
+            .stats-sheet {
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         background: var(--ios-bg); z-index: 900; display: none;
         -webkit-flex-direction: column; flex-direction: column;
@@ -1042,7 +1041,6 @@
 <input type="file" id="bsFileInput" accept=".json" style="display:none" onchange="onImportFileChosen(event)">
 
 <script>
-// ════════════════ CONFIG ════════════════
 var SITE_ROOT    = 'https://res.evanyin.dpdns.org/';
 var AUDIO_EXTS   = ['.mp3','.wav','.flac','.m4a','.aac','.ogg','.opus'];
 var SPEED_OPTIONS = [
@@ -1052,7 +1050,6 @@ var SPEED_OPTIONS = [
 ];
 var WHEEL_ITEM_H = 44;
 
-// ════════════════ STATE ═════════════════
 var currentPath        = SITE_ROOT;
 var fileList           = [];
 var playList           = [];
@@ -1189,7 +1186,6 @@ var slider    = document.getElementById('progressSlider');
 var fillEl    = document.getElementById('sliderFill');
 var noSleepV  = document.getElementById('noSleepVideo');
 
-// ════════════════ INIT ══════════════════
 function init() {
     setupAudioEvents();
     setupSlider();
@@ -1212,12 +1208,10 @@ if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else { init(); }
 
-// ════════════════ COMPACT / EXPANDED ═══
 function setCompact(c) {
     document.body.className = c ? 'player-compact' : '';
 }
 
-// ════════════════ SLIDER ════════════════
 function setupSlider() {
     var _sliderDragWasPlaying = false;
 
@@ -1254,7 +1248,6 @@ function setupSlider() {
 }
 function setFill(pct) { fillEl.style.width = pct + '%'; }
 
-// ════════════════ AUDIO EVENTS ══════════
 function setupAudioEvents() {
     audio.addEventListener('play',   function() {
         document.getElementById('iconPlay').style.display  = 'none';
@@ -1302,7 +1295,6 @@ function onTU() {
     if (abA !== null && abB !== null && audio.currentTime >= abB) audio.currentTime = abA;
 }
 
-// ════════════════ PLAY CONTROLS ═════════
 function pad2(n) { return n < 10 ? '0' + n : String(n); }
 function safePlay(targetAudio) {
     return (targetAudio || audio).play().catch(function(e) {
@@ -1323,7 +1315,6 @@ function togglePlay() {
     else { audio.pause(); }
 }
 
-// ════════════════ MEDIA SESSION API ═════
 function updateMediaSession(track) {
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -1479,7 +1470,6 @@ function seekRelative(sec) {
     saveProgress();
 }
 
-// ════════════════ CYCLE PLAY MODE ═══════
 function cyclPlayMode() {
     if (playMode === 'list')   { playMode = 'single'; }
     else if (playMode === 'single') { playMode = 'shuffle'; if (!shuffleOrder.length) genShuffle(); }
@@ -1524,7 +1514,6 @@ function genShuffle() {
     if (cur > 0) { var t = shuffleOrder[0]; shuffleOrder[0] = shuffleOrder[cur]; shuffleOrder[cur] = t; }
 }
 
-// ════════════════ AUDIO INFO ════════════
 function startAudioInfoLoad(url) {
     var ext = url.split('.').pop().toUpperCase();
     document.getElementById('audioInfo').textContent = ext + ' 读取中';
@@ -1617,7 +1606,6 @@ function fmtSize(b) {
     return b + ' B';
 }
 
-// ════════════════ SPEED WHEEL ═══════════
 function buildSpeedWheel() {
     var wheel = document.getElementById('speedWheelScroll');
     wheel.innerHTML = '';
@@ -1681,7 +1669,6 @@ function closeSpeedSheet() {
     document.getElementById('speedSheet').className = 'speed-sheet';
 }
 
-// ════════════════ WAKE LOCK ══════════════
 function _setWakeLockUI(on) {
     var btn   = document.getElementById('wakeLockBtn');
     var label = document.getElementById('wakeLockLabel');
@@ -1746,7 +1733,6 @@ document.addEventListener('visibilitychange', function() {
 window.addEventListener('pagehide', function() { saveSession(); });
 window.addEventListener('beforeunload', function() { saveSession(); });
 
-// ════════════════ A-B REPEAT ═════════════
 function handleABRepeat() {
     var btn = document.getElementById('abBtn');
     var txt = document.getElementById('abText');
@@ -1773,7 +1759,6 @@ function resetAB() {
     if (txt) txt.textContent = 'A-B重复';
 }
 
-// ════════════════ TIMER ══════════════════
 var _sleepTimerEnd  = 0;
 var _sleepCountdown = null;
 
@@ -1817,7 +1802,6 @@ function setTimer() {
     showToast('定时 ' + i + ' 分钟后停止');
 }
 
-// ════════════════ FAVOURITES ═════════════
 function openPlaylistModal() {
     var track = playList[currentTrackIndex];
     if (!track) { showToast('请先播放歌曲'); return; }
@@ -1898,7 +1882,6 @@ function saveProgress() {
     }
 }
 
-// ════════════════ DIRECTORY ═════════════
 function fetchDirectory(url) {
     if (url === 'virtual:folders') { renderPlaylistFolders(); return; }
     if (url.indexOf('virtual:list:') === 0) { renderTracksInPlaylist(url.replace('virtual:list:', '')); return; }
@@ -2092,7 +2075,6 @@ function renderTracksInPlaylist(name) {
     renderList(playList, true);
 }
 
-// ════════════════ NAVIGATION ═════════════
 function goBack() {
     if (currentPath.indexOf('virtual:list:') === 0) { fetchDirectory('virtual:folders'); return; }
     if (currentPath === 'virtual:folders') { fetchDirectory(SITE_ROOT); return; }
@@ -2117,7 +2099,6 @@ function filterList() {
     renderList(fileList.filter(function(i) { return i.name.toLowerCase().indexOf(term) > -1; }), false);
 }
 
-// ════════════════ PLAYLIST MANAGEMENT ════
 function deletePlaylist(name) {
     if (confirm('删除收藏夹【' + name + '】？')) {
         delete playlists[name]; savePlaylists(); renderPlaylistFolders(); updateFavHeart();
@@ -2131,7 +2112,6 @@ function renamePlaylist(oldName) {
     }
 }
 
-// ════════════════ DRAG & DROP ════════════
 var dragSrcEl = null;
 function handleDragStart(e, el) {
     dragSrcEl = el;
@@ -2182,7 +2162,6 @@ function setupDragSort(el) {
     handle.addEventListener('touchstart', function(e) { handleDragStart(e, el); }, false);
 }
 
-// ════════════════ UTILS ══════════════════
 function fmtTime(s) {
     if (!s || isNaN(s)) return '--:--';
     var m = Math.floor(s / 60), sec = Math.floor(s % 60);
@@ -2195,9 +2174,7 @@ function showToast(msg) {
     showToast._t = setTimeout(function() { t.style.display = 'none'; }, 1800);
 }
 
-// ══════════════════════════════════════════════════════════
 //  LISTENING STATS  v2.0.8
-// ══════════════════════════════════════════════════════════
 var statsDB        = {};
 var _stFlush       = 0;
 var MIN_VOL        = 0.4;
@@ -2414,7 +2391,6 @@ function openStats() {
     renderStats();
 }
 
-// ════════════════ STATS SHARE ══════════════
 function openSharePicker() {
     var dates     = getWeekDates(_stWeekOff);
     var weekLabel = _stWeekOff === 0 ? '本周' : (_stWeekOff === -1 ? '上周' : Math.abs(_stWeekOff) + '周前');
@@ -2745,7 +2721,6 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
     }, 'image/png');
 }
 
-// ════════════════ BACKUP / RESTORE ══════════════════════════════════════════
 function openBackupSheet() {
     flushStats();
     var days  = Object.keys(statsDB).length;
