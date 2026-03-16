@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v1.9.9</title>
+    <title>英语精听播放器 v2.0.0</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -31,688 +31,737 @@
                 --ios-sep:     rgba(255,255,255,0.08);
             }
         }
+        @media (prefers-color-scheme: dark) {
+            .speed-wheel-mask.top {
+                background: linear-gradient(to bottom, rgba(28,28,30,0.97) 0%, rgba(28,28,30,0) 100%);
+            }
+            .speed-wheel-mask.bottom {
+                background: linear-gradient(to top, rgba(28,28,30,0.97) 0%, rgba(28,28,30,0) 100%);
+            }
+            .st-week-totals { border-top-color: rgba(255,255,255,0.08); }
+            .st-week-total-cell:first-child { border-right-color: rgba(255,255,255,0.08); }
+            .st-files-header { border-bottom-color: rgba(255,255,255,0.06); }
+            .st-file-row { border-bottom-color: rgba(255,255,255,0.04); }
+            .playlist-modal { background: #1c1c1e; }
+            .speed-sheet { background: #1c1c1e; }
+        }
+        html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+            background-color: var(--ios-bg); color: var(--ios-text);
+            -webkit-user-select: none; user-select: none;
+            display: -webkit-flex; display: flex;
+            -webkit-flex-direction: column; flex-direction: column;
+        }
 
 ```
-@media (prefers-color-scheme: dark) {
-    /* Speed wheel gradient masks */
+    /* ── HEADER ─────────────────────────────── */
+    .header {
+        background-color: var(--ios-blur);
+        -webkit-backdrop-filter: blur(25px); backdrop-filter: blur(25px);
+        padding: calc(var(--safe-top) + 6px) 15px 8px 15px;
+        border-bottom: 0.5px solid rgba(0,0,0,0.1);
+        z-index: 100; -webkit-flex-shrink: 0; flex-shrink: 0;
+    }
+    .path-nav {
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        -webkit-justify-content: space-between; justify-content: space-between;
+        margin-bottom: 8px;
+    }
+    .back-btn {
+        color: var(--ios-blue); font-size: 17px; font-weight: 500;
+        background: none; border: none; cursor: pointer;
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        -webkit-tap-highlight-color: transparent; padding: 4px 0;
+    }
+    .header-stats-btn {
+        background: none; border: none; font-size: 22px;
+        cursor: pointer; padding: 2px 4px; line-height: 1;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-flex-shrink: 0; flex-shrink: 0;
+    }
+    .current-folder {
+        font-size: 17px; font-weight: 700;
+        max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .search-bar {
+        background-color: rgba(118,118,128,0.12); border-radius: 10px;
+        padding: 6px 12px;
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+    }
+    .search-input {
+        border: none; background: transparent; width: 100%;
+        font-size: 16px; margin-left: 6px; outline: none; -webkit-appearance: none;
+    }
+
+    /* ── CONTENT ─────────────────────────────── */
+    .content {
+        -webkit-flex: 1; flex: 1;
+        overflow-y: scroll; -webkit-overflow-scrolling: touch;
+        position: relative;
+        padding: 10px 16px 295px 16px;
+        -webkit-transition: padding-bottom 0.35s ease;
+        transition: padding-bottom 0.35s ease;
+    }
+    body.player-compact .content { padding-bottom: 130px; }
+
+    .list-group { background-color: var(--ios-card); border-radius: var(--ios-radius); overflow: hidden; }
+    .list-item {
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        padding: 13px 16px; background-color: var(--ios-card);
+        border-bottom: 0.5px solid var(--ios-sep);
+        cursor: pointer; position: relative;
+        -webkit-tap-highlight-color: rgba(0,0,0,0.05); box-sizing: border-box;
+    }
+    .list-item:active { background-color: var(--ios-gray-btn); }
+    .list-item.active .item-title { color: var(--ios-blue); font-weight: 600; }
+    .list-item.pinned-item { background-color: rgba(0,122,255,0.05); }
+    .list-item.dragging { opacity: 0.5; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    .drag-handle { color: #ccc; margin-right: 12px; font-size: 20px; cursor: grab; padding: 5px; touch-action: none; }
+    .item-icon { font-size: 20px; margin-right: 12px; width: 24px; text-align: center; }
+    .item-info { -webkit-flex: 1; flex: 1; overflow: hidden; }
+    .item-title { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ios-text); }
+    .item-subtext { font-size: 11px; color: var(--ios-subtext); margin-top: 2px; }
+    .item-fav-heart { padding: 10px; font-size: 20px; color: #ddd; }
+    .item-fav-heart.fav-on { color: var(--ios-red); }
+
+    /* ── PLAYER BAR ──────────────────────────── */
+    .player-bar {
+        position: fixed; bottom: 0; left: 0; right: 0;
+        background-color: var(--ios-card);
+        border-top: 0.5px solid var(--ios-sep);
+        padding: 10px 0 calc(10px + var(--safe-bottom)) 0;
+        z-index: 200; box-shadow: 0 -8px 30px rgba(0,0,0,0.08);
+    }
+    .pf {
+        overflow: hidden;
+        max-height: 200px; opacity: 1;
+        -webkit-transition: max-height 0.35s ease, opacity 0.3s ease;
+        transition: max-height 0.35s ease, opacity 0.3s ease;
+    }
+    body.player-compact .pf { max-height: 0; opacity: 0; }
+
+    /* Slider */
+    .slider-container { padding: 0 20px; margin-bottom: 5px; }
+    .slider-wrapper {
+        position: relative; height: 20px;
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+    }
+    .slider-track-bg {
+        position: absolute; left: 0; right: 0;
+        height: 5px; background: var(--ios-gray-btn); border-radius: 3px; overflow: hidden;
+    }
+    .slider-track-fill {
+        height: 100%; background: var(--ios-blue); border-radius: 3px; width: 0%;
+        -webkit-transition: width 0.1s linear; transition: width 0.1s linear;
+    }
+    .ios-slider {
+        -webkit-appearance: none; position: absolute;
+        left: 0; right: 0; width: 100%; height: 20px;
+        background: transparent; outline: none; cursor: pointer; margin: 0;
+    }
+    .ios-slider::-webkit-slider-thumb {
+        -webkit-appearance: none; width: 22px; height: 22px;
+        background: var(--ios-card); border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+
+    /* Track display */
+    .track-display { text-align: center; padding: 0 20px; margin-bottom: 5px; }
+    .track-name {
+        font-size: 16px; font-weight: 700;
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        color: var(--ios-text); margin-bottom: 1px;
+    }
+    .track-time { font-size: 11px; color: var(--ios-subtext); font-variant-numeric: tabular-nums; margin-bottom: 2px; }
+    .audio-info { font-size: 10px; color: #b0b0b8; min-height: 13px; letter-spacing: 0.3px; }
+
+    /* Learning controls */
+    .learning-controls {
+        display: -webkit-flex; display: flex;
+        -webkit-justify-content: center; justify-content: center;
+        -webkit-align-items: center; align-items: center;
+        margin-bottom: 10px;
+    }
+    .learn-btn {
+        background: none; border: none; color: var(--ios-text); cursor: pointer;
+        display: -webkit-flex; display: flex;
+        -webkit-flex-direction: column; flex-direction: column;
+        -webkit-align-items: center; align-items: center;
+        font-size: 10px; font-weight: 600;
+        margin: 0 22px; -webkit-tap-highlight-color: transparent; padding: 4px;
+    }
+    .learn-btn svg { width: 26px; height: 26px; margin-bottom: 2px; pointer-events: none; }
+    .learn-btn.active { color: var(--ios-blue); }
+
+    /* Basic controls */
+    .basic-controls {
+        display: -webkit-flex; display: flex;
+        -webkit-justify-content: center; justify-content: center;
+        -webkit-align-items: center; align-items: center;
+        margin-bottom: 11px;
+    }
+    .basic-controls > * { margin: 0 10px; }
+    .icon-btn {
+        background: none; border: none; cursor: pointer; padding: 6px; color: var(--ios-text);
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        -webkit-justify-content: center; justify-content: center;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .icon-btn svg { pointer-events: none; }
+    .play-btn svg { width: 44px; height: 44px; }
+    .side-btn svg { width: 28px; height: 28px; }
+    .icon-btn.active { color: var(--ios-blue); }
+
+    .cycle-wrap { position: relative; display: inline-block; padding: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; background: none; border: none; }
+    .cycle-wrap svg { width: 28px; height: 28px; display: block; pointer-events: none; }
+    .cycle-badge {
+        position: absolute; top: 2px; right: 2px;
+        width: 14px; height: 14px; border-radius: 7px;
+        background: var(--ios-blue); color: #fff;
+        font-size: 9px; font-weight: 800; line-height: 14px; text-align: center;
+        display: none; pointer-events: none;
+    }
+    .cycle-wrap.mode-single { color: var(--ios-blue); }
+    .cycle-wrap.mode-single .cycle-badge { display: block; }
+    .cycle-wrap.mode-shuffle { color: var(--ios-blue); }
+
+    .fav-btn {
+        font-size: 26px; cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+        background: none; border: none; padding: 6px;
+    }
+
+    /* Feature grid */
+    .feature-grid {
+        display: -webkit-flex; display: flex;
+        -webkit-justify-content: space-around; justify-content: space-around;
+        -webkit-align-items: center; align-items: center;
+        padding: 0 8px;
+    }
+    .pill-btn {
+        background-color: var(--ios-gray-btn); border: none; border-radius: 8px;
+        padding: 7px 0; font-size: 11px; font-weight: 600;
+        display: -webkit-flex; display: flex;
+        -webkit-flex-direction: column; flex-direction: column;
+        -webkit-align-items: center; align-items: center;
+        cursor: pointer; width: 18%; -webkit-tap-highlight-color: transparent;
+    }
+    .pill-btn span { line-height: 1.4; pointer-events: none; }
+    .pill-btn.active { background-color: rgba(0,122,255,0.1); color: var(--ios-blue); }
+    .version-tag { font-size: 10px; color: #c6c6c8; text-align: center; margin-top: 5px; }
+
+    /* ── SPEED SHEET ─────────────────────────── */
+    .sheet-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.35); z-index: 500; display: none;
+    }
+    .speed-sheet {
+        position: fixed; left: 0; right: 0; bottom: 0;
+        background: var(--ios-card); border-radius: 20px 20px 0 0;
+        z-index: 600; display: none;
+        -webkit-flex-direction: column; flex-direction: column;
+        padding-bottom: calc(16px + var(--safe-bottom));
+        -webkit-animation: slideUp 0.3s ease-out; animation: slideUp 0.3s ease-out;
+    }
+    .speed-sheet.open { display: -webkit-flex; display: flex; }
+
+    .speed-sheet-header {
+        display: -webkit-flex; display: flex;
+        -webkit-justify-content: space-between; justify-content: space-between;
+        -webkit-align-items: center; align-items: center;
+        padding: 14px 20px 4px 20px;
+    }
+    .speed-sheet-title { font-size: 17px; font-weight: 700; }
+    .speed-done-btn {
+        color: var(--ios-blue); font-size: 17px; font-weight: 600;
+        background: none; border: none; cursor: pointer; padding: 4px;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .speed-live-badge {
+        text-align: center; font-size: 28px; font-weight: 700;
+        color: var(--ios-blue); padding: 4px 0 8px 0;
+        letter-spacing: -0.5px;
+    }
+    .speed-wheel-wrap { position: relative; height: 200px; overflow: hidden; }
+    .speed-wheel-scroll {
+        height: 100%; overflow-y: scroll;
+        scroll-snap-type: y mandatory; -webkit-scroll-snap-type: y mandatory;
+        -webkit-overflow-scrolling: touch;
+    }
+    .speed-wheel-pad { height: 78px; }
+    .speed-wheel-option {
+        height: 44px;
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        -webkit-justify-content: center; justify-content: center;
+        scroll-snap-align: center;
+        font-size: 20px; font-weight: 400; color: var(--ios-text);
+    }
+    .speed-wheel-option.sel { font-weight: 700; color: var(--ios-blue); font-size: 22px; }
+    .speed-wheel-mask {
+        position: absolute; left: 0; right: 0; height: 78px; pointer-events: none; z-index: 2;
+    }
     .speed-wheel-mask.top {
-        background: linear-gradient(to bottom, rgba(28,28,30,0.97) 0%, rgba(28,28,30,0) 100%);
+        top: 0;
+        background: -webkit-linear-gradient(top, var(--ios-card) 0%, rgba(0,0,0,0) 100%);
+        background: linear-gradient(to bottom, var(--ios-card) 0%, rgba(0,0,0,0) 100%);
     }
     .speed-wheel-mask.bottom {
-        background: linear-gradient(to top, rgba(28,28,30,0.97) 0%, rgba(28,28,30,0) 100%);
+        bottom: 0;
+        background: -webkit-linear-gradient(bottom, var(--ios-card) 0%, rgba(0,0,0,0) 100%);
+        background: linear-gradient(to top, var(--ios-card) 0%, rgba(0,0,0,0) 100%);
     }
-    /* Stats sheet bg colour already via var(--ios-bg) */
-    .st-week-totals { border-top-color: rgba(255,255,255,0.08); }
-    .st-week-total-cell:first-child { border-right-color: rgba(255,255,255,0.08); }
-    .st-files-header { border-bottom-color: rgba(255,255,255,0.06); }
-    .st-file-row { border-bottom-color: rgba(255,255,255,0.04); }
-    /* Playlist modal */
-    .playlist-modal { background: #1c1c1e; }
-    /* Speed sheet */
-    .speed-sheet { background: #1c1c1e; }
-}
-html, body { margin:0; padding:0; width:100%; height:100%; overflow:hidden; }
-body {
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
-    background-color: var(--ios-bg); color: var(--ios-text);
-    -webkit-user-select: none; user-select: none;
-    display: -webkit-flex; display: flex;
-    -webkit-flex-direction: column; flex-direction: column;
-}
+    .speed-wheel-selector {
+        position: absolute; top: 78px; left: 20px; right: 20px; height: 44px;
+        border-top: 1px solid rgba(0,0,0,0.15);
+        border-bottom: 1px solid rgba(0,0,0,0.15);
+        pointer-events: none; z-index: 3; border-radius: 4px;
+    }
 
-/* ── HEADER ─────────────────────────────── */
-.header {
-    background-color: var(--ios-blur);
-    -webkit-backdrop-filter: blur(25px); backdrop-filter: blur(25px);
-    padding: calc(var(--safe-top) + 6px) 15px 8px 15px;
-    border-bottom: 0.5px solid rgba(0,0,0,0.1);
-    z-index: 100; -webkit-flex-shrink: 0; flex-shrink: 0;
-}
-.path-nav {
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    -webkit-justify-content: space-between; justify-content: space-between;
-    margin-bottom: 8px;
-}
-.back-btn {
-    color: var(--ios-blue); font-size: 17px; font-weight: 500;
-    background: none; border: none; cursor: pointer;
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    -webkit-tap-highlight-color: transparent; padding: 4px 0;
-}
-.header-stats-btn {
-    background: none; border: none; font-size: 22px;
-    cursor: pointer; padding: 2px 4px; line-height: 1;
-    -webkit-tap-highlight-color: transparent;
-    -webkit-flex-shrink: 0; flex-shrink: 0;
-}
-.current-folder {
-    font-size: 17px; font-weight: 700;
-    max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.search-bar {
-    background-color: rgba(118,118,128,0.12); border-radius: 10px;
-    padding: 6px 12px;
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-}
-.search-input {
-    border: none; background: transparent; width: 100%;
-    font-size: 16px; margin-left: 6px; outline: none; -webkit-appearance: none;
-}
+    /* ── PLAYLIST MODAL ──────────────────────── */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.4); z-index: 1000; display: none;
+        -webkit-align-items: flex-end; align-items: flex-end;
+        -webkit-justify-content: center; justify-content: center;
+    }
+    .playlist-modal {
+        background: var(--ios-card); width: 100%; max-width: 500px;
+        border-radius: 24px 24px 0 0;
+        padding: 20px 0 calc(20px + var(--safe-bottom)) 0;
+        -webkit-animation: slideUp 0.3s ease-out; animation: slideUp 0.3s ease-out;
+    }
+    @-webkit-keyframes slideUp { from { -webkit-transform: translateY(100%); } to { -webkit-transform: translateY(0); } }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-/* ── CONTENT ─────────────────────────────── */
-.content {
-    -webkit-flex: 1; flex: 1;
-    overflow-y: scroll; -webkit-overflow-scrolling: touch;
-    position: relative;
-    padding: 10px 16px 295px 16px;
-    -webkit-transition: padding-bottom 0.35s ease;
-    transition: padding-bottom 0.35s ease;
-}
-body.player-compact .content { padding-bottom: 130px; }
+    #toast {
+        position: fixed; top: 25%; left: 50%;
+        -webkit-transform: translateX(-50%); transform: translateX(-50%);
+        background: rgba(0,0,0,0.82); color: white;
+        padding: 11px 22px; border-radius: 22px; font-size: 15px;
+        z-index: 2000; display: none; white-space: nowrap;
+    }
+    #noSleepVideo { display: none; width: 1px; height: 1px; }
 
-.list-group { background-color: var(--ios-card); border-radius: var(--ios-radius); overflow: hidden; }
-.list-item {
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    padding: 13px 16px; background-color: var(--ios-card);
-    border-bottom: 0.5px solid var(--ios-sep);
-    cursor: pointer; position: relative;
-    -webkit-tap-highlight-color: rgba(0,0,0,0.05); box-sizing: border-box;
-}
-.list-item:active { background-color: var(--ios-gray-btn); }
-.list-item.active .item-title { color: var(--ios-blue); font-weight: 600; }
-.list-item.pinned-item { background-color: rgba(0,122,255,0.05); }
-.list-item.dragging { opacity: 0.5; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-.drag-handle { color: #ccc; margin-right: 12px; font-size: 20px; cursor: grab; padding: 5px; touch-action: none; }
-.item-icon { font-size: 20px; margin-right: 12px; width: 24px; text-align: center; }
-.item-info { -webkit-flex: 1; flex: 1; overflow: hidden; }
-.item-title { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ios-text); }
-.item-subtext { font-size: 11px; color: var(--ios-subtext); margin-top: 2px; }
-.item-fav-heart { padding: 10px; font-size: 20px; color: #ddd; }
-.item-fav-heart.fav-on { color: var(--ios-red); }
+    /* ══ STATS SHEET ═══════════════════════════════════ */
+    .stats-sheet {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: var(--ios-bg); z-index: 900; display: none;
+        -webkit-flex-direction: column; flex-direction: column;
+    }
+    .stats-sheet.open { display: -webkit-flex; display: flex; }
 
-/* ── PLAYER BAR ──────────────────────────── */
-.player-bar {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    background-color: var(--ios-card);
-    border-top: 0.5px solid var(--ios-sep);
-    padding: 10px 0 calc(10px + var(--safe-bottom)) 0;
-    z-index: 200; box-shadow: 0 -8px 30px rgba(0,0,0,0.08);
-}
-/* sections hidden when compact */
-.pf {
-    overflow: hidden;
-    max-height: 200px; opacity: 1;
-    -webkit-transition: max-height 0.35s ease, opacity 0.3s ease;
-    transition: max-height 0.35s ease, opacity 0.3s ease;
-}
-body.player-compact .pf { max-height: 0; opacity: 0; }
+    .st-hdr {
+        background: var(--ios-blur);
+        -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+        padding: calc(var(--safe-top) + 2px) 16px 10px 16px;
+        border-bottom: 0.5px solid rgba(0,0,0,0.1);
+        -webkit-flex-shrink: 0; flex-shrink: 0;
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        -webkit-justify-content: space-between; justify-content: space-between;
+    }
+    .st-back {
+        color: var(--ios-blue); font-size: 16px; font-weight: 600;
+        background: none; border: none; cursor: pointer;
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        -webkit-tap-highlight-color: transparent; padding: 4px 0;
+    }
+    .st-hdr-title { font-size: 17px; font-weight: 700; }
 
-/* Slider */
-.slider-container { padding: 0 20px; margin-bottom: 5px; }
-.slider-wrapper {
-    position: relative; height: 20px;
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-}
-.slider-track-bg {
-    position: absolute; left: 0; right: 0;
-    height: 5px; background: var(--ios-gray-btn); border-radius: 3px; overflow: hidden;
-}
-.slider-track-fill {
-    height: 100%; background: var(--ios-blue); border-radius: 3px; width: 0%;
-    -webkit-transition: width 0.1s linear; transition: width 0.1s linear;
-}
-.ios-slider {
-    -webkit-appearance: none; position: absolute;
-    left: 0; right: 0; width: 100%; height: 20px;
-    background: transparent; outline: none; cursor: pointer; margin: 0;
-}
-.ios-slider::-webkit-slider-thumb {
-    -webkit-appearance: none; width: 22px; height: 22px;
-    background: var(--ios-card); border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-}
+    .st-body {
+        -webkit-flex: 1; flex: 1;
+        overflow-y: scroll; -webkit-overflow-scrolling: touch;
+        padding: 14px 14px calc(30px + var(--safe-bottom)) 14px;
+    }
 
-/* Track display */
-.track-display { text-align: center; padding: 0 20px; margin-bottom: 5px; }
-.track-name {
-    font-size: 16px; font-weight: 700;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    color: var(--ios-text); margin-bottom: 1px;
-}
-.track-time { font-size: 11px; color: var(--ios-subtext); font-variant-numeric: tabular-nums; margin-bottom: 2px; }
-.audio-info { font-size: 10px; color: #b0b0b8; min-height: 13px; letter-spacing: 0.3px; }
+    .st-cumul {
+        background: var(--ios-card); border-radius: 16px;
+        padding: 16px 20px 14px 20px; margin-bottom: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .st-cumul-label { font-size: 14px; font-weight: 700; color: var(--ios-text); margin-bottom: 6px; }
+    .st-cumul-value {
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: flex-end; align-items: flex-end;
+    }
+    .st-cumul-num { font-size: 38px; font-weight: 700; color: #27ae60; letter-spacing: -1px; line-height: 1; }
+    .st-cumul-unit { font-size: 15px; font-weight: 600; color: #27ae60; margin-left: 3px; margin-bottom: 4px; }
+    .st-cumul-sub { font-size: 11px; color: var(--ios-subtext); margin-top: 4px; }
 
-/* Learning controls */
-.learning-controls {
-    display: -webkit-flex; display: flex;
-    -webkit-justify-content: center; justify-content: center;
-    -webkit-align-items: center; align-items: center;
-    margin-bottom: 10px;
-}
-.learn-btn {
-    background: none; border: none; color: var(--ios-text); cursor: pointer;
-    display: -webkit-flex; display: flex;
-    -webkit-flex-direction: column; flex-direction: column;
-    -webkit-align-items: center; align-items: center;
-    font-size: 10px; font-weight: 600;
-    margin: 0 22px; -webkit-tap-highlight-color: transparent; padding: 4px;
-}
-.learn-btn svg { width: 26px; height: 26px; margin-bottom: 2px; pointer-events: none; }
-.learn-btn.active { color: var(--ios-blue); }
+    .st-week-card {
+        background: var(--ios-card); border-radius: 16px;
+        padding: 14px 16px 16px 16px; margin-bottom: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .st-week-nav {
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        -webkit-justify-content: space-between; justify-content: space-between;
+        margin-bottom: 14px;
+    }
+    .st-week-arrow {
+        background: none; border: none; cursor: pointer;
+        color: var(--ios-blue); font-size: 20px; font-weight: 700;
+        padding: 4px 10px; -webkit-tap-highlight-color: transparent;
+    }
+    .st-week-arrow:disabled { color: #ccc; }
+    .st-week-label { font-size: 15px; font-weight: 700; color: var(--ios-text); }
+    .st-week-range { font-size: 13px; color: var(--ios-subtext); text-align: center; }
 
-/* Basic controls */
-.basic-controls {
-    display: -webkit-flex; display: flex;
-    -webkit-justify-content: center; justify-content: center;
-    -webkit-align-items: center; align-items: center;
-    margin-bottom: 11px;
-}
-.basic-controls > * { margin: 0 10px; }
-.icon-btn {
-    background: none; border: none; cursor: pointer; padding: 6px; color: var(--ios-text);
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    -webkit-justify-content: center; justify-content: center;
-    -webkit-tap-highlight-color: transparent;
-}
-.icon-btn svg { pointer-events: none; }
-.play-btn svg { width: 44px; height: 44px; }
-.side-btn svg { width: 28px; height: 28px; }
-.icon-btn.active { color: var(--ios-blue); }
+    .st-bar-meta {
+        display: -webkit-flex; display: flex;
+        -webkit-justify-content: space-between; justify-content: space-between;
+        -webkit-align-items: center; align-items: center;
+        margin-bottom: 4px;
+    }
+    .st-bar-meta-l { font-size: 12px; color: var(--ios-subtext); font-weight: 600; }
+    .st-bar-meta-r { font-size: 12px; color: var(--ios-subtext); }
 
-/* ── CYCLE BUTTON badge "1" ─────────────── */
-.cycle-wrap { position: relative; display: inline-block; padding: 6px; cursor: pointer; -webkit-tap-highlight-color: transparent; background: none; border: none; }
-.cycle-wrap svg { width: 28px; height: 28px; display: block; pointer-events: none; }
-.cycle-badge {
-    position: absolute; top: 2px; right: 2px;
-    width: 14px; height: 14px; border-radius: 7px;
-    background: var(--ios-blue); color: #fff;
-    font-size: 9px; font-weight: 800; line-height: 14px; text-align: center;
-    display: none; pointer-events: none;
-}
-.cycle-wrap.mode-single { color: var(--ios-blue); }
-.cycle-wrap.mode-single .cycle-badge { display: block; }
-.cycle-wrap.mode-shuffle { color: var(--ios-blue); }
+    #stBarCanvas { display: block; width: 100%; touch-action: none; }
 
-/* Fav heart */
-.fav-btn {
-    font-size: 26px; cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-    background: none; border: none; padding: 6px;
-}
+    .st-week-totals {
+        display: -webkit-flex; display: flex;
+        border-top: 0.5px solid var(--ios-sep); margin-top: 14px; padding-top: 12px;
+    }
+    .st-week-total-cell {
+        -webkit-flex: 1; flex: 1; text-align: center;
+    }
+    .st-week-total-cell:first-child {
+        border-right: 0.5px solid var(--ios-sep);
+    }
+    .st-week-total-label { font-size: 12px; color: var(--ios-subtext); font-weight: 600; margin-bottom: 4px; }
+    .st-week-total-value { font-size: 18px; font-weight: 700; color: var(--ios-blue); }
+    .st-week-compare { font-size: 13px; font-weight: 600; }
+    .st-compare-up   { color: #27ae60; }
+    .st-compare-down { color: var(--ios-red); }
+    .st-compare-same { color: var(--ios-subtext); }
 
-/* Feature grid */
-.feature-grid {
-    display: -webkit-flex; display: flex;
-    -webkit-justify-content: space-around; justify-content: space-around;
-    -webkit-align-items: center; align-items: center;
-    padding: 0 8px;
-}
-.pill-btn {
-    background-color: var(--ios-gray-btn); border: none; border-radius: 8px;
-    padding: 7px 0; font-size: 11px; font-weight: 600;
-    display: -webkit-flex; display: flex;
-    -webkit-flex-direction: column; flex-direction: column;
-    -webkit-align-items: center; align-items: center;
-    cursor: pointer; width: 18%; -webkit-tap-highlight-color: transparent;
-}
-.pill-btn span { line-height: 1.4; pointer-events: none; }
-.pill-btn.active { background-color: rgba(0,122,255,0.1); color: var(--ios-blue); }
-.version-tag { font-size: 10px; color: #c6c6c8; text-align: center; margin-top: 5px; }
+    .st-share-btn {
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        gap: 4px;
+        background: none; border: none;
+        color: var(--ios-blue); font-size: 15px;
+        padding: 4px 0; cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
+    .st-backup-btn {
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        gap: 4px;
+        background: none; border: none;
+        color: var(--ios-blue); font-size: 15px;
+        padding: 4px 0; cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+    }
 
-/* ── SPEED SHEET ─────────────────────────── */
-.sheet-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.35); z-index: 500; display: none;
-}
-.speed-sheet {
-    position: fixed; left: 0; right: 0; bottom: 0;
-    background: var(--ios-card); border-radius: 20px 20px 0 0;
-    z-index: 600; display: none;
-    -webkit-flex-direction: column; flex-direction: column;
-    padding-bottom: calc(16px + var(--safe-bottom));
-    -webkit-animation: slideUp 0.3s ease-out; animation: slideUp 0.3s ease-out;
-}
-.speed-sheet.open { display: -webkit-flex; display: flex; }
+    /* ── Share Picker Sheet ── */
+    .share-picker-overlay {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.35);
+        z-index: 3000; opacity: 0;
+        transition: opacity .25s;
+        pointer-events: none;
+    }
+    .share-picker-overlay.open { opacity: 1; pointer-events: auto; }
+    .share-picker-sheet {
+        position: fixed; left: 0; right: 0; bottom: 0;
+        background: var(--ios-bg);
+        border-radius: 20px 20px 0 0;
+        padding: 0 0 calc(var(--safe-bottom) + 8px) 0;
+        z-index: 3001;
+        transform: translateY(100%);
+        transition: transform .28s cubic-bezier(.4,0,.2,1);
+        max-height: 80vh; overflow-y: auto;
+    }
+    .share-picker-sheet.open { transform: translateY(0); }
+    .sp-handle {
+        width: 36px; height: 4px; border-radius: 2px;
+        background: #ccc; margin: 10px auto 0;
+    }
+    .sp-title {
+        text-align: center; font-size: 13px; color: #999;
+        padding: 10px 16px 4px;
+    }
+    .sp-row {
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        padding: 16px 20px;
+        font-size: 17px; color: var(--ios-text);
+        border-bottom: 1px solid var(--ios-divider);
+        cursor: pointer; -webkit-tap-highlight-color: transparent;
+        gap: 14px;
+    }
+    .sp-row:last-of-type { border-bottom: none; }
+    .sp-row:active { background: var(--ios-divider); }
+    .sp-row-icon { font-size: 22px; width: 28px; text-align: center; }
+    .sp-row-sub { font-size: 13px; color: #999; margin-top: 2px; }
+    .sp-cancel {
+        margin: 8px 16px 4px;
+        background: var(--ios-card);
+        border-radius: 14px;
+        padding: 16px;
+        text-align: center;
+        font-size: 17px; font-weight: 600;
+        color: var(--ios-blue);
+        cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .sp-cancel:active { opacity: 0.6; }
 
-.speed-sheet-header {
-    display: -webkit-flex; display: flex;
-    -webkit-justify-content: space-between; justify-content: space-between;
-    -webkit-align-items: center; align-items: center;
-    padding: 14px 20px 4px 20px;
-}
-.speed-sheet-title { font-size: 17px; font-weight: 700; }
-.speed-done-btn {
-    color: var(--ios-blue); font-size: 17px; font-weight: 600;
-    background: none; border: none; cursor: pointer; padding: 4px;
-    -webkit-tap-highlight-color: transparent;
-}
-/* live speed badge */
-.speed-live-badge {
-    text-align: center; font-size: 28px; font-weight: 700;
-    color: var(--ios-blue); padding: 4px 0 8px 0;
-    letter-spacing: -0.5px;
-}
-/* Wheel */
-.speed-wheel-wrap { position: relative; height: 200px; overflow: hidden; }
-.speed-wheel-scroll {
-    height: 100%; overflow-y: scroll;
-    scroll-snap-type: y mandatory; -webkit-scroll-snap-type: y mandatory;
-    -webkit-overflow-scrolling: touch;
-}
-.speed-wheel-pad { height: 78px; }
-.speed-wheel-option {
-    height: 44px;
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    -webkit-justify-content: center; justify-content: center;
-    scroll-snap-align: center;
-    font-size: 20px; font-weight: 400; color: var(--ios-text);
-}
-.speed-wheel-option.sel { font-weight: 700; color: var(--ios-blue); font-size: 22px; }
-.speed-wheel-mask {
-    position: absolute; left: 0; right: 0; height: 78px; pointer-events: none; z-index: 2;
-}
-.speed-wheel-mask.top {
-    top: 0;
-    background: -webkit-linear-gradient(top, var(--ios-card) 0%, rgba(0,0,0,0) 100%);
-    background: linear-gradient(to bottom, var(--ios-card) 0%, rgba(0,0,0,0) 100%);
-}
-.speed-wheel-mask.bottom {
-    bottom: 0;
-    background: -webkit-linear-gradient(bottom, var(--ios-card) 0%, rgba(0,0,0,0) 100%);
-    background: linear-gradient(to top, var(--ios-card) 0%, rgba(0,0,0,0) 100%);
-}
-.speed-wheel-selector {
-    position: absolute; top: 78px; left: 20px; right: 20px; height: 44px;
-    border-top: 1px solid rgba(0,0,0,0.15);
-    border-bottom: 1px solid rgba(0,0,0,0.15);
-    pointer-events: none; z-index: 3; border-radius: 4px;
-}
+    .sp-week-extra {
+        display: none;
+        padding: 12px 20px 4px;
+        border-top: 1px solid var(--ios-divider);
+        background: var(--ios-bg);
+    }
+    .sp-week-extra.open { display: block; }
+    .sp-week-extra-title {
+        font-size: 13px; color: #999; margin-bottom: 10px;
+    }
+    .sp-coin-row {
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        gap: 8px; margin-bottom: 12px;
+    }
+    .sp-coin-row label { font-size: 14px; color: #555; white-space: nowrap; }
+    .sp-coin-input {
+        -webkit-flex: 1; flex: 1;
+        padding: 8px 12px;
+        border: 1.5px solid var(--ios-divider);
+        border-radius: 10px;
+        font-size: 15px;
+        background: var(--ios-card);
+        color: var(--ios-text);
+        outline: none;
+        width: 80px;
+    }
+    .sp-coin-hint { font-size: 12px; color: #bbb; margin-top: -6px; margin-bottom: 10px; }
 
-/* ── PLAYLIST MODAL ──────────────────────── */
-.modal-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.4); z-index: 1000; display: none;
-    -webkit-align-items: flex-end; align-items: flex-end;
-    -webkit-justify-content: center; justify-content: center;
-}
-.playlist-modal {
-    background: var(--ios-card); width: 100%; max-width: 500px;
-    border-radius: 24px 24px 0 0;
-    padding: 20px 0 calc(20px + var(--safe-bottom)) 0;
-    -webkit-animation: slideUp 0.3s ease-out; animation: slideUp 0.3s ease-out;
-}
-@-webkit-keyframes slideUp { from { -webkit-transform: translateY(100%); } to { -webkit-transform: translateY(0); } }
-@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .sp-range-area {
+        padding: 12px 20px 8px;
+        display: none;
+    }
+    .sp-range-area.open { display: block; }
+    .sp-range-row {
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        gap: 10px; margin-bottom: 10px;
+    }
+    .sp-range-row label { font-size: 14px; color: #666; width: 40px; }
+    .sp-range-row input[type=date] {
+        -webkit-flex: 1; flex: 1;
+        padding: 8px 12px;
+        border: 1.5px solid var(--ios-divider);
+        border-radius: 10px;
+        font-size: 15px;
+        background: var(--ios-card);
+        color: var(--ios-text);
+        outline: none;
+    }
+    .sp-range-confirm {
+        width: 100%;
+        padding: 13px;
+        border-radius: 12px;
+        background: var(--ios-blue);
+        color: #fff;
+        font-size: 16px; font-weight: 600;
+        border: none; cursor: pointer;
+        margin-top: 4px;
+        -webkit-tap-highlight-color: transparent;
+    }
 
-#toast {
-    position: fixed; top: 25%; left: 50%;
-    -webkit-transform: translateX(-50%); transform: translateX(-50%);
-    background: rgba(0,0,0,0.82); color: white;
-    padding: 11px 22px; border-radius: 22px; font-size: 15px;
-    z-index: 2000; display: none; white-space: nowrap;
-}
-#noSleepVideo { display: none; width: 1px; height: 1px; }
+    /* ── Backup Sheet ── */
+    .backup-sheet-overlay {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.35);
+        z-index: 3000; opacity: 0;
+        transition: opacity .25s; pointer-events: none;
+    }
+    .backup-sheet-overlay.open { opacity: 1; pointer-events: auto; }
+    .backup-sheet {
+        position: fixed; left: 0; right: 0; bottom: 0;
+        background: var(--ios-bg);
+        border-radius: 20px 20px 0 0;
+        padding: 0 0 calc(var(--safe-bottom) + 8px) 0;
+        z-index: 3001;
+        transform: translateY(100%);
+        transition: transform .28s cubic-bezier(.4,0,.2,1);
+        max-height: 80vh; overflow-y: auto;
+    }
+    .backup-sheet.open { transform: translateY(0); }
+    .bs-handle {
+        width: 36px; height: 4px; border-radius: 2px;
+        background: #ccc; margin: 10px auto 0;
+    }
+    .bs-title {
+        text-align: center; font-size: 17px; font-weight: 600;
+        color: var(--ios-text); padding: 14px 16px 4px;
+    }
+    .bs-sub {
+        text-align: center; font-size: 13px; color: #999;
+        padding: 0 24px 12px;
+    }
+    .bs-row {
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        padding: 18px 24px;
+        font-size: 17px; color: var(--ios-text);
+        border-bottom: 1px solid var(--ios-divider);
+        cursor: pointer; -webkit-tap-highlight-color: transparent;
+        gap: 16px;
+    }
+    .bs-row:active { background: var(--ios-divider); }
+    .bs-row-icon { font-size: 24px; width: 32px; text-align: center; }
+    .bs-row-sub { font-size: 13px; color: #999; margin-top: 2px; }
+    .bs-row-warn { color: #FF3B30; }
+    .bs-cancel {
+        margin: 8px 16px 4px;
+        background: var(--ios-card);
+        border-radius: 14px; padding: 16px;
+        text-align: center;
+        font-size: 17px; font-weight: 600;
+        color: var(--ios-blue);
+        cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .bs-cancel:active { opacity: 0.6; }
+    .bs-info {
+        margin: 0 16px 8px;
+        background: var(--ios-card);
+        border-radius: 12px; padding: 14px 16px;
+        font-size: 13px; color: #666; line-height: 1.6;
+    }
+    .bs-import-preview {
+        margin: 0 16px 8px;
+        background: var(--ios-card);
+        border-radius: 12px; padding: 14px 16px;
+        font-size: 13px; color: #666; line-height: 1.6;
+        display: none;
+    }
+    .bs-import-preview.show { display: block; }
+    .bs-import-preview b { color: var(--ios-blue); }
 
-/* ══ STATS SHEET (v1.7.3) ══════════════════ */
-.stats-sheet {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: var(--ios-bg); z-index: 900; display: none;
-    -webkit-flex-direction: column; flex-direction: column;
-}
-.stats-sheet.open { display: -webkit-flex; display: flex; }
+    /* Partial Export Sheet (v2.0.0 NEW) */
+    .bs-range-section {
+        padding: 12px 24px;
+        border-top: 1px solid var(--ios-divider);
+        background: var(--ios-bg);
+    }
+    .bs-range-title {
+        font-size: 13px; font-weight: 600; color: var(--ios-text); margin-bottom: 12px;
+    }
+    .bs-range-row {
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        gap: 10px; margin-bottom: 10px;
+    }
+    .bs-range-row label { font-size: 14px; color: #666; width: 50px; }
+    .bs-range-row input[type=date] {
+        -webkit-flex: 1; flex: 1;
+        padding: 8px 12px;
+        border: 1.5px solid var(--ios-divider);
+        border-radius: 10px;
+        font-size: 15px;
+        background: var(--ios-card);
+        color: var(--ios-text);
+        outline: none;
+    }
+    .bs-range-btn {
+        width: 100%;
+        padding: 13px;
+        border-radius: 12px;
+        background: var(--ios-blue);
+        color: #fff;
+        font-size: 16px; font-weight: 600;
+        border: none; cursor: pointer;
+        margin-top: 4px;
+        -webkit-tap-highlight-color: transparent;
+    }
+    #peFileListSection {
+        max-height: 280px;
+        overflow-y: auto;
+        padding: 0 24px;
+    }
+    #peFileList > div {
+        display: -webkit-flex;
+        display: flex;
+        -webkit-align-items: center;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 0.5px solid var(--ios-sep);
+    }
+    #peFileList input[type=checkbox] {
+        width: 18px;
+        height: 18px;
+        margin-right: 12px;
+        cursor: pointer;
+    }
+    #peFileList label {
+        -webkit-flex: 1;
+        flex: 1;
+        cursor: pointer;
+    }
 
-/* header */
-.st-hdr {
-    background: var(--ios-blur);
-    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
-    padding: calc(var(--safe-top) + 2px) 16px 10px 16px;
-    border-bottom: 0.5px solid rgba(0,0,0,0.1);
-    -webkit-flex-shrink: 0; flex-shrink: 0;
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    -webkit-justify-content: space-between; justify-content: space-between;
-}
-.st-back {
-    color: var(--ios-blue); font-size: 16px; font-weight: 600;
-    background: none; border: none; cursor: pointer;
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    -webkit-tap-highlight-color: transparent; padding: 4px 0;
-}
-.st-hdr-title { font-size: 17px; font-weight: 700; }
-.st-hdr-spacer { width: 60px; }
+    .st-files-card {
+        background: var(--ios-card); border-radius: 16px;
+        overflow: hidden; margin-bottom: 12px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+    }
+    .st-files-header {
+        display: -webkit-flex; display: flex;
+        -webkit-justify-content: space-between; justify-content: space-between;
+        -webkit-align-items: center; align-items: center;
+        padding: 14px 16px 10px 16px;
+        border-bottom: 0.5px solid var(--ios-sep);
+    }
+    .st-files-title {
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        font-size: 15px; font-weight: 700; color: var(--ios-text);
+    }
+    .st-files-date { font-size: 13px; color: var(--ios-subtext); }
+    .st-file-row {
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        padding: 12px 16px;
+        border-bottom: 0.5px solid var(--ios-sep);
+    }
+    .st-file-row:last-child { border-bottom: none; }
+    .st-file-icon {
+        width: 42px; height: 42px; border-radius: 10px;
+        background: -webkit-linear-gradient(135deg, #f5a623, #f0932b);
+        background: linear-gradient(135deg, #f5a623, #f0932b);
+        display: -webkit-flex; display: flex;
+        -webkit-align-items: center; align-items: center;
+        -webkit-justify-content: center; justify-content: center;
+        font-size: 20px; margin-right: 12px;
+        -webkit-flex-shrink: 0; flex-shrink: 0;
+    }
+    .st-file-info { -webkit-flex: 1; flex: 1; overflow: hidden; }
+    .st-file-name {
+        font-size: 15px; font-weight: 600; color: var(--ios-text);
+        overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .st-file-dur { font-size: 12px; color: var(--ios-subtext); margin-top: 2px; }
+    .st-empty-files {
+        text-align: center; padding: 28px 20px;
+        color: var(--ios-subtext); font-size: 14px;
+    }
 
-/* scrollable body */
-.st-body {
-    -webkit-flex: 1; flex: 1;
-    overflow-y: scroll; -webkit-overflow-scrolling: touch;
-    padding: 14px 14px calc(30px + var(--safe-bottom)) 14px;
-}
-
-/* cumulative total card */
-.st-cumul {
-    background: var(--ios-card); border-radius: 16px;
-    padding: 16px 20px 14px 20px; margin-bottom: 12px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-}
-.st-cumul-label { font-size: 14px; font-weight: 700; color: var(--ios-text); margin-bottom: 6px; }
-.st-cumul-value {
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: flex-end; align-items: flex-end;
-}
-.st-cumul-num { font-size: 38px; font-weight: 700; color: #27ae60; letter-spacing: -1px; line-height: 1; }
-.st-cumul-unit { font-size: 15px; font-weight: 600; color: #27ae60; margin-left: 3px; margin-bottom: 4px; }
-.st-cumul-sub { font-size: 11px; color: var(--ios-subtext); margin-top: 4px; }
-
-/* week chart card */
-.st-week-card {
-    background: var(--ios-card); border-radius: 16px;
-    padding: 14px 16px 16px 16px; margin-bottom: 12px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-}
-/* week nav row */
-.st-week-nav {
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    -webkit-justify-content: space-between; justify-content: space-between;
-    margin-bottom: 14px;
-}
-.st-week-arrow {
-    background: none; border: none; cursor: pointer;
-    color: var(--ios-blue); font-size: 20px; font-weight: 700;
-    padding: 4px 10px; -webkit-tap-highlight-color: transparent;
-}
-.st-week-arrow:disabled { color: #ccc; }
-.st-week-label { font-size: 15px; font-weight: 700; color: var(--ios-text); }
-.st-week-range { font-size: 13px; color: var(--ios-subtext); text-align: center; }
-
-/* bar chart labels row */
-.st-bar-meta {
-    display: -webkit-flex; display: flex;
-    -webkit-justify-content: space-between; justify-content: space-between;
-    -webkit-align-items: center; align-items: center;
-    margin-bottom: 4px;
-}
-.st-bar-meta-l { font-size: 12px; color: var(--ios-subtext); font-weight: 600; }
-.st-bar-meta-r { font-size: 12px; color: var(--ios-subtext); }
-
-/* canvas bar chart */
-#stBarCanvas { display: block; width: 100%; touch-action: none; }
-
-/* week totals row */
-.st-week-totals {
-    display: -webkit-flex; display: flex;
-    border-top: 0.5px solid var(--ios-sep); margin-top: 14px; padding-top: 12px;
-}
-.st-week-total-cell {
-    -webkit-flex: 1; flex: 1; text-align: center;
-}
-.st-week-total-cell:first-child {
-    border-right: 0.5px solid var(--ios-sep);
-}
-.st-week-total-label { font-size: 12px; color: var(--ios-subtext); font-weight: 600; margin-bottom: 4px; }
-.st-week-total-value { font-size: 18px; font-weight: 700; color: var(--ios-blue); }
-.st-week-compare { font-size: 13px; font-weight: 600; }
-.st-compare-up   { color: #27ae60; }
-.st-compare-down { color: var(--ios-red); }
-.st-compare-same { color: var(--ios-subtext); }
-
-/* daily files card */
-.st-share-btn {
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    gap: 4px;
-    background: none; border: none;
-    color: var(--ios-blue); font-size: 15px;
-    padding: 4px 0; cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-}
-/* ── Share Picker Sheet ── */
-.share-picker-overlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.35);
-    z-index: 3000; opacity: 0;
-    transition: opacity .25s;
-    pointer-events: none;
-}
-.share-picker-overlay.open { opacity: 1; pointer-events: auto; }
-.share-picker-sheet {
-    position: fixed; left: 0; right: 0; bottom: 0;
-    background: var(--ios-bg);
-    border-radius: 20px 20px 0 0;
-    padding: 0 0 calc(var(--safe-bot) + 8px) 0;
-    z-index: 3001;
-    transform: translateY(100%);
-    transition: transform .28s cubic-bezier(.4,0,.2,1);
-    max-height: 80vh; overflow-y: auto;
-}
-.share-picker-sheet.open { transform: translateY(0); }
-.sp-handle {
-    width: 36px; height: 4px; border-radius: 2px;
-    background: #ccc; margin: 10px auto 0;
-}
-.sp-title {
-    text-align: center; font-size: 13px; color: #999;
-    padding: 10px 16px 4px;
-}
-.sp-row {
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    padding: 16px 20px;
-    font-size: 17px; color: var(--ios-text);
-    border-bottom: 1px solid var(--ios-divider);
-    cursor: pointer; -webkit-tap-highlight-color: transparent;
-    gap: 14px;
-}
-.sp-row:last-of-type { border-bottom: none; }
-.sp-row:active { background: var(--ios-divider); }
-.sp-row-icon { font-size: 22px; width: 28px; text-align: center; }
-.sp-row-sub { font-size: 13px; color: #999; margin-top: 2px; }
-.sp-cancel {
-    margin: 8px 16px 4px;
-    background: var(--ios-card);
-    border-radius: 14px;
-    padding: 16px;
-    text-align: center;
-    font-size: 17px; font-weight: 600;
-    color: var(--ios-blue);
-    cursor: pointer; -webkit-tap-highlight-color: transparent;
-}
-.sp-cancel:active { opacity: 0.6; }
-/* Week extra fields */
-.sp-week-extra {
-    display: none;
-    padding: 12px 20px 4px;
-    border-top: 1px solid var(--ios-divider);
-    background: var(--ios-bg);
-}
-.sp-week-extra.open { display: block; }
-.sp-week-extra-title {
-    font-size: 13px; color: #999; margin-bottom: 10px;
-}
-.sp-coin-row {
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    gap: 8px; margin-bottom: 12px;
-}
-.sp-coin-row label { font-size: 14px; color: #555; white-space: nowrap; }
-.sp-coin-input {
-    -webkit-flex: 1; flex: 1;
-    padding: 8px 12px;
-    border: 1.5px solid var(--ios-divider);
-    border-radius: 10px;
-    font-size: 15px;
-    background: var(--ios-card);
-    color: var(--ios-text);
-    outline: none;
-    width: 80px;
-}
-.sp-coin-hint { font-size: 12px; color: #bbb; margin-top: -6px; margin-bottom: 10px; }
-/* ── Backup Sheet ── */
-.st-backup-btn {
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    gap: 4px;
-    background: none; border: none;
-    color: var(--ios-blue); font-size: 15px;
-    padding: 4px 0; cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-}
-.backup-sheet-overlay {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.35);
-    z-index: 3000; opacity: 0;
-    transition: opacity .25s; pointer-events: none;
-}
-.backup-sheet-overlay.open { opacity: 1; pointer-events: auto; }
-.backup-sheet {
-    position: fixed; left: 0; right: 0; bottom: 0;
-    background: var(--ios-bg);
-    border-radius: 20px 20px 0 0;
-    padding: 0 0 calc(var(--safe-bot) + 8px) 0;
-    z-index: 3001;
-    transform: translateY(100%);
-    transition: transform .28s cubic-bezier(.4,0,.2,1);
-}
-.backup-sheet.open { transform: translateY(0); }
-.bs-handle {
-    width: 36px; height: 4px; border-radius: 2px;
-    background: #ccc; margin: 10px auto 0;
-}
-.bs-title {
-    text-align: center; font-size: 17px; font-weight: 600;
-    color: var(--ios-text); padding: 14px 16px 4px;
-}
-.bs-sub {
-    text-align: center; font-size: 13px; color: #999;
-    padding: 0 24px 12px;
-}
-.bs-row {
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    padding: 18px 24px;
-    font-size: 17px; color: var(--ios-text);
-    border-bottom: 1px solid var(--ios-divider);
-    cursor: pointer; -webkit-tap-highlight-color: transparent;
-    gap: 16px;
-}
-.bs-row:active { background: var(--ios-divider); }
-.bs-row-icon { font-size: 24px; width: 32px; text-align: center; }
-.bs-row-sub { font-size: 13px; color: #999; margin-top: 2px; }
-.bs-row-warn { color: #FF3B30; }
-.bs-cancel {
-    margin: 8px 16px 4px;
-    background: var(--ios-card);
-    border-radius: 14px; padding: 16px;
-    text-align: center;
-    font-size: 17px; font-weight: 600;
-    color: var(--ios-blue);
-    cursor: pointer; -webkit-tap-highlight-color: transparent;
-}
-.bs-cancel:active { opacity: 0.6; }
-.bs-info {
-    margin: 0 16px 8px;
-    background: var(--ios-card);
-    border-radius: 12px; padding: 14px 16px;
-    font-size: 13px; color: #666; line-height: 1.6;
-}
-/* Custom range picker */
-.sp-range-area {
-    padding: 12px 20px 8px;
-    display: none;
-}
-.sp-range-area.open { display: block; }
-.sp-range-row {
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    gap: 10px; margin-bottom: 10px;
-}
-.sp-range-row label { font-size: 14px; color: #666; width: 40px; }
-.sp-range-row input[type=date] {
-    -webkit-flex: 1; flex: 1;
-    padding: 8px 12px;
-    border: 1.5px solid var(--ios-divider);
-    border-radius: 10px;
-    font-size: 15px;
-    background: var(--ios-card);
-    color: var(--ios-text);
-    outline: none;
-}
-.sp-range-confirm {
-    width: 100%;
-    padding: 13px;
-    border-radius: 12px;
-    background: var(--ios-blue);
-    color: #fff;
-    font-size: 16px; font-weight: 600;
-    border: none; cursor: pointer;
-    margin-top: 4px;
-    -webkit-tap-highlight-color: transparent;
-}
-.st-file-count {
-    font-size: 12px; color: #888; margin-top: 2px;
-}
-.st-file-count b { color: var(--ios-blue); }
-.st-files-card {
-    background: var(--ios-card); border-radius: 16px;
-    overflow: hidden; margin-bottom: 12px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-}
-.st-files-header {
-    display: -webkit-flex; display: flex;
-    -webkit-justify-content: space-between; justify-content: space-between;
-    -webkit-align-items: center; align-items: center;
-    padding: 14px 16px 10px 16px;
-    border-bottom: 0.5px solid var(--ios-sep);
-}
-.st-files-title {
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    font-size: 15px; font-weight: 700; color: var(--ios-text);
-}
-.st-files-date { font-size: 13px; color: var(--ios-subtext); }
-.st-file-row {
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    padding: 12px 16px;
-    border-bottom: 0.5px solid var(--ios-sep);
-}
-.st-file-row:last-child { border-bottom: none; }
-.st-file-icon {
-    width: 42px; height: 42px; border-radius: 10px;
-    background: -webkit-linear-gradient(135deg, #f5a623, #f0932b);
-    background: linear-gradient(135deg, #f5a623, #f0932b);
-    display: -webkit-flex; display: flex;
-    -webkit-align-items: center; align-items: center;
-    -webkit-justify-content: center; justify-content: center;
-    font-size: 20px; margin-right: 12px;
-    -webkit-flex-shrink: 0; flex-shrink: 0;
-}
-.st-file-info { -webkit-flex: 1; flex: 1; overflow: hidden; }
-.st-file-name {
-    font-size: 15px; font-weight: 600; color: var(--ios-text);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.st-file-dur { font-size: 12px; color: var(--ios-subtext); margin-top: 2px; }
-.st-empty-files {
-    text-align: center; padding: 28px 20px;
-    color: var(--ios-subtext); font-size: 14px;
-}
-
-/* notice */
-.st-notice {
-    font-size: 11px; color: var(--ios-subtext); text-align: center;
-    padding: 0 8px 4px 8px; line-height: 1.6;
-}
+    .st-notice {
+        font-size: 11px; color: var(--ios-subtext); text-align: center;
+        padding: 0 8px 4px 8px; line-height: 1.6;
+    }
+</style>
 ```
 
-</style>
 </head>
 <body class="player-compact">
 
@@ -721,7 +770,7 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
 
 <div id="toast"></div>
 
-<!-- Collect Modal -->
+<!-- Playlist Modal -->
 
 <div class="modal-overlay" id="playlistModal" onclick="if(event.target===this)closePlaylistModal()">
     <div class="playlist-modal">
@@ -732,7 +781,7 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
     </div>
 </div>
 
-<!-- Stats Sheet (v1.7.3) -->
+<!-- Stats Sheet -->
 
 <div class="stats-sheet" id="statsSheet">
     <div class="st-hdr">
@@ -796,25 +845,19 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
 <!-- PLAYER BAR -->
 
 <div class="player-bar" id="playerBar">
-
-<!-- Slider -->
-
-<div class="slider-container">
-    <div class="slider-wrapper">
-        <div class="slider-track-bg"><div class="slider-track-fill" id="sliderFill"></div></div>
-        <input type="range" class="ios-slider" id="progressSlider" value="0" min="0" max="100" step="0.1">
+    <div class="slider-container">
+        <div class="slider-wrapper">
+            <div class="slider-track-bg"><div class="slider-track-fill" id="sliderFill"></div></div>
+            <input type="range" class="ios-slider" id="progressSlider" value="0" min="0" max="100" step="0.1">
+        </div>
     </div>
-</div>
 
-<!-- Track Info -->
-
+```
 <div class="track-display">
     <div class="track-name" id="trackName">未播放</div>
     <div class="track-time" id="trackTime">--:-- / --:--</div>
     <div class="audio-info" id="audioInfo"></div>
 </div>
-
-<!-- Learning controls (hidden compact) -->
 
 <div class="pf">
     <div class="learning-controls">
@@ -832,8 +875,6 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
         </button>
     </div>
 </div>
-
-<!-- Basic Controls -->
 
 <div class="basic-controls" id="basicControls">
     <button class="cycle-wrap" id="cycleBtn" onclick="cyclPlayMode()" data-mode="list" aria-label="切换循环模式">
@@ -861,8 +902,6 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
     <button class="fav-btn" id="mainFavBtn" onclick="openPlaylistModal()" aria-label="收藏">🤍</button>
 </div>
 
-<!-- Feature grid (hidden compact) -->
-
 <div class="pf">
     <div class="feature-grid">
         <button class="pill-btn" id="speedBtn" onclick="openSpeedSheet()" aria-label="播放速度">
@@ -881,29 +920,164 @@ body.player-compact .pf { max-height: 0; opacity: 0; }
             <span>📊</span><span>统计</span>
         </button>
     </div>
-    <div class="version-tag">Build v1.9.9</div>
+    <div class="version-tag">Build v2.0.0</div>
 </div>
+```
 
 </div>
+
+<!-- Share Picker Sheet -->
+
+<div class="share-picker-overlay" id="sharePickerOverlay" onclick="closeSharePicker()"></div>
+<div class="share-picker-sheet" id="sharePickerSheet">
+    <div class="sp-handle"></div>
+    <div class="sp-title">选择分享范围</div>
+
+```
+<div class="sp-row" onclick="doShareDay()">
+    <span class="sp-row-icon">📅</span>
+    <div>
+        <div>当日分享</div>
+        <div class="sp-row-sub" id="spDayLabel">今天</div>
+    </div>
+</div>
+
+<div class="sp-row" onclick="toggleWeekExtra()">
+    <span class="sp-row-icon">📊</span>
+    <div>
+        <div>本周分享</div>
+        <div class="sp-row-sub" id="spWeekLabel">本周</div>
+    </div>
+    <span style="margin-left:auto;font-size:13px;color:#ccc" id="spWeekArrow">▶</span>
+</div>
+<div class="sp-week-extra" id="spWeekExtra">
+    <div class="sp-week-extra-title">填写额外信息（选填）</div>
+    <div class="sp-coin-row">
+        <label>💰 累计金币</label>
+        <input type="number" id="spCoinInput" class="sp-coin-input" placeholder="如：14" min="0" inputmode="numeric">
+    </div>
+    <div class="sp-coin-hint">不填则隐藏金币</div>
+    <button class="sp-range-confirm" onclick="doShareWeek()">生成本周分享长图</button>
+</div>
+
+<div class="sp-row" onclick="toggleRangePicker()">
+    <span class="sp-row-icon">🗓️</span>
+    <div>
+        <div>自定义区间</div>
+        <div class="sp-row-sub">选择任意起止日期</div>
+    </div>
+</div>
+
+<div class="sp-range-area" id="spRangeArea">
+    <div class="sp-range-row">
+        <label>开始</label>
+        <input type="date" id="spRangeStart">
+    </div>
+    <div class="sp-range-row">
+        <label>结束</label>
+        <input type="date" id="spRangeEnd">
+    </div>
+    <button class="sp-range-confirm" onclick="doShareRange()">生成分享长图</button>
+</div>
+
+<div class="sp-cancel" onclick="closeSharePicker()">取消</div>
+```
+
+</div>
+
+<!-- Backup Sheet (v2.0.0) -->
+
+<div class="backup-sheet-overlay" id="backupOverlay" onclick="closeBackupSheet()"></div>
+<div class="backup-sheet" id="backupSheet">
+    <div class="bs-handle"></div>
+    <div class="bs-title">📦 数据备份与恢复</div>
+    <div class="bs-sub">导出 JSON 文件可保存到本地，换设备可导入恢复</div>
+
+```
+<div class="bs-row" onclick="doExportStats()">
+    <span class="bs-row-icon">⬇️</span>
+    <div>
+        <div>导出全部数据</div>
+        <div class="bs-row-sub" id="bsExportSub">下载完整 stats_backup.json</div>
+    </div>
+</div>
+
+<div class="bs-row" onclick="openPartialExport()">
+    <span class="bs-row-icon">📋</span>
+    <div>
+        <div>按日期/文件导出</div>
+        <div class="bs-row-sub">灵活选择特定日期和文件</div>
+    </div>
+</div>
+
+<div class="bs-row" onclick="doImportStats()">
+    <span class="bs-row-icon">⬆️</span>
+    <div>
+        <div>导入备份</div>
+        <div class="bs-row-sub bs-row-warn">将与现有数据合并（不覆盖记录）</div>
+    </div>
+</div>
+
+<div class="bs-import-preview" id="bsImportPreview"></div>
+<div class="bs-info" id="bsInfo">正在读取数据…</div>
+<div class="bs-cancel" onclick="closeBackupSheet()">取消</div>
+```
+
+</div>
+
+<!-- Partial Export Sheet (v2.0.0 NEW) -->
+
+<div class="backup-sheet-overlay" id="partialExportOverlay" onclick="closePartialExport()"></div>
+<div class="backup-sheet" id="partialExportSheet">
+    <div class="bs-handle"></div>
+    <div class="bs-title">按日期/文件导出</div>
+    <div class="bs-sub">灵活选择特定日期和文件记录</div>
+
+```
+<div class="bs-range-section">
+    <div class="bs-range-title">📅 选择日期范围</div>
+    <div class="bs-range-row">
+        <label>从</label>
+        <input type="date" id="peRangeStart">
+    </div>
+    <div class="bs-range-row">
+        <label>至</label>
+        <input type="date" id="peRangeEnd">
+    </div>
+    <button class="bs-range-btn" onclick="loadFilesForDateRange()">查看文件列表</button>
+</div>
+
+<div class="bs-range-section" id="peFileListSection" style="display:none;">
+    <div class="bs-range-title">🎵 选择文件 <span id="peFileCount" style="font-size:12px;color:#999;margin-left:4px;"></span></div>
+    <div id="peFileList"></div>
+    <button class="bs-range-btn" style="margin-top:12px;" onclick="doPartialExport()">导出选中的记录</button>
+</div>
+
+<div class="bs-cancel" onclick="closePartialExport()">返回</div>
+```
+
+</div>
+
+<!-- Hidden file input for import -->
+
+<input type="file" id="bsFileInput" accept=".json" style="display:none" onchange="onImportFileChosen(event)">
 
 <script>
 // ════════════════ CONFIG ════════════════
 var SITE_ROOT    = 'https://res.evanyin.dpdns.org/';
 var AUDIO_EXTS   = ['.mp3','.wav','.flac','.m4a','.aac','.ogg','.opus'];
-// Speed options 0.5 → 3.0, step ~0.1-0.25
 var SPEED_OPTIONS = [
     0.5, 0.6, 0.7, 0.8, 0.9,
     1.0, 1.1, 1.2, 1.25, 1.3, 1.4, 1.5,
     1.6, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0
 ];
-var WHEEL_ITEM_H = 44;   // px – must match .speed-wheel-option height
+var WHEEL_ITEM_H = 44;
 
 // ════════════════ STATE ═════════════════
 var currentPath        = SITE_ROOT;
 var fileList           = [];
 var playList           = [];
 var currentTrackIndex  = -1;
-// playMode: 'list' | 'single' | 'shuffle'
 var playMode           = 'list';
 var shuffleOrder       = [];
 var playbackRate       = 1.0;
@@ -913,15 +1087,15 @@ var isDraggingSlider   = false;
 var isWakeLockEnabled  = false;
 var wakeLockObj        = null;
 var _speedScrollTimer  = null;
-var _fileSizeCache     = {};   // url → bytes
-var _rangeChecked      = {};   // url → bool (server Range support check)
+var _fileSizeCache     = {};
+var _rangeChecked      = {};
 
 var playlists   = {};
 var progressDB  = {};
 try { playlists  = JSON.parse(localStorage.getItem('my_playlists_v3') || '{}'); } catch(e) {}
 try { progressDB = JSON.parse(localStorage.getItem('audio_progress_v2') || '{}'); } catch(e) {}
 
-// ── Last-Session State ────────────────────────────────────────────────────────
+// ── Session State ────────────────────────────────────────────────────────
 var _SESSION_KEY = 'player_last_session_v1';
 var _pendingSession = null;
 
@@ -948,82 +1122,87 @@ function restoreSession() {
         if (!s || !s.trackUrl || !s.path) return false;
         if (Date.now() - (s.ts || 0) > 30 * 86400000) return false;
         _pendingSession = { trackUrl: s.trackUrl, trackTime: s.trackTime || 0, trackName: s.trackName || '', speed: s.speed || 1.0 };
+        
+        // 🔥 立即显示 UI（<100ms）
+        setTimeout(_quickRestoreUI, 10);
+        
+        // 🔥 异步加载目录，不阻塞 UI 初始化
         fetchDirectory(s.path);
         return true;
     } catch(e) { return false; }
 }
 
-// ── FIX 2: _applyPendingSession — 鸿蒙4.3续播修复 ──────────────────────────
-// 根因：HarmonyOS 4.3 上 loadedmetadata 触发时 audio.duration 可能仍为 NaN，
-// 导致 seek 条件判断失败，播放位置无法恢复。
-// 修复方案：
-//   1. 同时监听 loadedmetadata 和 canplay（鸿蒙解码器就绪更晚）
-//   2. 共享 seekApplied 标志，防止重复执行
-//   3. 新增 retrySeek 轮询（最多 10×200ms=2s），兜底 duration 迟到的情况
-//   4. 优先使用 session 时间，回退到 progressDB（pause 事件时已可靠保存）
+// ── v2.0.0 优化：快速展示上次播放曲目（不等目录加载）──────────────────
+// 🔥 核心优化：立即恢复 audio.src + UI，不阻塞目录加载
+function _quickRestoreUI() {
+    if (!_pendingSession) return;
+    var ps = _pendingSession;
+    
+    // 1. 立即更新 UI（100ms 内完成）
+    document.getElementById('trackName').textContent = ps.trackName || '恢复中...';
+    document.getElementById('trackTime').textContent = fmtTime(ps.trackTime) + ' / --:--';
+    
+    // 2. 恢复播放速度
+    if (ps.speed && ps.speed !== playbackRate) {
+        playbackRate = ps.speed;
+        audio.playbackRate = playbackRate;
+        document.getElementById('speedLabel').textContent = fmtSpeed(playbackRate);
+    }
+    
+    // 3. 立即设置音源（浏览器开始加载）
+    var targetTime = ps.trackTime > 2 ? ps.trackTime : (progressDB[ps.trackUrl] || 0);
+    audio.src = ps.trackUrl;
+    startAudioInfoLoad(ps.trackUrl);
+    
+    // 4. 展开播放条
+    setCompact(false);
+    
+    // 5. 异步处理进度恢复（loadstart 时触发，不等 canplay）
+    var seekApplied = false;
+    var lsHandler = function() {
+        audio.removeEventListener('loadstart', lsHandler);
+        if (seekApplied) return;
+        seekApplied = true;
+        
+        // loadstart 时立即设置进度（无需等 canplay）
+        if (targetTime > 2) {
+            try { audio.currentTime = targetTime; } catch(e) {}
+        }
+    };
+    audio.addEventListener('loadstart', lsHandler);
+    
+    // 6. canplay 时再进行二次seek（鸿蒙4.3兼容）
+    var cpHandler = function() {
+        audio.removeEventListener('canplay', cpHandler);
+        if (targetTime > 2 && !seekApplied) {
+            try { audio.currentTime = targetTime; } catch(e) {}
+            seekApplied = true;
+        }
+        updateAudioInfo();
+    };
+    audio.addEventListener('canplay', cpHandler);
+    audio.load();
+}
+
 function _applyPendingSession() {
     if (!_pendingSession) return;
     var ps = _pendingSession;
-    _pendingSession = null;
-    // Find the track in playList
+    
+    // 在目录加载完后，找到 track 对象更新 playList 中的信息
     var idx = -1;
     for (var i = 0; i < playList.length; i++) {
         if (playList[i].url === ps.trackUrl) { idx = i; break; }
     }
-    if (idx < 0) return;   // track no longer exists in directory
-    currentTrackIndex = idx;
-    var track = playList[idx];
-
-    // Prefer session time; fall back to progressDB (saved reliably on every pause event)
-    var targetTime = (ps.trackTime > 2) ? ps.trackTime : (progressDB[track.url] || 0);
-
-    // 恢复上次播放速度
-    if (ps.speed && ps.speed !== playbackRate) {
-        playbackRate = ps.speed;
-        document.getElementById('speedLabel').textContent = fmtSpeed(playbackRate);
-        var sBtn = document.getElementById('speedBtn');
-        if (sBtn) sBtn.className = 'pill-btn' + (playbackRate !== 1.0 ? ' active' : '');
+    
+    // 即使没找到，也不影响已经正在播放的音频
+    if (idx >= 0) {
+        currentTrackIndex = idx;
+        renderListHighlight();   // 高亮列表中的当前曲目
+        updateFavHeart();        // 更新收藏图标
     }
-
-    // Load track into player but do NOT auto-play — let user press ▶
-    audio.src = track.url;
-    audio.playbackRate = playbackRate;
-    document.getElementById('trackName').textContent = track.name;
-    updateMediaSession(track);
-    document.getElementById('trackTime').textContent = fmtTime(targetTime) + ' / --:--';
-    document.getElementById('audioInfo').textContent = '';
-    startAudioInfoLoad(track.url);
-    renderListHighlight();
-    updateFavHeart();
-    setCompact(false);   // expand player bar to show the track
-
-    // Shared guard: ensures only the first successful seek is applied
-    var seekApplied = false;
-
-    // 鸿蒙4.3: 使用 canplay 事件（解码器就绪后）再设置 currentTime
-    // _applyPendingSession 不自动播放，只定位位置等用户手动按播放
-    var apCpHandler = function() {
-        audio.removeEventListener('canplay', apCpHandler);
-        audio.playbackRate = playbackRate;
-        if (targetTime > 2) {
-            try { audio.currentTime = targetTime; } catch(e) {}
-            // 二次赋值确保鸿蒙WebView实际接受
-            setTimeout(function() {
-                try { audio.currentTime = targetTime; } catch(e) {}
-                updateAudioInfo();
-            }, 300);
-        }
-        updateAudioInfo();
-        try {
-            navigator.mediaSession && navigator.mediaSession.setPositionState &&
-            navigator.mediaSession.setPositionState({
-                duration: audio.duration, playbackRate: playbackRate, position: audio.currentTime
-            });
-        } catch(e) {}
-    };
-    audio.addEventListener('canplay', apCpHandler);
-    audio.load();
-    showToast('上次播放：' + (track.name.length > 16 ? track.name.slice(0,16)+'…' : track.name));
+    
+    // 清除待处理会话
+    _pendingSession = null;
 }
 
 var audio     = document.getElementById('audioPlayer');
@@ -1039,7 +1218,16 @@ function init() {
     setCompact(true);
     startStatsTicker();
     setupMediaSession();
-    if (!restoreSession()) fetchDirectory(currentPath);
+    
+    // 🔥 v2.0.0 优化初始化：
+    // 1. 如果有上次会话，立即恢复 UI + 开始加载音频（<100ms）
+    // 2. 异步加载目录（不阻塞，最多几秒）
+    if (!restoreSession()) {
+        // 没有上次会话，直接加载根目录
+        fetchDirectory(currentPath);
+    }
+    // 如果有上次会话，_quickRestoreUI 会立即执行，
+    // restoreSession 返回 true 后，同步加载目录（异步 XHR）
 }
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -1052,14 +1240,11 @@ function setCompact(c) {
 
 // ════════════════ SLIDER ════════════════
 function setupSlider() {
-    // Track whether audio was playing when drag started
-    // so _doSeek knows to resume after seek
     var _sliderDragWasPlaying = false;
 
     function onDragStart() {
         isDraggingSlider = true;
         _sliderDragWasPlaying = !audio.paused;
-        // Do NOT pause here — _doSeek will handle pause→seek→play internally
     }
     slider.addEventListener('touchstart',   onDragStart, { passive: true });
     slider.addEventListener('mousedown',    onDragStart);
@@ -1079,11 +1264,9 @@ function setupSlider() {
     function commitSeek() {
         var dur = audio.duration;
         if (audio.src && audio.src !== window.location.href && dur && !isNaN(dur) && isFinite(dur)) {
-            // 明确传入 forcePlay，避免 onDragStart 的 pause() 影响判断
             _doSeek((slider.value / 100) * dur, _sliderDragWasPlaying);
             saveProgress();
         }
-        // 延迟 650ms 释放（_doSeek 内 500ms 延迟 + 余量）
         setTimeout(function() { isDraggingSlider = false; }, 650);
     }
     slider.addEventListener('touchend',    commitSeek, false);
@@ -1224,26 +1407,11 @@ function playTrack(index) {
     startAudioInfoLoad(track.url);
 
     var savedTime = progressDB[track.url] || 0;
-    _sessionCounted = false;   // 新曲目开始，重置计次
+    _sessionCounted = false;
     _sessionSec     = 0;
 
-    // ── 播放启动策略（兼容 iOS 锁屏 / 鸿蒙4.3）─────────────────────────
-    //
-    // iOS 锁屏自动播下一首的根因：
-    //   audio.load() 会重置 iOS 音频会话，锁屏时 canplay 事件不再触发，
-    //   导致 safePlay() 永远得不到调用。
-    //
-    // 解决方案：分两条路径
-    //   A. 锁屏中（visibilityState==='hidden'）：
-    //      只设 src，直接调 play()。iOS 在 ended 事件上下文里允许此操作，
-    //      不需要 load()，不需要等 canplay。
-    //   B. 前台正常播放（含鸿蒙4.3）：
-    //      load() → 等 canplay → seek（如有进度）→ play()
-
     if (document.visibilityState === 'hidden') {
-        // ── 路径A：iOS 锁屏，直接 play() ─────────────────────────────
         safePlay();
-        // canplay 作为保险：若 play() 因某种原因失败，canplay 触发时再试一次
         var cpFallback = function() {
             audio.removeEventListener('canplay', cpFallback);
             audio.playbackRate = playbackRate;
@@ -1252,7 +1420,6 @@ function playTrack(index) {
         };
         audio.addEventListener('canplay', cpFallback);
     } else {
-        // ── 路径B：前台播放（鸿蒙4.3 / 安卓）─────────────────────────
         var cpHandler = function() {
             audio.removeEventListener('canplay', cpHandler);
             audio.playbackRate = playbackRate;
@@ -1268,12 +1435,6 @@ function playTrack(index) {
                 safePlay();
                 updateAudioInfo();
             }
-            try {
-                navigator.mediaSession && navigator.mediaSession.setPositionState &&
-                navigator.mediaSession.setPositionState({
-                    duration: audio.duration, playbackRate: playbackRate, position: audio.currentTime
-                });
-            } catch(e) {}
         };
         audio.addEventListener('canplay', cpHandler);
         audio.load();
@@ -1304,16 +1465,6 @@ function playPrev() {
     }
 }
 
-// ── _doSeek: 统一跳转辅助函数（鸿蒙4.3确认可用方案）──────────────────────
-// ══ 根因与方案来源 ══
-// 鸿蒙4.3 / 安卓 WebView: 'seeked' 事件不可靠，不能作为 seek 完成信号
-// 多个开发者社区（微信开放社区、掘金、CSDN）确认唯一可靠方案：
-//   pause → currentTime = t → 固定延迟 500ms → currentTime = t（再赋一次）→ play
-// 参考：https://developers.weixin.qq.com/community/develop/article/doc/0004ce806443f01bd07ca12aa50013
-// 参考：https://blog.csdn.net/csdn_chengpeng/article/details/113502816
-// 注意：服务器必须支持 HTTP Range / Accept-Ranges: bytes，否则 seek 从头播
-//       这是服务器端要求，客户端已无法绕过
-
 var _doSeekTimer = null;
 
 function _doSeek(targetTime, forcePlay) {
@@ -1322,16 +1473,9 @@ function _doSeek(targetTime, forcePlay) {
     var isLockScreen = (document.visibilityState === 'hidden');
 
     if (isLockScreen) {
-        // ── iOS 锁屏路径 ──────────────────────────────────────────────
-        // 锁屏时绝对不能调 audio.pause()：
-        //   pause() 会终止 iOS 音频会话，之后 play() 会被系统拒绝（无声）
-        // 正确做法：直接设 currentTime，立即同步调 play()
-        //   iOS 锁屏允许在持有音频焦点时直接 seek + play
         try { audio.currentTime = targetTime; } catch(e) {}
         if (shouldPlay) { safePlay(); }
     } else {
-        // ── 前台路径（鸿蒙4.3 / 安卓）───────────────────────────────
-        // 必须先 pause → seek → 延迟 play，否则鸿蒙 seek 不生效
         try { audio.pause(); } catch(e) {}
         try { audio.currentTime = targetTime; } catch(e) {}
         if (shouldPlay) {
@@ -1343,14 +1487,7 @@ function _doSeek(targetTime, forcePlay) {
     }
 }
 
-// ── FIX 1: seekRelative — 鸿蒙4.3 ±15秒按钮修复 ─────────────────────────────
-// 根因：HarmonyOS 4.3 上即使音频正在播放，audio.duration 也可能为 NaN 或 0，
-// 导致原来的 if (!audio.duration) return 直接返回，seek 永远不执行。
-// 修复方案：改为仅检查 src 是否存在及 currentTime 是否有效，
-// duration 只用来做上限裁剪（缺失时允许向前/后跳而不裁上限），
-// 并用 try-catch 吸收 HarmonyOS 可能抛出的 InvalidStateError。
 function seekRelative(sec) {
-    // 鸿蒙/安卓 WebView: pause → currentTime → 500ms → play
     if (!audio.src || audio.src === window.location.href) return;
     var cur = audio.currentTime;
     if (isNaN(cur)) return;
@@ -1359,8 +1496,6 @@ function seekRelative(sec) {
     if (dur && !isNaN(dur) && isFinite(dur)) {
         newTime = Math.min(dur - 0.5, newTime);
     }
-    // 强制 forcePlay=true：±15s 按钮点击时用户肯定是在播放中的
-    // 不能让 _doSeek 自己判断（pause()已使audio.paused=true）
     _doSeek(newTime, true);
     saveProgress();
 }
@@ -1416,10 +1551,6 @@ function startAudioInfoLoad(url) {
     document.getElementById('audioInfo').textContent = ext + ' · 读取中…';
     if (_fileSizeCache[url]) { updateAudioInfo(); }
 
-    // ── Range 支持检测（使用 audio.seekable，避免 CORS 误报）─────────────
-    // Cloudflare / 标准静态服务器均支持 Range，但 XHR 跨域检测受 CORS 限制
-    // 误判率极高。改为监听 audio 的 seekable 属性：
-    // canplay 后 audio.seekable.length > 0 表示浏览器已确认服务器支持 Range
     if (!_rangeChecked[url]) {
         _rangeChecked[url] = true;
         var _rangeUrl = url;
@@ -1428,7 +1559,7 @@ function startAudioInfoLoad(url) {
             if (audio.src.split('#')[0] !== _rangeUrl.split('#')[0]) return;
             if (!audio.seekable || audio.seekable.length === 0) {
                 document.getElementById('audioInfo').textContent =
-                    '⚠️ 服务器不支持Range请求，跳转功能可能失效';
+                    '⚠️ 服务器不支持Range请求';
             }
         };
         audio.addEventListener('canplay', _rangeHandler);
@@ -1594,7 +1725,7 @@ function _requestWakeLock(silent) {
     }).catch(function(err) {
         isWakeLockEnabled = false;
         _setWakeLockUI(false);
-        if (!silent) showToast('⚠️ 系统拒绝常亮请求（可能正在省电模式）');
+        if (!silent) showToast('⚠️ 系统拒绝常亮请求');
     });
 }
 
@@ -1625,10 +1756,8 @@ document.addEventListener('visibilitychange', function() {
         if (isWakeLockEnabled) _requestWakeLock(true);
         if (_wasPlayingBeforeHide && audio.src) {
             if (audio.ended) {
-                // 锁屏期间曲目播完，需要播下一首
                 playNext();
             } else if (audio.paused) {
-                // 锁屏期间被系统暂停，恢复播放
                 safePlay();
             }
         }
@@ -1706,7 +1835,7 @@ function setTimer() {
         document.getElementById('timerLabel').textContent = '定时';
         showToast('定时停止');
     }, ms);
-    showToast('定时 ' + i + ' 分钟后停止（再次点击可取消）');
+    showToast('定时 ' + i + ' 分钟后停止');
 }
 
 // ════════════════ FAVOURITES ═════════════
@@ -1807,6 +1936,10 @@ function fetchDirectory(url) {
         if (xhr.readyState !== 4) return;
         if (xhr.status >= 200 && xhr.status < 300) {
             parseDirectory(xhr.responseText, url);
+            // 🔥 目录加载完后再应用pending session
+            if (_pendingSession) {
+                _applyPendingSession();
+            }
         } else {
             document.getElementById('fileList').innerHTML = '<div style="padding:20px;color:red;text-align:center;">无法连接服务器 (' + xhr.status + ')</div>';
         }
@@ -1841,7 +1974,6 @@ function parseDirectory(htmlText, baseUrl) {
     }
     if (playMode === 'shuffle') genShuffle();
     renderList(fileList, false);
-    _applyPendingSession();
 }
 
 function renderList(items, isPlaylist) {
@@ -2005,7 +2137,6 @@ function filterList() {
     var term = document.getElementById('searchInput').value.toLowerCase();
     renderList(fileList.filter(function(i) { return i.name.toLowerCase().indexOf(term) > -1; }), false);
 }
-function refreshList() { fetchDirectory(currentPath); }
 
 // ════════════════ PLAYLIST MANAGEMENT ════
 function deletePlaylist(name) {
@@ -2086,17 +2217,16 @@ function showToast(msg) {
 }
 
 // ══════════════════════════════════════════════════════════
-//  LISTENING STATS  v1.7.7
+//  LISTENING STATS  v2.0.0
 // ══════════════════════════════════════════════════════════
 var statsDB        = {};
 var _stFlush       = 0;
 var MIN_VOL        = 0.4;
-var _sessionCounted = false;   // 当前曲目本次会话是否已计入次数
-var _sessionSec     = 0;       // 当前会话累计有效秒数（≥10s才计次）
+var _sessionCounted = false;
+var _sessionSec     = 0;
 
 try { statsDB = JSON.parse(localStorage.getItem('stats_db_v1') || '{}'); } catch(e) {}
 
-// ── 历史数据补丁：2025-03-08 前有时长但无次数的记录，统一补1次 ──────
 (function() {
     var CUTOFF = '2025-03-08';
     var dirty  = false;
@@ -2140,10 +2270,8 @@ function startStatsTicker() {
         _lastWallClock = _nowMs();
     }, false);
 
-    // Update UI immediately when seek completes (HarmonyOS fix)
     audio.addEventListener('seeked', function() {
         updateAudioInfo();
-        // Force re-activation of timeupdate on HarmonyOS (玄学: read paused)
         void audio.paused;
     });
 
@@ -2186,10 +2314,9 @@ function _commitStatsDelta(useWallClock) {
         if (!statsDB[today]) statsDB[today] = {};
         var k = urlHash(track.url);
         if (!statsDB[today][k]) statsDB[today][k] = { name: track.name, url: track.url, sec: 0, count: 0 };
-        if (!statsDB[today][k].count) statsDB[today][k].count = 0;  // 兼容旧数据
+        if (!statsDB[today][k].count) statsDB[today][k].count = 0;
         statsDB[today][k].sec += delta;
 
-        // 播放次数：本次会话累计≥10秒才计一次
         _sessionSec += delta;
         if (!_sessionCounted && _sessionSec >= 30) {
             statsDB[today][k].count += 1;
@@ -2234,7 +2361,7 @@ function flushStats() {
                 localStorage.setItem('audio_progress_v2',  JSON.stringify(progressDB));
                 if (pruned > 0) showToast('已自动清理' + pruned + '天历史记录');
             } catch(e2) {
-                showToast('⚠️ 存储空间不足，请清理浏览器缓存');
+                showToast('⚠️ 存储空间不足');
             }
         }
     }
@@ -2268,12 +2395,10 @@ function fmtHM(sec) {
 }
 
 function urlHash(url) {
-    // 只用文件名做 key，目录变更不影响统计累加
-    // 例：/a/b/cxj01.mp3 和 /x/y/cxj01.mp3 → 相同 key
     var filename = url.split('/').pop().split('?')[0].split('#')[0];
     var h = 5381;
     for (var i = 0; i < filename.length; i++) h = ((h << 5) + h) ^ filename.charCodeAt(i);
-    return 'fn_' + String(h >>> 0);   // 'fn_' 前缀区分旧全URL key，避免数据混淆
+    return 'fn_' + String(h >>> 0);
 }
 
 function getCumulativeTotal() {
@@ -2310,15 +2435,12 @@ function openStats() {
     renderStats();
 }
 
-// ════════════════ STATS SHARE / 学习报告长图分享 ═══════════════════════════
-
-// ── Share Picker ─────────────────────────────────────────────────────────────
+// ════════════════ STATS SHARE ══════════════
 function openSharePicker() {
     var dates     = getWeekDates(_stWeekOff);
     var weekLabel = _stWeekOff === 0 ? '本周' : (_stWeekOff === -1 ? '上周' : Math.abs(_stWeekOff) + '周前');
     document.getElementById('spDayLabel').textContent  = (_stSelDay || todayKey()).replace(/-/g, '/');
     document.getElementById('spWeekLabel').textContent = weekLabel + '  ' + fmtMD(dates[0]) + '–' + fmtMD(dates[6]);
-    // Default range = this week
     document.getElementById('spRangeStart').value = dates[0];
     document.getElementById('spRangeEnd').value   = dates[6];
     document.getElementById('spRangeArea').classList.remove('open');
@@ -2334,20 +2456,17 @@ function toggleWeekExtra() {
     var arrow = document.getElementById('spWeekArrow');
     var open  = area.classList.toggle('open');
     arrow.textContent = open ? '▼' : '▶';
-    // Close range if open
     document.getElementById('spRangeArea').classList.remove('open');
 }
 function toggleRangePicker() {
     document.getElementById('spRangeArea').classList.toggle('open');
 }
-// ── Programme week number ────────────────────────────────────────────
-// Week 1 = the natural Mon-Sun week that contains 2026-03-09
-var PROGRAMME_EPOCH = new Date('2026-03-09T00:00:00');  // Monday
+
+var PROGRAMME_EPOCH = new Date('2026-03-09T00:00:00');
 function getProgrammeWeekNum(mondayDate) {
-    // mondayDate: 'YYYY-MM-DD' string of the Mon of the chosen week
     var mon = new Date(mondayDate + 'T00:00:00');
     var diffMs = mon - PROGRAMME_EPOCH;
-    if (diffMs < 0) return null;   // before programme start
+    if (diffMs < 0) return null;
     return Math.floor(diffMs / (7 * 86400 * 1000)) + 1;
 }
 
@@ -2372,7 +2491,6 @@ function doShareRange() {
     if (!s || !e) { showToast('请选择起止日期'); return; }
     if (s > e)    { showToast('开始日期不能晚于结束日期'); return; }
     closeSharePicker();
-    // Build date array
     var arr = [], cur = new Date(s);
     var end = new Date(e);
     while (cur <= end) {
@@ -2383,15 +2501,9 @@ function doShareRange() {
     buildShareImage(arr, label, arr.length > 1);
 }
 
-// ── Core: buildShareImage(dates[], label, showBarChart) ──────────────────────
-// dates: array of 'YYYY-MM-DD' strings to include
-// label: header subtitle string
-// showBarChart: true → draw 7-bar week chart, false → skip bars (single day)
-
 function buildShareImage(dates, label, showBarChart, weekExtra) {
-    // ── Collect track data across all dates ──────────────────────────────────
     var trackMap = {};
-    var dayTotals = {};  // date → seconds
+    var dayTotals = {};
     dates.forEach(function(day) {
         var d = statsDB[day] || {};
         dayTotals[day] = 0;
@@ -2408,10 +2520,9 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
 
     var totalSec = tracks.reduce(function(a,t){ return a + t.sec; }, 0);
 
-    // Compare period: same length ending the day before dates[0]
     var prevEnd   = new Date(dates[0]); prevEnd.setDate(prevEnd.getDate() - 1);
     var prevStart = new Date(prevEnd);  prevStart.setDate(prevStart.getDate() - dates.length + 1);
-    var prevTracks = {}, prevTotalSec = 0;
+    var prevTotalSec = 0;
     var pd = new Date(prevStart);
     while (pd <= prevEnd) {
         var dk = pd.getFullYear() + '-' + pad2(pd.getMonth()+1) + '-' + pad2(pd.getDate());
@@ -2423,22 +2534,19 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
     }
     var diffSec = totalSec - prevTotalSec;
 
-    // Bar values: one bar per date (capped to 31 days for readability)
     var barDates  = dates.slice(0, 31);
     var barValues = barDates.map(function(d){ return Math.round((dayTotals[d] || 0) / 60); });
 
-    // ── Canvas layout ────────────────────────────────────────────────────────
     var W       = 750;
     var PAD     = 32;
     var cardW   = W - PAD * 2;
     var dpr     = Math.min(window.devicePixelRatio || 2, 3);
 
     var HEADER_H  = 130;
-    var CHART_H   = showBarChart ? (240 + 80) : 0;   // bar area + totals row
+    var CHART_H   = showBarChart ? (240 + 80) : 0;
     var SECTION_H = 54;
     var ROW_H     = 70;
     var FOOTER_H  = 56;
-    // Week info card (weekNum / avg / coins) — only for weekly share
     var hasWeekCard = !!(weekExtra && weekExtra.weekNum);
     var WEEK_CARD_H = hasWeekCard ? 160 : 0;
 
@@ -2452,14 +2560,12 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
     var ctx = canvas.getContext('2d');
     ctx.scale(dpr, dpr);
 
-    // ── Colors ───────────────────────────────────────────────────────────────
     var C_BG     = '#F2F5FA', C_CARD = '#FFFFFF';
     var C_BLUE   = '#2979FF', C_LBL  = '#1A1A2E';
     var C_META   = '#8888AA', C_TRK  = '#333355';
     var C_DIV    = '#E8EAF0', C_GRN  = '#34C759', C_RED = '#FF3B30';
     var C_BAR    = '#90CAF9', C_BARS = '#2979FF';
 
-    // ── Helpers ──────────────────────────────────────────────────────────────
     function rr(x,y,w,h,r) {
         ctx.beginPath();
         ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y);
@@ -2485,10 +2591,8 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
 
     var y = 0;
 
-    // ── 1. Background ────────────────────────────────────────────────────────
     ctx.fillStyle = C_BG; ctx.fillRect(0,0,W,H);
 
-    // ── 2. Header gradient ───────────────────────────────────────────────────
     var g = ctx.createLinearGradient(0,0,W,HEADER_H);
     g.addColorStop(0,'#3A5FF8'); g.addColorStop(1,'#5B86FF');
     ctx.fillStyle=g; ctx.fillRect(0,0,W,HEADER_H);
@@ -2499,37 +2603,29 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
     ctx.fillText(label, W/2, 94);
     y = HEADER_H;
 
-    // ── 2b. Week info card (听力进程 / 平均时长 / 金币) ─────────────────────────
     if (hasWeekCard) {
         var we     = weekExtra;
         var avgMin = Math.round(totalSec / 60 / dates.length);
         var wNum   = we.weekNum;
-        // Date range string e.g. "3月9日–3月15日"
         var wRange = fmtMD(dates[0]) + '–' + fmtMD(dates[6]);
 
         y += 16;
         rr(PAD, y, cardW, WEEK_CARD_H - 16, 18);
         ctx.fillStyle = C_CARD; ctx.fill();
 
-        // Row height inside card
         var iR = (WEEK_CARD_H - 16) / 4;
 
-        // Line 1: 听力进程
         txt('听力进程', PAD+20, y + iR*0.8, '13px sans-serif', C_META);
         txt('Week' + wNum + '  （' + wRange + '）', PAD+20, y + iR*1.5, 'bold 17px sans-serif', C_LBL);
 
-        // Divider
         ctx.strokeStyle = C_DIV; ctx.lineWidth = 0.5;
         ctx.beginPath(); ctx.moveTo(PAD+20, y+iR*2); ctx.lineTo(PAD+cardW-20, y+iR*2); ctx.stroke();
 
-        // Line 2: 听力内容
         txt('听力内容', PAD+20, y + iR*2.45, '13px sans-serif', C_META);
         txt('见截图', PAD+20, y + iR*3.1, 'bold 17px sans-serif', C_LBL);
 
-        // Divider
         ctx.beginPath(); ctx.moveTo(PAD+20, y+iR*3.5); ctx.lineTo(PAD+cardW-20, y+iR*3.5); ctx.stroke();
 
-        // Line 3: 平均时长 (left) + 金币 (right, optional)
         txt('平均听力时长', PAD+20, y + iR*3.85, '13px sans-serif', C_META);
         txt(avgMin + ' 分钟/天', PAD+20, y + iR*4.55, 'bold 17px sans-serif', C_BLUE);
 
@@ -2541,13 +2637,11 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
         y += WEEK_CARD_H;
     }
 
-    // ── 3. Bar chart + totals (only if showBarChart) ──────────────────────────
     if (showBarChart) {
         y += 18;
         rr(PAD, y, cardW, CHART_H - 18, 18);
         ctx.fillStyle=C_CARD; ctx.fill();
 
-        // Chart label row
         txt('收听时长', PAD+20, y+30, 'bold 16px sans-serif', C_LBL);
         txt('单位：分钟', W-PAD-20, y+30, '13px sans-serif', C_META, 'right');
 
@@ -2569,7 +2663,6 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
             if (barValues[i] > 0 && n <= 14) {
                 txt(barValues[i], bx+bW/2, by2-5, (isSel?'bold ':'')+Math.max(10,Math.min(12, Math.floor(slotW*0.45)))+'px sans-serif', isSel?C_BARS:'#666', 'center');
             }
-            // Day label
             var dayLbl = n <= 7 ? DAYS_ZH[new Date(barDates[i]).getDay() === 0 ? 6 : new Date(barDates[i]).getDay()-1]
                                 : pad2(new Date(barDates[i]).getDate())+'';
             if (isSel) {
@@ -2581,7 +2674,6 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
             }
         }
 
-        // Totals row
         var totY = chartTop + chartH2 + 46;
         var halfC = cardW / 2;
         txt('收听总时长', PAD+20, totY+16, '13px sans-serif', C_META);
@@ -2595,7 +2687,6 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
 
         y = totY + 56;
     } else {
-        // Single day: just show total time in a mini card
         y += 14;
         rr(PAD, y, cardW, 70, 16); ctx.fillStyle=C_CARD; ctx.fill();
         txt('收听总时长', PAD+20, y+26, '13px sans-serif', C_META);
@@ -2607,12 +2698,10 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
         y += 84;
     }
 
-    // ── 4. Track list card ────────────────────────────────────────────────────
     var listH = SECTION_H + Math.max(tracks.length,1) * ROW_H;
     y += 14;
     rr(PAD, y, cardW, listH, 18); ctx.fillStyle=C_CARD; ctx.fill();
 
-    // Section header
     var secIcon = showBarChart ? '🎧  收听明细' : '🎧  当日明细';
     txt(secIcon, PAD+20, y+36, 'bold 17px sans-serif', C_LBL);
     txt(label,   W-PAD-20, y+36, '13px sans-serif', C_META, 'right');
@@ -2631,7 +2720,6 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
             var tr = tracks[i];
             var ry = y + i * ROW_H;
 
-            // name truncate
             ctx.font = 'bold 15px sans-serif';
             var name = tr.name;
             var maxNameW = cardW - 180;
@@ -2642,7 +2730,6 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
             var meta = (tr.count||0) + '次收听  ·  ' + fmtDur(tr.sec);
             txt(meta, PAD+20, ry+54, '13px sans-serif', C_META);
 
-            // percent of total (text, right-aligned)
             if (totalSec > 0) {
                 var pct = Math.round(tr.sec / totalSec * 100) + '%';
                 txt(pct, W-PAD-20, ry+42, 'bold 15px sans-serif', C_BLUE, 'right');
@@ -2656,7 +2743,6 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
         y += tracks.length * ROW_H;
     }
 
-    // ── 5. Footer ─────────────────────────────────────────────────────────────
     y += 20;
     var now=new Date();
     var ts=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()
@@ -2664,7 +2750,6 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
     ctx.font='13px sans-serif'; ctx.fillStyle=C_META; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
     ctx.fillText('生成时间：'+ts+'  ·  英语精听播放器', W/2, y+28);
 
-    // ── 6. Export ──────────────────────────────────────────────────────────────
     canvas.toBlob(function(blob) {
         var fname = '听力报告_'+label.replace(/[\s\/–\-]+/g,'_')+'.png';
         if (navigator.share && navigator.canShare) {
@@ -2681,13 +2766,9 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
     }, 'image/png');
 }
 
-
-
 // ════════════════ BACKUP / RESTORE ══════════════════════════════════════════
-
 function openBackupSheet() {
     flushStats();
-    // Show current data summary
     var days  = Object.keys(statsDB).length;
     var total = getCumulativeTotal();
     var h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60);
@@ -2696,7 +2777,8 @@ function openBackupSheet() {
     document.getElementById('bsInfo').textContent =
         '当前数据：' + days + ' 天记录  ·  累计 ' + h + ' 小时 ' + m + ' 分钟  ·  约 ' + sizeK + ' KB';
     document.getElementById('bsExportSub').textContent =
-        '下载 stats_backup.json（' + sizeK + ' KB）';
+        '下载完整 stats_backup.json（' + sizeK + ' KB）';
+    
     document.getElementById('backupOverlay').classList.add('open');
     document.getElementById('backupSheet').classList.add('open');
 }
@@ -2719,7 +2801,6 @@ function doExportStats() {
     var ts   = now.getFullYear() + pad2(now.getMonth()+1) + pad2(now.getDate());
     var fname = 'stats_backup_' + ts + '.json';
 
-    // Try Web Share (mobile), fallback to download link
     if (navigator.share && navigator.canShare) {
         var f = new File([blob], fname, { type: 'application/json' });
         if (navigator.canShare({ files: [f] })) {
@@ -2736,6 +2817,186 @@ function doExportStats() {
     showToast('备份已导出：' + fname);
 }
 
+// ── v2.0.0 NEW: 按日期/文件导出 ────────────────────────────────────────────
+var _peSelectedFiles = {};
+
+function openPartialExport() {
+    closeBackupSheet();
+    var today = new Date();
+    var startDate = new Date(today);
+    startDate.setDate(today.getDate() - 6);
+    var toDateStr = today.getFullYear() + '-' + pad2(today.getMonth()+1) + '-' + pad2(today.getDate());
+    var fromDateStr = startDate.getFullYear() + '-' + pad2(startDate.getMonth()+1) + '-' + pad2(startDate.getDate());
+    document.getElementById('peRangeStart').value = fromDateStr;
+    document.getElementById('peRangeEnd').value = toDateStr;
+    
+    document.getElementById('partialExportOverlay').classList.add('open');
+    document.getElementById('partialExportSheet').classList.add('open');
+}
+
+function closePartialExport() {
+    document.getElementById('partialExportOverlay').classList.remove('open');
+    document.getElementById('partialExportSheet').classList.remove('open');
+}
+
+function loadFilesForDateRange() {
+    var s = document.getElementById('peRangeStart').value;
+    var e = document.getElementById('peRangeEnd').value;
+    if (!s || !e) { showToast('请选择起止日期'); return; }
+    if (s > e)    { showToast('开始日期不能晚于结束日期'); return; }
+    
+    var arr = [], cur = new Date(s);
+    var end = new Date(e);
+    while (cur <= end) {
+        arr.push(cur.getFullYear() + '-' + pad2(cur.getMonth()+1) + '-' + pad2(cur.getDate()));
+        cur.setDate(cur.getDate() + 1);
+    }
+    
+    var fileMap = {};
+    var totalDays = 0, totalFiles = 0;
+    
+    for (var i = 0; i < arr.length; i++) {
+        if (!statsDB[arr[i]]) continue;
+        totalDays++;
+        var dayData = statsDB[arr[i]];
+        Object.keys(dayData).forEach(function(k) {
+            if (!fileMap[k]) {
+                fileMap[k] = { 
+                    name: dayData[k].name, 
+                    url: dayData[k].url, 
+                    days: [] 
+                };
+            }
+            fileMap[k].days.push(arr[i]);
+        });
+    }
+    
+    totalFiles = Object.keys(fileMap).length;
+    
+    if (totalFiles === 0) {
+        showToast('该日期范围内没有记录');
+        return;
+    }
+    
+    _peSelectedFiles = {};
+    Object.keys(fileMap).forEach(function(k) {
+        if (!_peSelectedFiles[k]) _peSelectedFiles[k] = {};
+        fileMap[k].days.forEach(function(day) {
+            _peSelectedFiles[k][day] = true;
+        });
+    });
+    
+    var container = document.getElementById('peFileList');
+    container.innerHTML = '';
+    
+    var fileKeys = Object.keys(fileMap).sort(function(a, b) {
+        var secA = 0, secB = 0;
+        for (var day in _peSelectedFiles[a]) secA += (statsDB[day][a]?.sec || 0);
+        for (var day in _peSelectedFiles[b]) secB += (statsDB[day][b]?.sec || 0);
+        return secB - secA;
+    });
+    
+    fileKeys.forEach(function(k) {
+        var file = fileMap[k];
+        var totalSec = 0;
+        file.days.forEach(function(day) {
+            totalSec += statsDB[day][k]?.sec || 0;
+        });
+        
+        var div = document.createElement('div');
+        var checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = true;
+        checkbox.id = 'pe_' + k;
+        checkbox.onchange = function() {
+            if (this.checked) {
+                _peSelectedFiles[k] = {};
+                file.days.forEach(function(day) {
+                    _peSelectedFiles[k][day] = true;
+                });
+            } else {
+                delete _peSelectedFiles[k];
+            }
+        };
+        
+        var label = document.createElement('label');
+        label.htmlFor = 'pe_' + k;
+        label.innerHTML = 
+            '<div style="font-size:15px;font-weight:600;color:var(--ios-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + 
+            escHtml(file.name) + 
+            '</div>' +
+            '<div style="font-size:12px;color:var(--ios-subtext);margin-top:2px;">' +
+            file.days.length + ' 天  ·  ' + fmtHM(totalSec) +
+            '</div>';
+        
+        div.appendChild(checkbox);
+        div.appendChild(label);
+        container.appendChild(div);
+    });
+    
+    document.getElementById('peFileListSection').style.display = 'block';
+    document.getElementById('peFileCount').textContent = '(' + totalFiles + ' 个文件，' + totalDays + ' 天)';
+}
+
+function doPartialExport() {
+    var selectedCount = Object.keys(_peSelectedFiles).length;
+    if (selectedCount === 0) {
+        showToast('请至少选择一个文件');
+        return;
+    }
+    
+    flushStats();
+    
+    var rangeStats = {};
+    Object.keys(_peSelectedFiles).forEach(function(k) {
+        Object.keys(_peSelectedFiles[k]).forEach(function(day) {
+            if (!rangeStats[day]) rangeStats[day] = {};
+            if (statsDB[day] && statsDB[day][k]) {
+                rangeStats[day][k] = statsDB[day][k];
+            }
+        });
+    });
+    
+    var s = document.getElementById('peRangeStart').value;
+    var e = document.getElementById('peRangeEnd').value;
+    var dayCount = Object.keys(rangeStats).length;
+    
+    var payload = {
+        version:    2,
+        exportedAt: new Date().toISOString(),
+        exportType: 'partial',
+        dateRange:  s + ' 至 ' + e,
+        dayCount:   dayCount,
+        fileCount:  selectedCount,
+        statsDB:    rangeStats,
+        progressDB: progressDB
+    };
+    
+    var json = JSON.stringify(payload, null, 2);
+    var blob = new Blob([json], { type: 'application/json' });
+    var fname = '听力_' + s + '_到_' + e + '_' + selectedCount + '个文件.json';
+    
+    if (navigator.share && navigator.canShare) {
+        var f = new File([blob], fname, { type: 'application/json' });
+        if (navigator.canShare({ files: [f] })) {
+            navigator.share({ 
+                title: '听力统计导出', 
+                text: dayCount + '天 ' + selectedCount + '个文件',
+                files: [f] 
+            }).catch(function(){});
+            closePartialExport();
+            return;
+        }
+    }
+    
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = fname; a.click();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 5000);
+    closePartialExport();
+    showToast('已导出：' + dayCount + '天、' + selectedCount + '个文件');
+}
+
 function doImportStats() {
     document.getElementById('bsFileInput').value = '';
     document.getElementById('bsFileInput').click();
@@ -2748,53 +3009,72 @@ function onImportFileChosen(evt) {
     reader.onload = function(e) {
         try {
             var payload = JSON.parse(e.target.result);
-            // Support both raw statsDB and versioned payload
             var incoming = payload.statsDB || payload;
+            var dateRange = payload.dateRange || '全部数据';
+            var fileCount = payload.fileCount || Object.keys(incoming).reduce(function(sum, day) {
+                return sum + Object.keys(incoming[day] || {}).length;
+            }, 0);
+
             if (typeof incoming !== 'object' || Array.isArray(incoming)) throw new Error('格式错误');
 
-            var added = 0, merged = 0;
-            Object.keys(incoming).forEach(function(day) {
-                if (!statsDB[day]) { statsDB[day] = {}; added++; }
-                var dayData = incoming[day];
-                Object.keys(dayData).forEach(function(k) {
-                    var src = dayData[k];
-                    if (!statsDB[day][k]) {
-                        // New entry: copy directly
-                        statsDB[day][k] = {
-                            name:  src.name  || '',
-                            url:   src.url   || '',
-                            sec:   src.sec   || 0,
-                            count: src.count || 0
-                        };
-                        merged++;
-                    } else {
-                        // Existing entry: take the MAX of each field
-                        // (prevents double-counting if backup was partial)
-                        statsDB[day][k].sec   = Math.max(statsDB[day][k].sec,   src.sec   || 0);
-                        statsDB[day][k].count = Math.max(statsDB[day][k].count, src.count || 0);
-                        merged++;
-                    }
-                });
-            });
-
-            // Also restore progressDB if present
-            if (payload.progressDB && typeof payload.progressDB === 'object') {
-                Object.keys(payload.progressDB).forEach(function(url) {
-                    if (!progressDB[url]) progressDB[url] = payload.progressDB[url];
-                });
-                try { localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e) {}
-            }
-
-            flushStats();
-            closeBackupSheet();
-            showToast('导入成功：' + added + ' 天新增，' + merged + ' 条已合并');
-            renderStats();
+            var previewText = '即将导入：<b>' + dateRange + '</b><br>' +
+                '共 <b>' + Object.keys(incoming).length + '</b> 天，<b>' + fileCount + '</b> 条记录';
+            
+            var previewEl = document.getElementById('bsImportPreview');
+            previewEl.innerHTML = previewText;
+            previewEl.classList.add('show');
+            
+            window._pendingImportData = { incoming: incoming, dateRange: dateRange, payload: payload };
+            
         } catch(err) {
             showToast('导入失败：' + (err.message || '文件格式不正确'));
+            closeBackupSheet();
         }
     };
     reader.readAsText(file);
+}
+
+function confirmImportData() {
+    if (!window._pendingImportData) return;
+    
+    var data = window._pendingImportData;
+    var incoming = data.incoming;
+    var added = 0, merged = 0, totalDays = 0;
+    
+    Object.keys(incoming).forEach(function(day) {
+        totalDays++;
+        if (!statsDB[day]) { statsDB[day] = {}; added++; }
+        var dayData = incoming[day];
+        Object.keys(dayData).forEach(function(k) {
+            var src = dayData[k];
+            if (!statsDB[day][k]) {
+                statsDB[day][k] = {
+                    name:  src.name  || '',
+                    url:   src.url   || '',
+                    sec:   src.sec   || 0,
+                    count: src.count || 0
+                };
+                merged++;
+            } else {
+                statsDB[day][k].sec   = Math.max(statsDB[day][k].sec,   src.sec   || 0);
+                statsDB[day][k].count = Math.max(statsDB[day][k].count, src.count || 0);
+                merged++;
+            }
+        });
+    });
+
+    if (data.payload && data.payload.progressDB) {
+        Object.keys(data.payload.progressDB).forEach(function(url) {
+            if (!progressDB[url]) progressDB[url] = data.payload.progressDB[url];
+        });
+        try { localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e) {}
+    }
+
+    flushStats();
     closeBackupSheet();
+    showToast('导入成功：' + totalDays + ' 天，' + added + ' 天新增，' + merged + ' 条已合并');
+    renderStats();
+    window._pendingImportData = null;
 }
 
 function closeStats() {
@@ -3043,97 +3323,5 @@ function escHtml(s) {
 }
 </script>
 
-<!-- Share Picker Sheet -->
-
-<div class="share-picker-overlay" id="sharePickerOverlay" onclick="closeSharePicker()"></div>
-<div class="share-picker-sheet" id="sharePickerSheet">
-    <div class="sp-handle"></div>
-    <div class="sp-title">选择分享范围</div>
-
-```
-<div class="sp-row" onclick="doShareDay()">
-    <span class="sp-row-icon">📅</span>
-    <div>
-        <div>当日分享</div>
-        <div class="sp-row-sub" id="spDayLabel">今天</div>
-    </div>
-</div>
-
-<div class="sp-row" onclick="toggleWeekExtra()">
-    <span class="sp-row-icon">📊</span>
-    <div>
-        <div>本周分享</div>
-        <div class="sp-row-sub" id="spWeekLabel">本周</div>
-    </div>
-    <span style="margin-left:auto;font-size:13px;color:#ccc" id="spWeekArrow">▶</span>
-</div>
-<div class="sp-week-extra" id="spWeekExtra">
-    <div class="sp-week-extra-title">填写额外信息（选填，不填则不显示）</div>
-    <div class="sp-coin-row">
-        <label>💰 截止本周累计金币</label>
-        <input type="number" id="spCoinInput" class="sp-coin-input" placeholder="如：14" min="0" inputmode="numeric">
-    </div>
-    <div class="sp-coin-hint">不填则隐藏金币一栏</div>
-    <button class="sp-range-confirm" onclick="doShareWeek()">生成本周分享长图</button>
-</div>
-
-<div class="sp-row" onclick="toggleRangePicker()">
-    <span class="sp-row-icon">🗓️</span>
-    <div>
-        <div>自定义区间</div>
-        <div class="sp-row-sub">选择任意起止日期</div>
-    </div>
-</div>
-
-<div class="sp-range-area" id="spRangeArea">
-    <div class="sp-range-row">
-        <label>开始</label>
-        <input type="date" id="spRangeStart">
-    </div>
-    <div class="sp-range-row">
-        <label>结束</label>
-        <input type="date" id="spRangeEnd">
-    </div>
-    <button class="sp-range-confirm" onclick="doShareRange()">生成分享长图</button>
-</div>
-
-<div class="sp-cancel" onclick="closeSharePicker()">取消</div>
-```
-
-</div>
-<!-- Backup Sheet -->
-<div class="backup-sheet-overlay" id="backupOverlay" onclick="closeBackupSheet()"></div>
-<div class="backup-sheet" id="backupSheet">
-    <div class="bs-handle"></div>
-    <div class="bs-title">📦 数据备份与恢复</div>
-    <div class="bs-sub">导出 JSON 文件可保存到本地，换设备或清除数据后可导入恢复。</div>
-
-```
-<div class="bs-row" onclick="doExportStats()">
-    <span class="bs-row-icon">⬇️</span>
-    <div>
-        <div>导出备份</div>
-        <div class="bs-row-sub" id="bsExportSub">下载 stats_backup.json 到本地</div>
-    </div>
-</div>
-
-<div class="bs-row" onclick="doImportStats()">
-    <span class="bs-row-icon">⬆️</span>
-    <div>
-        <div>导入备份</div>
-        <div class="bs-row-sub bs-row-warn">将与现有数据合并（不会覆盖已有记录）</div>
-    </div>
-</div>
-
-<div class="bs-info" id="bsInfo">
-    正在读取数据…
-</div>
-
-<div class="bs-cancel" onclick="closeBackupSheet()">取消</div>
-```
-
-</div>
-<!-- Hidden file input for import -->
-<input type="file" id="bsFileInput" accept=".json" style="display:none" onchange="onImportFileChosen(event)">
 </body>
 </html>
