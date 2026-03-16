@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.0.9</title>
+    <title>英语精听播放器 v2.0.8</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -96,7 +96,6 @@
         font-size: 16px; margin-left: 6px; outline: none; -webkit-appearance: none;
     }
 
-    
     .content {
         -webkit-flex: 1; flex: 1;
         overflow-y: scroll; -webkit-overflow-scrolling: touch;
@@ -128,7 +127,6 @@
     .item-fav-heart { padding: 10px; font-size: 20px; color: #ddd; }
     .item-fav-heart.fav-on { color: var(--ios-red); }
 
-    
     .player-bar {
         position: fixed; bottom: 0; left: 0; right: 0;
         background-color: var(--ios-card);
@@ -255,7 +253,6 @@
     .pill-btn.active { background-color: rgba(0,122,255,0.1); color: var(--ios-blue); }
     .version-tag { font-size: 10px; color: #c6c6c8; text-align: center; margin-top: 5px; }
 
-    
     .sheet-overlay {
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         background: rgba(0,0,0,0.35); z-index: 500; display: none;
@@ -323,7 +320,6 @@
         pointer-events: none; z-index: 3; border-radius: 4px;
     }
 
-    
     .modal-overlay {
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         background: rgba(0,0,0,0.4); z-index: 1000; display: none;
@@ -348,7 +344,7 @@
     }
     #noSleepVideo { display: none; width: 1px; height: 1px; }
 
-            .stats-sheet {
+    .stats-sheet {
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
         background: var(--ios-bg); z-index: 900; display: none;
         -webkit-flex-direction: column; flex-direction: column;
@@ -646,7 +642,7 @@
     .bs-import-preview.show { display: block; }
     .bs-import-preview b { color: var(--ios-blue); }
 
-    /* Partial Export Sheet (v2.0.8 NEW) */
+    /* Partial Export Sheet */
     .bs-range-section {
         padding: 12px 24px;
         border-top: 1px solid var(--ios-divider);
@@ -1098,56 +1094,41 @@ function restoreSession() {
         if (!s || !s.trackUrl || !s.path) return false;
         if (Date.now() - (s.ts || 0) > 30 * 86400000) return false;
         _pendingSession = { trackUrl: s.trackUrl, trackTime: s.trackTime || 0, trackName: s.trackName || '', speed: s.speed || 1.0 };
-        
-        // 🔥 立即显示 UI（<100ms）
         setTimeout(_quickRestoreUI, 10);
-        
-        // 🔥 异步加载目录，不阻塞 UI 初始化
         fetchDirectory(s.path);
         return true;
     } catch(e) { return false; }
 }
 
-// v2.0.8 优化：快速展示上次播放曲目
-// 核心优化：立即恢复 audio.src + UI，不阻塞目录加载
 function _quickRestoreUI() {
     if (!_pendingSession) return;
     var ps = _pendingSession;
-    
-    // 1. 立即更新 UI（100ms 内完成）
+
     document.getElementById('trackName').textContent = ps.trackName || '恢复中';
     document.getElementById('trackTime').textContent = fmtTime(ps.trackTime) + ' / --:--';
-    
-    // 2. 恢复播放速度
+
     if (ps.speed && ps.speed !== playbackRate) {
         playbackRate = ps.speed;
         audio.playbackRate = playbackRate;
         document.getElementById('speedLabel').textContent = fmtSpeed(playbackRate);
     }
-    
-    // 3. 立即设置音源（浏览器开始加载）
+
     var targetTime = ps.trackTime > 2 ? ps.trackTime : (progressDB[ps.trackUrl] || 0);
     audio.src = ps.trackUrl;
     startAudioInfoLoad(ps.trackUrl);
-    
-    // 4. 展开播放条
     setCompact(false);
-    
-    // 5. 异步处理进度恢复（loadstart 时触发，不等 canplay）
+
     var seekApplied = false;
     var lsHandler = function() {
         audio.removeEventListener('loadstart', lsHandler);
         if (seekApplied) return;
         seekApplied = true;
-        
-        // loadstart 时立即设置进度（无需等 canplay）
         if (targetTime > 2) {
             try { audio.currentTime = targetTime; } catch(e) {}
         }
     };
     audio.addEventListener('loadstart', lsHandler);
-    
-    // 6. canplay 时再进行二次seek（鸿蒙4.3兼容）
+
     var cpHandler = function() {
         audio.removeEventListener('canplay', cpHandler);
         if (targetTime > 2 && !seekApplied) {
@@ -1163,21 +1144,18 @@ function _quickRestoreUI() {
 function _applyPendingSession() {
     if (!_pendingSession) return;
     var ps = _pendingSession;
-    
-    // 在目录加载完后，找到 track 对象更新 playList 中的信息
+
     var idx = -1;
     for (var i = 0; i < playList.length; i++) {
         if (playList[i].url === ps.trackUrl) { idx = i; break; }
     }
-    
-    // 即使没找到，也不影响已经正在播放的音频
+
     if (idx >= 0) {
         currentTrackIndex = idx;
-        renderListHighlight();   // 高亮列表中的当前曲目
-        updateFavHeart();        // 更新收藏图标
+        renderListHighlight();
+        updateFavHeart();
     }
-    
-    // 清除待处理会话
+
     _pendingSession = null;
 }
 
@@ -1193,16 +1171,10 @@ function init() {
     setCompact(true);
     startStatsTicker();
     setupMediaSession();
-    
-    // 🔥 v2.0.8 优化初始化：
-    // 1. 如果有上次会话，立即恢复 UI + 开始加载音频（<100ms）
-    // 2. 异步加载目录（不阻塞，最多几秒）
+
     if (!restoreSession()) {
-        // 没有上次会话，直接加载根目录
         fetchDirectory(currentPath);
     }
-    // 如果有上次会话，_quickRestoreUI 会立即执行，
-    // restoreSession 返回 true 后，同步加载目录（异步 XHR）
 }
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -1319,7 +1291,7 @@ function updateMediaSession(track) {
     if (!('mediaSession' in navigator)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
         title:  track.name,
-        artist: '英语精听播放器',
+        artist: 'Evan Yin 英语精听播放器',
         album:  currentPath.indexOf('virtual:list:') === 0
                     ? currentPath.replace('virtual:list:', '')
                     : '听力材料'
@@ -1898,7 +1870,6 @@ function fetchDirectory(url) {
         if (xhr.readyState !== 4) return;
         if (xhr.status >= 200 && xhr.status < 300) {
             parseDirectory(xhr.responseText, url);
-            // 🔥 目录加载完后再应用pending session
             if (_pendingSession) {
                 _applyPendingSession();
             }
@@ -2183,6 +2154,7 @@ var _sessionSec     = 0;
 
 try { statsDB = JSON.parse(localStorage.getItem('stats_db_v1') || '{}'); } catch(e) {}
 
+// 历史数据修复：为旧记录补充 count 字段
 (function() {
     var CUTOFF = '2025-03-08';
     var dirty  = false;
@@ -2470,7 +2442,7 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
             dayTotals[day]    += e.sec   || 0;
         });
     });
-    var tracks = Object.values(trackMap).filter(function(t){ return t.sec >= 1; });
+    var tracks = Object.keys(trackMap).map(function(k){ return trackMap[k]; }).filter(function(t){ return t.sec >= 1; });
     tracks.sort(function(a,b){ return b.sec - a.sec; });
 
     var totalSec = tracks.reduce(function(a,t){ return a + t.sec; }, 0);
@@ -2553,7 +2525,7 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
     ctx.fillStyle=g; ctx.fillRect(0,0,W,HEADER_H);
     ctx.fillStyle='#fff';
     ctx.font='bold 26px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-    ctx.fillText('📊 英语精听学习报告', W/2, 56);
+    ctx.fillText('📊 Evan Yin的英语听力学习报告', W/2, 56);
     ctx.font='17px sans-serif'; ctx.fillStyle='rgba(255,255,255,0.85)';
     ctx.fillText(label, W/2, 94);
     y = HEADER_H;
@@ -2703,14 +2675,14 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
     var ts=now.getFullYear()+'/'+(now.getMonth()+1)+'/'+now.getDate()
          +'  '+pad2(now.getHours())+':'+pad2(now.getMinutes());
     ctx.font='13px sans-serif'; ctx.fillStyle=C_META; ctx.textAlign='center'; ctx.textBaseline='alphabetic';
-    ctx.fillText('生成时间：'+ts+'   英语精听播放器', W/2, y+28);
+    ctx.fillText('生成时间：'+ts+'   Evan Yin 英语精听播放器', W/2, y+28);
 
     canvas.toBlob(function(blob) {
         var fname = '听力报告_'+label.replace(/[\s\/–\-]+/g,'_')+'.png';
         if (navigator.share && navigator.canShare) {
             var f = new File([blob], fname, { type: 'image/png' });
             if (navigator.canShare({ files: [f] })) {
-                navigator.share({ title: '英语精听学习报告', text: label, files: [f] }).catch(function(){});
+                navigator.share({ title: 'Evan Yin英语听力学习报告', text: label, files: [f] }).catch(function(){});
                 return;
             }
         }
@@ -2732,7 +2704,7 @@ function openBackupSheet() {
         '当前数据' + days + ' 天记录   累计 ' + h + ' 小时 ' + m + ' 分钟   约 ' + sizeK + ' KB';
     document.getElementById('bsExportSub').textContent =
         '下载完整 stats_backup.json（' + sizeK + ' KB）';
-    
+
     document.getElementById('backupOverlay').classList.add('open');
     document.getElementById('backupSheet').classList.add('open');
 }
@@ -2771,7 +2743,7 @@ function doExportStats() {
     showToast('备份已导出：' + fname);
 }
 
-// v2.0.8 NEW: 按日期/文件导出
+// 按日期/文件导出
 var _peSelectedFiles = {};
 
 function openPartialExport() {
@@ -2783,7 +2755,7 @@ function openPartialExport() {
     var fromDateStr = startDate.getFullYear() + '-' + pad2(startDate.getMonth()+1) + '-' + pad2(startDate.getDate());
     document.getElementById('peRangeStart').value = fromDateStr;
     document.getElementById('peRangeEnd').value = toDateStr;
-    
+
     document.getElementById('partialExportOverlay').classList.add('open');
     document.getElementById('partialExportSheet').classList.add('open');
 }
@@ -2798,40 +2770,40 @@ function loadFilesForDateRange() {
     var e = document.getElementById('peRangeEnd').value;
     if (!s || !e) { showToast('请选择起止日期'); return; }
     if (s > e)    { showToast('开始日期不能晚于结束日期'); return; }
-    
+
     var arr = [], cur = new Date(s);
     var end = new Date(e);
     while (cur <= end) {
         arr.push(cur.getFullYear() + '-' + pad2(cur.getMonth()+1) + '-' + pad2(cur.getDate()));
         cur.setDate(cur.getDate() + 1);
     }
-    
+
     var fileMap = {};
     var totalDays = 0, totalFiles = 0;
-    
+
     for (var i = 0; i < arr.length; i++) {
         if (!statsDB[arr[i]]) continue;
         totalDays++;
         var dayData = statsDB[arr[i]];
         Object.keys(dayData).forEach(function(k) {
             if (!fileMap[k]) {
-                fileMap[k] = { 
-                    name: dayData[k].name, 
-                    url: dayData[k].url, 
-                    days: [] 
+                fileMap[k] = {
+                    name: dayData[k].name,
+                    url:  dayData[k].url,
+                    days: []
                 };
             }
             fileMap[k].days.push(arr[i]);
         });
     }
-    
+
     totalFiles = Object.keys(fileMap).length;
-    
+
     if (totalFiles === 0) {
         showToast('该日期范围内没有记录');
         return;
     }
-    
+
     _peSelectedFiles = {};
     Object.keys(fileMap).forEach(function(k) {
         if (!_peSelectedFiles[k]) _peSelectedFiles[k] = {};
@@ -2839,55 +2811,67 @@ function loadFilesForDateRange() {
             _peSelectedFiles[k][day] = true;
         });
     });
-    
+
     var container = document.getElementById('peFileList');
     container.innerHTML = '';
-    
+
+    // 计算每个文件的总秒数（兼容写法，不用可选链）
     var fileKeys = Object.keys(fileMap).sort(function(a, b) {
         var secA = 0, secB = 0;
-        for (var day in _peSelectedFiles[a]) secA += (statsDB[day][a]?.sec || 0);
-        for (var day in _peSelectedFiles[b]) secB += (statsDB[day][b]?.sec || 0);
+        var daysA = Object.keys(_peSelectedFiles[a] || {});
+        var daysB = Object.keys(_peSelectedFiles[b] || {});
+        for (var i = 0; i < daysA.length; i++) {
+            var entry = statsDB[daysA[i]] && statsDB[daysA[i]][a];
+            secA += entry ? (entry.sec || 0) : 0;
+        }
+        for (var i = 0; i < daysB.length; i++) {
+            var entry = statsDB[daysB[i]] && statsDB[daysB[i]][b];
+            secB += entry ? (entry.sec || 0) : 0;
+        }
         return secB - secA;
     });
-    
+
     fileKeys.forEach(function(k) {
         var file = fileMap[k];
         var totalSec = 0;
         file.days.forEach(function(day) {
-            totalSec += statsDB[day][k]?.sec || 0;
+            var entry = statsDB[day] && statsDB[day][k];
+            totalSec += entry ? (entry.sec || 0) : 0;
         });
-        
+
         var div = document.createElement('div');
         var checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = true;
         checkbox.id = 'pe_' + k;
-        checkbox.onchange = function() {
-            if (this.checked) {
-                _peSelectedFiles[k] = {};
-                file.days.forEach(function(day) {
-                    _peSelectedFiles[k][day] = true;
-                });
-            } else {
-                delete _peSelectedFiles[k];
-            }
-        };
-        
+        (function(fk, fdays) {
+            checkbox.onchange = function() {
+                if (this.checked) {
+                    _peSelectedFiles[fk] = {};
+                    fdays.forEach(function(day) {
+                        _peSelectedFiles[fk][day] = true;
+                    });
+                } else {
+                    delete _peSelectedFiles[fk];
+                }
+            };
+        })(k, file.days);
+
         var label = document.createElement('label');
         label.htmlFor = 'pe_' + k;
-        label.innerHTML = 
-            '<div style="font-size:15px;font-weight:600;color:var(--ios-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + 
-            escHtml(file.name) + 
+        label.innerHTML =
+            '<div style="font-size:15px;font-weight:600;color:var(--ios-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
+            escHtml(file.name) +
             '</div>' +
             '<div style="font-size:12px;color:var(--ios-subtext);margin-top:2px;">' +
             file.days.length + ' 天   ' + fmtHM(totalSec) +
             '</div>';
-        
+
         div.appendChild(checkbox);
         div.appendChild(label);
         container.appendChild(div);
     });
-    
+
     document.getElementById('peFileListSection').style.display = 'block';
     document.getElementById('peFileCount').textContent = '(' + totalFiles + ' 个文件，' + totalDays + ' 天)';
 }
@@ -2898,23 +2882,24 @@ function doPartialExport() {
         showToast('请至少选择一个文件');
         return;
     }
-    
+
     flushStats();
-    
+
     var rangeStats = {};
     Object.keys(_peSelectedFiles).forEach(function(k) {
         Object.keys(_peSelectedFiles[k]).forEach(function(day) {
             if (!rangeStats[day]) rangeStats[day] = {};
-            if (statsDB[day] && statsDB[day][k]) {
-                rangeStats[day][k] = statsDB[day][k];
+            var entry = statsDB[day] && statsDB[day][k];
+            if (entry) {
+                rangeStats[day][k] = entry;
             }
         });
     });
-    
+
     var s = document.getElementById('peRangeStart').value;
     var e = document.getElementById('peRangeEnd').value;
     var dayCount = Object.keys(rangeStats).length;
-    
+
     var payload = {
         version:    2,
         exportedAt: new Date().toISOString(),
@@ -2925,24 +2910,24 @@ function doPartialExport() {
         statsDB:    rangeStats,
         progressDB: progressDB
     };
-    
+
     var json = JSON.stringify(payload, null, 2);
     var blob = new Blob([json], { type: 'application/json' });
     var fname = '听力_' + s + '_到_' + e + '_' + selectedCount + '个文件.json';
-    
+
     if (navigator.share && navigator.canShare) {
         var f = new File([blob], fname, { type: 'application/json' });
         if (navigator.canShare({ files: [f] })) {
-            navigator.share({ 
-                title: '听力统计导出', 
+            navigator.share({
+                title: '听力统计导出',
                 text: dayCount + '天 ' + selectedCount + '个文件',
-                files: [f] 
+                files: [f]
             }).catch(function(){});
             closePartialExport();
             return;
         }
     }
-    
+
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url; a.download = fname; a.click();
@@ -2965,9 +2950,14 @@ function onImportFileChosen(evt) {
             var payload = JSON.parse(e.target.result);
             var incoming = payload.statsDB || payload;
             var dateRange = payload.dateRange || '全部数据';
-            var fileCount = payload.fileCount || Object.keys(incoming).reduce(function(sum, day) {
-                return sum + Object.keys(incoming[day] || {}).length;
-            }, 0);
+
+            // 计算文件条数（兼容全量和部分导出格式）
+            var fileCount = payload.fileCount || 0;
+            if (!fileCount) {
+                Object.keys(incoming).forEach(function(day) {
+                    fileCount += Object.keys(incoming[day] || {}).length;
+                });
+            }
 
             if (typeof incoming !== 'object' || Array.isArray(incoming)) throw new Error('格式错误');
 
@@ -2977,13 +2967,13 @@ function onImportFileChosen(evt) {
                 '<button style="flex:1;padding:12px;background:#007aff;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;" onclick="confirmImportData()">确认导入</button>' +
                 '<button style="flex:1;padding:12px;background:#e8e8e8;color:#333;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;" onclick="cancelImport()">取消</button>' +
                 '</div>';
-            
+
             var previewEl = document.getElementById('bsImportPreview');
             previewEl.innerHTML = previewText;
             previewEl.classList.add('show');
-            
+
             window._pendingImportData = { incoming: incoming, dateRange: dateRange, payload: payload };
-            
+
         } catch(err) {
             showToast('导入失败：' + (err.message || '文件格式不正确'));
             closeBackupSheet();
@@ -2994,11 +2984,11 @@ function onImportFileChosen(evt) {
 
 function confirmImportData() {
     if (!window._pendingImportData) return;
-    
+
     var data = window._pendingImportData;
     var incoming = data.incoming;
     var added = 0, merged = 0, totalDays = 0;
-    
+
     Object.keys(incoming).forEach(function(day) {
         totalDays++;
         if (!statsDB[day]) { statsDB[day] = {}; added++; }
@@ -3014,6 +3004,7 @@ function confirmImportData() {
                 };
                 merged++;
             } else {
+                // 取较大值，确保不丢数据
                 statsDB[day][k].sec   = Math.max(statsDB[day][k].sec,   src.sec   || 0);
                 statsDB[day][k].count = Math.max(statsDB[day][k].count, src.count || 0);
                 merged++;
