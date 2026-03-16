@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.0.9</title>
+    <title>英语精听播放器 v2.1.0</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -165,6 +165,13 @@
     .ios-slider::-webkit-slider-thumb {
         -webkit-appearance: none; width: 22px; height: 22px;
         background: var(--ios-card); border-radius: 50%; box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+        -webkit-transition: -webkit-transform 0.12s ease;
+        transition: transform 0.12s ease;
+    }
+    .ios-slider:active::-webkit-slider-thumb {
+        -webkit-transform: scale(1.25);
+        transform: scale(1.25);
+        box-shadow: 0 3px 12px rgba(0,0,0,0.32);
     }
 
     /* Track display */
@@ -749,7 +756,43 @@
         color: var(--ios-subtext); font-size: 14px;
     }
 
-    .st-notice {
+    /* 长按菜单 */
+    .ctx-menu-overlay {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.3);
+        z-index: 4000; opacity: 0;
+        transition: opacity .2s;
+        pointer-events: none;
+    }
+    .ctx-menu-overlay.open { opacity: 1; pointer-events: auto; }
+    .ctx-menu {
+        position: fixed;
+        background: var(--ios-card);
+        border-radius: 16px;
+        overflow: hidden;
+        min-width: 200px;
+        z-index: 4001;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.22);
+        transform: scale(0.85); opacity: 0;
+        transition: transform .18s cubic-bezier(.34,1.56,.64,1), opacity .15s ease;
+        pointer-events: none;
+    }
+    .ctx-menu.open { transform: scale(1); opacity: 1; pointer-events: auto; }
+    .ctx-menu-title {
+        font-size: 13px; color: var(--ios-subtext);
+        text-align: center; padding: 12px 16px 6px;
+        max-width: 220px; overflow: hidden;
+        text-overflow: ellipsis; white-space: nowrap;
+    }
+    .ctx-menu-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 14px 18px;
+        font-size: 16px; color: var(--ios-text);
+        border-top: 0.5px solid var(--ios-sep);
+        cursor: pointer; -webkit-tap-highlight-color: transparent;
+    }
+    .ctx-menu-item:active { background: var(--ios-gray-btn); }
+    .ctx-menu-item.danger { color: var(--ios-red); }
         font-size: 11px; color: var(--ios-subtext); text-align: center;
         padding: 0 8px 4px 8px; line-height: 1.6;
     }
@@ -902,7 +945,7 @@
             <span>📊</span><span>统计</span>
         </button>
     </div>
-    <div class="version-tag">Build v2.0.9</div>
+    <div class="version-tag">Build v2.1.0</div>
 </div>
 ```
 
@@ -1032,6 +1075,17 @@
 <div class="bs-cancel" onclick="closePartialExport()">返回</div>
 ```
 
+</div>
+
+<div class="ctx-menu-overlay" id="ctxOverlay" onclick="closeCtxMenu()"></div>
+<div class="ctx-menu" id="ctxMenu">
+    <div class="ctx-menu-title" id="ctxMenuTitle"></div>
+    <div class="ctx-menu-item" id="ctxRename" onclick="ctxDoRename()">
+        <span>✏️</span><span>重命名</span>
+    </div>
+    <div class="ctx-menu-item danger" id="ctxDelete" onclick="ctxDoDelete()">
+        <span>🗑️</span><span>删除收藏夹</span>
+    </div>
 </div>
 
 <input type="file" id="bsFileInput" accept=".json" style="display:none" onchange="onImportFileChosen(event)">
@@ -1268,16 +1322,6 @@ function onTU() {
 }
 
 function pad2(n) { return n < 10 ? '0' + n : String(n); }
-function safePlay(targetAudio) {
-    return (targetAudio || audio).play().catch(function(e) {
-        if (e && e.name === 'NotAllowedError') {
-            showToast('请点击播放按钮开始播放');
-            document.getElementById('iconPlay').style.display  = 'block';
-            document.getElementById('iconPause').style.display = 'none';
-        }
-    });
-}
-
 function togglePlay() {
     if (!audio.src || audio.src === window.location.href) {
         if (playList.length > 0) playTrack(0);
@@ -2003,19 +2047,18 @@ function renderPlaylistFolders() {
     currentPath = 'virtual:folders';
     document.getElementById('currentFolder').textContent = '/我的收藏';
     var container = document.getElementById('fileList');
-    container.innerHTML = '<div class="list-item pinned-item active"><div class="item-icon">⭐️</div><div class="item-info"><div class="item-title">收藏文件夹</div></div></div>';
+    container.innerHTML = '<div class="list-item pinned-item active"><div class="item-icon">⭐️</div><div class="item-info"><div class="item-title">收藏文件夹</div><div class="item-subtext">长按文件夹可重命名或删除</div></div></div>';
     var keys = Object.keys(playlists);
     for (var k = 0; k < keys.length; k++) {
         (function(name) {
             var div = document.createElement('div');
             div.className = 'list-item';
-            var esc = name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
             div.innerHTML =
                 '<div class="item-icon">📁</div>' +
                 '<div class="item-info"><div class="item-title">' + escHtml(name) + '</div><div class="item-subtext">' + playlists[name].length + ' 首</div></div>' +
-                '<div style="font-size:12px;color:var(--ios-blue);padding:8px;cursor:pointer;" onclick="event.stopPropagation();renamePlaylist(\'' + esc + '\')">重命名</div>' +
-                '<div style="font-size:12px;color:var(--ios-red);padding:8px;cursor:pointer;" onclick="event.stopPropagation();deletePlaylist(\'' + esc + '\')">删除</div>';
+                '<div style="font-size:12px;color:var(--ios-subtext);padding:8px;pointer-events:none;">长按</div>';
             div.onclick = function() { fetchDirectory('virtual:list:' + name); };
+            setupLongPress(div, name);
             container.appendChild(div);
         })(keys[k]);
     }
@@ -2145,7 +2188,7 @@ function showToast(msg) {
     showToast._t = setTimeout(function() { t.style.display = 'none'; }, 1800);
 }
 
-//  LISTENING STATS  v2.0.9
+//  LISTENING STATS  v2.1.0
 var statsDB        = {};
 var _stFlush       = 0;
 var MIN_VOL        = 0.4;
@@ -3275,6 +3318,119 @@ function drawBarChart(values, dates) {
         }, false);
     }
 }
+
+// 长按菜单
+var _ctxTarget = null;
+var _longPressTimer = null;
+
+function setupLongPress(el, name) {
+    function trigger(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openCtxMenu(name, e);
+    }
+    // 触摸长按（500ms）
+    el.addEventListener('touchstart', function(e) {
+        _longPressTimer = setTimeout(function() {
+            _longPressTimer = null;
+            trigger(e);
+        }, 500);
+    }, { passive: true });
+    el.addEventListener('touchend', function() {
+        clearTimeout(_longPressTimer);
+        _longPressTimer = null;
+    });
+    el.addEventListener('touchmove', function() {
+        clearTimeout(_longPressTimer);
+        _longPressTimer = null;
+    });
+    // 桌面右键
+    el.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        trigger(e);
+    });
+}
+
+function openCtxMenu(name, e) {
+    _ctxTarget = name;
+    document.getElementById('ctxMenuTitle').textContent = name;
+
+    var menu = document.getElementById('ctxMenu');
+    var overlay = document.getElementById('ctxOverlay');
+
+    // 定位：优先在触摸点附近，避免超出屏幕
+    var touch = e.touches ? e.touches[0] : e;
+    var x = touch ? (touch.clientX || 0) : window.innerWidth / 2;
+    var y = touch ? (touch.clientY || 0) : window.innerHeight / 2;
+
+    menu.style.left = '50%';
+    menu.style.top  = '50%';
+    menu.style.transform = 'translate(-50%,-50%) scale(0.85)';
+
+    overlay.classList.add('open');
+    menu.classList.add('open');
+    // 触发弹出动画
+    requestAnimationFrame(function() {
+        menu.style.transform = 'translate(-50%,-50%) scale(1)';
+    });
+}
+
+function closeCtxMenu() {
+    _ctxTarget = null;
+    document.getElementById('ctxOverlay').classList.remove('open');
+    var menu = document.getElementById('ctxMenu');
+    menu.classList.remove('open');
+    menu.style.transform = 'translate(-50%,-50%) scale(0.85)';
+}
+
+function ctxDoRename() {
+    var name = _ctxTarget;
+    closeCtxMenu();
+    if (!name) return;
+    setTimeout(function() { renamePlaylist(name); }, 150);
+}
+
+function ctxDoDelete() {
+    var name = _ctxTarget;
+    closeCtxMenu();
+    if (!name) return;
+    setTimeout(function() { deletePlaylist(name); }, 150);
+}
+
+// 优化3：音频错误完善捕获
+function safePlay(targetAudio) {
+    return (targetAudio || audio).play().catch(function(e) {
+        if (!e) return;
+        if (e.name === 'NotAllowedError') {
+            showToast('请点击播放按钮开始播放');
+            document.getElementById('iconPlay').style.display  = 'block';
+            document.getElementById('iconPause').style.display = 'none';
+        } else if (e.name === 'NotSupportedError') {
+            showToast('⚠️ 不支持此音频格式');
+            document.getElementById('iconPlay').style.display  = 'block';
+            document.getElementById('iconPause').style.display = 'none';
+        } else if (e.name === 'AbortError') {
+            // 切歌时的正常中断，不提示
+        } else {
+            showToast('⚠️ 音频加载失败，请检查网络或文件');
+            document.getElementById('iconPlay').style.display  = 'block';
+            document.getElementById('iconPause').style.display = 'none';
+        }
+    });
+}
+
+// audio error 事件（网络断开等情况 play() 不一定触发）
+audio.addEventListener('error', function() {
+    var err = audio.error;
+    if (!err) return;
+    var msg = '⚠️ 音频加载失败';
+    if (err.code === MediaError.MEDIA_ERR_NETWORK)  msg = '⚠️ 网络错误，音频加载失败';
+    if (err.code === MediaError.MEDIA_ERR_DECODE)   msg = '⚠️ 音频解码失败';
+    if (err.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) msg = '⚠️ 不支持此音频格式';
+    showToast(msg);
+    document.getElementById('iconPlay').style.display  = 'block';
+    document.getElementById('iconPause').style.display = 'none';
+});
 
 function escHtml(s) {
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
