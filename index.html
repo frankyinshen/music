@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.1.0</title>
+    <title>英语精听播放器 v2.2.0</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -942,7 +942,7 @@
             <span>📊</span><span>统计</span>
         </button>
     </div>
-    <div class="version-tag">Build v2.1.0</div>
+    <div class="version-tag">Build v2.2.0</div>
 </div>
 
 </div>
@@ -999,6 +999,7 @@
 </div>
 
 <div class="sp-cancel" onclick="closeSharePicker()">取消</div>
+
 
 </div>
 
@@ -1175,6 +1176,7 @@ function _quickRestoreUI() {
 
     var cpHandler = function() {
         audio.removeEventListener('canplay', cpHandler);
+        audio.removeEventListener('loadedmetadata', cpHandler);
         if (targetTime > 2 && !seekApplied) {
             try { audio.currentTime = targetTime; } catch(e) {}
             seekApplied = true;
@@ -1182,6 +1184,7 @@ function _quickRestoreUI() {
         updateAudioInfo();
     };
     audio.addEventListener('canplay', cpHandler);
+    audio.addEventListener('loadedmetadata', cpHandler);
     audio.load();
 }
 
@@ -1283,7 +1286,14 @@ function setupAudioEvents() {
     });
     audio.addEventListener('timeupdate', onTU);
     audio.addEventListener('durationchange', function() {
-        if (audio.duration && !isNaN(audio.duration)) {
+        if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+            document.getElementById('trackTime').textContent = fmtTime(audio.currentTime) + ' / ' + fmtTime(audio.duration);
+            updateAudioInfo();
+        }
+    });
+    // loadedmetadata 专门负责时长就绪，iOS上比durationchange更可靠
+    audio.addEventListener('loadedmetadata', function() {
+        if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
             document.getElementById('trackTime').textContent = fmtTime(audio.currentTime) + ' / ' + fmtTime(audio.duration);
             updateAudioInfo();
         }
@@ -1390,14 +1400,20 @@ function playTrack(index) {
         safePlay();
         var cpFallback = function() {
             audio.removeEventListener('canplay', cpFallback);
+            audio.removeEventListener('loadedmetadata', cpFallback);
             audio.playbackRate = playbackRate;
             safePlay();
             updateAudioInfo();
         };
         audio.addEventListener('canplay', cpFallback);
+        audio.addEventListener('loadedmetadata', cpFallback);
     } else {
+        var _metaLoaded = false;
         var cpHandler = function() {
+            if (_metaLoaded) return;
+            _metaLoaded = true;
             audio.removeEventListener('canplay', cpHandler);
+            audio.removeEventListener('loadedmetadata', cpHandler);
             audio.playbackRate = playbackRate;
             if (savedTime > 2) {
                 try { audio.currentTime = savedTime; } catch(e) {}
@@ -1413,7 +1429,39 @@ function playTrack(index) {
             }
         };
         audio.addEventListener('canplay', cpHandler);
+        audio.addEventListener('loadedmetadata', cpHandler);
         audio.load();
+
+        // 兜底轮询：针对服务器不支持Range时iOS迟迟不触发事件的情况
+        var _pollCount = 0;
+        var _pollTimer = setInterval(function() {
+            _pollCount++;
+            if (_metaLoaded || _pollCount > 30) {
+                clearInterval(_pollTimer);
+                return;
+            }
+            if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+                clearInterval(_pollTimer);
+                if (!_metaLoaded) {
+                    _metaLoaded = true;
+                    audio.removeEventListener('canplay', cpHandler);
+                    audio.removeEventListener('loadedmetadata', cpHandler);
+                    audio.playbackRate = playbackRate;
+                    if (savedTime > 2) {
+                        try { audio.currentTime = savedTime; } catch(e) {}
+                        showToast('恢复进度: ' + fmtTime(savedTime));
+                        setTimeout(function() {
+                            try { audio.currentTime = savedTime; } catch(e) {}
+                            safePlay();
+                            updateAudioInfo();
+                        }, 100);
+                    } else {
+                        safePlay();
+                        updateAudioInfo();
+                    }
+                }
+            }
+        }, 300);
     }
 }
 
@@ -1522,41 +1570,13 @@ function genShuffle() {
 
 function startAudioInfoLoad(url) {
     var ext = url.split('.').pop().toUpperCase();
-    document.getElementById('audioInfo').textContent = ext + ' 读取中';
-    if (_fileSizeCache[url]) { updateAudioInfo(); }
-
-    if (!_rangeChecked[url]) {
-        _rangeChecked[url] = true;
-        var _rangeUrl = url;
-        var _rangeHandler = function() {
-            audio.removeEventListener('canplay', _rangeHandler);
-            if (audio.src.split('#')[0] !== _rangeUrl.split('#')[0]) return;
-            if (!audio.seekable || audio.seekable.length === 0) {
-                document.getElementById('audioInfo').textContent =
-                    '⚠️ 服务器不支持Range请求';
-            }
-        };
-        audio.addEventListener('canplay', _rangeHandler);
+    if (_fileSizeCache[url]) {
+        updateAudioInfo();
+    } else {
+        document.getElementById('audioInfo').textContent = ext + ' 读取中';
     }
 
-    var perfTries = 0;
-    function tryPerf() {
-        perfTries++;
-        var entries = (window.performance && performance.getEntriesByName)
-                        ? performance.getEntriesByName(url, 'resource') : [];
-        if (entries.length) {
-            var e = entries[entries.length - 1];
-            var sz = e.encodedBodySize || e.decodedBodySize || 0;
-            if (sz > 512) {
-                _fileSizeCache[url] = sz;
-                updateAudioInfo();
-                return;
-            }
-        }
-        if (perfTries < 25) setTimeout(tryPerf, 200);
-        else tryXHR();
-    }
-
+    // 优先用 HEAD 请求拿文件大小（Cloudflare 支持）
     var xhrDone = false;
     function tryXHR() {
         var xhr = new XMLHttpRequest();
@@ -1564,28 +1584,53 @@ function startAudioInfoLoad(url) {
         xhr.onreadystatechange = function() {
             if (xhr.readyState !== 4 || xhrDone) return;
             var sz = parseInt(xhr.getResponseHeader('Content-Length') || '0', 10);
-            if (sz > 0) { xhrDone = true; _fileSizeCache[url] = sz; updateAudioInfo(); }
-            else tryRange();
+            if (sz > 0) {
+                xhrDone = true;
+                _fileSizeCache[url] = sz;
+                updateAudioInfo();
+            } else {
+                tryFromAudio();
+            }
         };
-        xhr.onerror = tryRange;
-        try { xhr.send(); } catch(e) { tryRange(); }
-    }
-    function tryRange() {
-        if (xhrDone) return;
-        var xhr2 = new XMLHttpRequest();
-        xhr2.open('GET', url, true);
-        try { xhr2.setRequestHeader('Range', 'bytes=0-0'); } catch(e) {}
-        xhr2.onreadystatechange = function() {
-            if (xhr2.readyState !== 4 || xhrDone) return;
-            var m = (xhr2.getResponseHeader('Content-Range') || '').match(/\/(\d+)/);
-            if (m) { xhrDone = true; _fileSizeCache[url] = parseInt(m[1], 10); updateAudioInfo(); }
-            else { document.getElementById('audioInfo').textContent = ext; }
-        };
-        xhr2.onerror = function() { document.getElementById('audioInfo').textContent = ext; };
-        try { xhr2.send(); } catch(e) { document.getElementById('audioInfo').textContent = ext; }
+        xhr.onerror = tryFromAudio;
+        try { xhr.send(); } catch(e) { tryFromAudio(); }
     }
 
-    tryPerf();
+    // HEAD 拿不到大小时，从 audio 的已下载量估算
+    function tryFromAudio() {
+        if (xhrDone) return;
+        // 轮询 audio.buffered 来估算文件大小
+        var pollCount = 0;
+        var pollTimer = setInterval(function() {
+            pollCount++;
+            // 用 PerformanceResourceTiming 拿真实大小
+            if (window.performance && performance.getEntriesByName) {
+                var entries = performance.getEntriesByName(url, 'resource');
+                if (entries.length) {
+                    var e = entries[entries.length - 1];
+                    var sz = e.encodedBodySize || e.decodedBodySize || 0;
+                    if (sz > 512) {
+                        clearInterval(pollTimer);
+                        if (!xhrDone) {
+                            xhrDone = true;
+                            _fileSizeCache[url] = sz;
+                            updateAudioInfo();
+                        }
+                        return;
+                    }
+                }
+            }
+            // 超时直接只显示格式
+            if (pollCount > 20) {
+                clearInterval(pollTimer);
+                if (!xhrDone) {
+                    document.getElementById('audioInfo').textContent = ext;
+                }
+            }
+        }, 300);
+    }
+
+    tryXHR();
 }
 
 function updateAudioInfo() {
@@ -2178,7 +2223,7 @@ function showToast(msg) {
     showToast._t = setTimeout(function() { t.style.display = 'none'; }, 1800);
 }
 
-//  LISTENING STATS  v2.1.0
+//  LISTENING STATS  v2.2.0
 var statsDB        = {};
 var _stFlush       = 0;
 var MIN_VOL        = 0.4;
@@ -3410,16 +3455,52 @@ function safePlay(targetAudio) {
 }
 
 // audio error 事件（网络断开等情况 play() 不一定触发）
+var _audioRetryCount = 0;
+var _audioRetryMax   = 3;
+var _audioRetryTimer = null;
+
 audio.addEventListener('error', function() {
     var err = audio.error;
     if (!err) return;
+
+    // M4A/网络错误自动重试（最多3次，间隔递增）
+    var isRetryable = (
+        err.code === MediaError.MEDIA_ERR_NETWORK ||
+        err.code === MediaError.MEDIA_ERR_DECODE  ||
+        (err.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED &&
+         audio.src && audio.src.toLowerCase().indexOf('.m4a') > -1)
+    );
+
+    if (isRetryable && _audioRetryCount < _audioRetryMax) {
+        _audioRetryCount++;
+        var delay = _audioRetryCount * 1500; // 1.5s / 3s / 4.5s
+        var retryUrl = audio.src;
+        showToast('加载失败，' + (_audioRetryCount) + '/' + _audioRetryMax + ' 重试中…');
+        clearTimeout(_audioRetryTimer);
+        _audioRetryTimer = setTimeout(function() {
+            if (audio.src === retryUrl) {
+                audio.load();
+                safePlay();
+            }
+        }, delay);
+        return;
+    }
+
+    // 超过重试次数或不可重试，显示错误
+    _audioRetryCount = 0;
     var msg = '⚠️ 音频加载失败';
-    if (err.code === MediaError.MEDIA_ERR_NETWORK)  msg = '⚠️ 网络错误，音频加载失败';
-    if (err.code === MediaError.MEDIA_ERR_DECODE)   msg = '⚠️ 音频解码失败';
+    if (err.code === MediaError.MEDIA_ERR_NETWORK)           msg = '⚠️ 网络错误，请检查网络连接';
+    if (err.code === MediaError.MEDIA_ERR_DECODE)            msg = '⚠️ 音频解码失败';
     if (err.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED) msg = '⚠️ 不支持此音频格式';
     showToast(msg);
     document.getElementById('iconPlay').style.display  = 'block';
     document.getElementById('iconPause').style.display = 'none';
+});
+
+// 播放成功时重置重试计数
+audio.addEventListener('playing', function() {
+    _audioRetryCount = 0;
+    clearTimeout(_audioRetryTimer);
 });
 
 function escHtml(s) {
