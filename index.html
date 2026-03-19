@@ -3510,7 +3510,10 @@ function checkFictionRatio() {
         var sec = entry.sec || 0;
         totalSec += sec;
         // 用URL判断目录；文件删除/重命名后历史URL不变，逻辑不受影响
-        if (entry.url && entry.url.indexOf(FICTION_DIR) > -1) {
+        // URL是percent-encoded的，必须先decode再indexOf中文路径
+        var decodedUrl = '';
+        try { decodedUrl = decodeURIComponent(entry.url || ''); } catch(e) { decodedUrl = entry.url || ''; }
+        if (decodedUrl.indexOf(FICTION_DIR) > -1) {
             fictionSec += sec;
         }
     });
