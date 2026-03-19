@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.2.1</title>
+    <title>英语精听播放器 v2.2.3</title>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -791,6 +791,7 @@
         }
         .ctx-menu-item:active { background: var(--ios-gray-btn); }
         .ctx-menu-item.danger { color: var(--ios-red); }
+        .st-notice {
             font-size: 11px; color: var(--ios-subtext); text-align: center;
             padding: 0 8px 4px 8px; line-height: 1.6;
         }
@@ -940,7 +941,7 @@
                 <span>📊</span><span>统计</span>
             </button>
         </div>
-        <div class="version-tag">Build v2.2.1</div>
+        <div class="version-tag">Build v2.2.3</div>
     </div>
 </div>
 
@@ -1304,7 +1305,6 @@ function setupAudioEvents() {
 
 function onTU() {
     if (!audio.duration || isNaN(audio.duration)) return;
-    updateMediaPositionState();
     if (!isDraggingSlider) {
         var pct = (audio.currentTime / audio.duration) * 100;
         slider.value = pct;
@@ -1786,7 +1786,7 @@ function handleABRepeat() {
         txt.textContent = '设B点';
     } else if (abB === null) {
         abB = audio.currentTime;
-        if (abB <= abA) { abB = null; showToast('B点须在A点之后'); return; }
+        if (abB <= abA + 1) { abB = null; showToast('B点须在A点1秒之后'); return; }
         txt.textContent = '循环中';
         audio.currentTime = abA;
     } else {
@@ -2035,7 +2035,7 @@ function renderList(items, isPlaylist) {
             div.onclick = function(e) {
                 var node = e.target || e.srcElement;
                 while (node && node !== div) {
-                    var cn = node.className || '';
+                    var cn = (node.getAttribute && node.getAttribute('class')) || '';
                     if (cn.indexOf('item-fav-heart') > -1 || cn.indexOf('drag-handle') > -1) return;
                     node = node.parentNode;
                 }
@@ -2216,7 +2216,7 @@ function showToast(msg) {
     showToast._t = setTimeout(function() { t.style.display = 'none'; }, 1800);
 }
 
-//  LISTENING STATS  v2.2.1
+//  LISTENING STATS  v2.2.3
 var statsDB        = {};
 var _stFlush       = 0;
 var MIN_VOL        = 0.4;
@@ -2267,12 +2267,12 @@ function startStatsTicker() {
     audio.addEventListener('seeked', function() {
         _lastAudioTime = audio.currentTime;
         _lastWallClock = _nowMs();
-    }, false);
-
-    audio.addEventListener('seeked', function() {
         updateAudioInfo();
-        void audio.paused;
-    });
+        updateMediaPositionState();
+    }, false);
+    audio.addEventListener('ratechange', function() {
+        updateMediaPositionState();
+    }, false);
 
     audio.addEventListener('timeupdate', function() {
         if (audio.paused) return;
@@ -2308,7 +2308,7 @@ function _commitStatsDelta(useWallClock) {
         delta = audio.currentTime - _lastAudioTime;
     }
 
-    if (delta > 0 && delta < 2) {
+    if (delta > 0 && delta <= 10.5) {  // 兼容Wall Clock兜底（最大10秒）
         var today = todayKey();
         if (!statsDB[today]) statsDB[today] = {};
         var k = urlHash(track.url);
@@ -2490,7 +2490,9 @@ function doShareRange() {
     if (s > e)    { showToast('开始日期不能晚于结束日期'); return; }
     closeSharePicker();
     var arr = [], cur = new Date(s);
+    cur.setHours(12, 0, 0, 0);
     var end = new Date(e);
+    end.setHours(23, 59, 59, 999);
     while (cur <= end) {
         arr.push(cur.getFullYear() + '-' + pad2(cur.getMonth()+1) + '-' + pad2(cur.getDate()));
         cur.setDate(cur.getDate() + 1);
@@ -2843,7 +2845,9 @@ function loadFilesForDateRange() {
     if (s > e)    { showToast('开始日期不能晚于结束日期'); return; }
 
     var arr = [], cur = new Date(s);
+    cur.setHours(12, 0, 0, 0);
     var end = new Date(e);
+    end.setHours(23, 59, 59, 999);
     while (cur <= end) {
         arr.push(cur.getFullYear() + '-' + pad2(cur.getMonth()+1) + '-' + pad2(cur.getDate()));
         cur.setDate(cur.getDate() + 1);
@@ -3197,7 +3201,7 @@ function renderStats() {
         }
     }
     html += '</div>';
-    html += '<div class="st-notice">⚠️ 仅统计音量≥40%有效播放时间。iOS系统音量无法通过JS检测，已通过音频信号分析作补充判断。</div>';
+    html += '<div class="st-notice">⚠️ 仅统计有效播放时间（静音不计入）。iOS设备因系统限制无法检测系统音量，请自觉保持合适音量收听。</div>';
 
     body.innerHTML = html;
     setTimeout(function() { drawBarChart(values, dates); }, 30);
@@ -3387,11 +3391,6 @@ function openCtxMenu(name, e) {
 
     var menu = document.getElementById('ctxMenu');
     var overlay = document.getElementById('ctxOverlay');
-
-    // 定位：优先在触摸点附近，避免超出屏幕
-    var touch = e.touches ? e.touches[0] : e;
-    var x = touch ? (touch.clientX || 0) : window.innerWidth / 2;
-    var y = touch ? (touch.clientY || 0) : window.innerHeight / 2;
 
     menu.style.left = '50%';
     menu.style.top  = '50%';
