@@ -10,30 +10,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="精听播放器">
     <meta name="theme-color" content="#007aff">
-    <script>
-    // 动态生成 Web App Manifest 并注入，不需要外部 manifest.json 文件
-    (function() {
-        var manifest = {
-            name: "英语精听播放器",
-            short_name: "精听",
-            description: "英语精听与离线听力学习工具",
-            start_url: "/",
-            display: "standalone",
-            background_color: "#f2f2f7",
-            theme_color: "#007aff",
-            orientation: "portrait",
-            icons: [
-                { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22.5' fill='%23007aff'/><text y='75' x='50' text-anchor='middle' font-size='65'>🎧</text></svg>", sizes: "any", type: "image/svg+xml" }
-            ]
-        };
-        var blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
-        var url  = URL.createObjectURL(blob);
-        var link = document.createElement("link");
-        link.rel  = "manifest";
-        link.href = url;
-        document.head.appendChild(link);
-    })();
-    </script>
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -83,7 +61,7 @@
             -webkit-flex-direction: column; flex-direction: column;
         }
 
-
+```
     .header {
         background-color: var(--ios-blur);
         -webkit-backdrop-filter: blur(25px); backdrop-filter: blur(25px);
@@ -957,7 +935,7 @@
         padding: 0 8px 4px 8px; line-height: 1.6;
     }
 </style>
-
+```
 
 </head>
 <body class="player-compact">
@@ -1037,7 +1015,7 @@
         </div>
     </div>
 
-
+```
 <div class="track-display">
     <div class="track-name" id="trackName">未播放</div>
     <div class="track-time" id="trackTime">--:-- / --:--</div>
@@ -1110,7 +1088,7 @@
     </div>
     <div class="version-tag">Build v2.3.0</div>
 </div>
-
+```
 
 </div>
 
@@ -1119,7 +1097,7 @@
     <div class="sp-handle"></div>
     <div class="sp-title">选择分享范围</div>
 
-
+```
 <div class="sp-row" onclick="doShareDay()">
     <span class="sp-row-icon">📅</span>
     <div>
@@ -1167,7 +1145,7 @@
 </div>
 
 <div class="sp-cancel" onclick="closeSharePicker()">取消</div>
-
+```
 
 </div>
 
@@ -1177,7 +1155,7 @@
     <div class="bs-title">📦 数据备份与恢复</div>
     <div class="bs-sub">导出 JSON 文件可保存到本地，换设备可导入恢复</div>
 
-
+```
 <div class="bs-row" onclick="doExportStats()">
     <span class="bs-row-icon">⬇️</span>
     <div>
@@ -1205,7 +1183,7 @@
 <div class="bs-import-preview" id="bsImportPreview"></div>
 <div class="bs-info" id="bsInfo">正在读取数据</div>
 <div class="bs-cancel" onclick="closeBackupSheet()">取消</div>
-
+```
 
 </div>
 
@@ -1215,7 +1193,7 @@
     <div class="bs-title">按日期/文件导出</div>
     <div class="bs-sub">灵活选择特定日期和文件记录</div>
 
-
+```
 <div class="bs-range-section">
     <div class="bs-range-title">📅 选择日期范围</div>
     <div class="bs-range-row">
@@ -1236,7 +1214,7 @@
 </div>
 
 <div class="bs-cancel" onclick="closePartialExport()">返回</div>
-
+```
 
 </div>
 
@@ -3881,6 +3859,11 @@ var IDB_STORE   = 'audios';
 var IDB_VERSION = 1;
 var _idb        = null;   // IDBDatabase 实例
 
+// 缓存文件大小 map，存在 localStorage，避免打开空间管理时把所有 ArrayBuffer 读进内存
+var _IDB_SIZE_KEY = 'idb_size_map_v1';
+var _idbSizeMap   = {};
+try { _idbSizeMap = JSON.parse(localStorage.getItem(_IDB_SIZE_KEY) || '{}'); } catch(e) {}
+
 // 打开/初始化 IndexedDB
 var _idbOpenQueue = null; // null=未开始, []=开启中排队, db=已开启
 
@@ -3936,7 +3919,12 @@ function _idbPut(url, buffer, cb) {
             var tx  = db.transaction(IDB_STORE, 'readwrite');
             var st  = tx.objectStore(IDB_STORE);
             var req = st.put(buffer, url);
-            req.onsuccess = function() { cb && cb(true); };
+            req.onsuccess = function() {
+                // 顺手把文件大小存到 localStorage，避免空间管理时加载全部 ArrayBuffer
+                _idbSizeMap[url] = buffer.byteLength;
+                try { localStorage.setItem(_IDB_SIZE_KEY, JSON.stringify(_idbSizeMap)); } catch(e) {}
+                cb && cb(true);
+            };
             req.onerror   = function() {
                 console.error('IDB put error:', req.error);
                 cb && cb(false);
@@ -3994,24 +3982,31 @@ function _idbDelete(url, cb) {
         if (!db) { cb && cb(); return; }
         var tx = db.transaction(IDB_STORE, 'readwrite');
         tx.objectStore(IDB_STORE).delete(url);
-        tx.oncomplete = function() { cb && cb(); };
+        tx.oncomplete = function() {
+            delete _idbSizeMap[url];
+            try { localStorage.setItem(_IDB_SIZE_KEY, JSON.stringify(_idbSizeMap)); } catch(e) {}
+            cb && cb();
+        };
     });
 }
 
 // 列出所有缓存（返回 [{url, size}]）
-// 注意：读取 size 需要加载每个 ArrayBuffer，数量多时较慢
-// 仅在空间管理面板打开时调用，不在启动时调用
+// openKeyCursor 只读 key，不加载 ArrayBuffer，避免大量缓存时内存爆炸
+// size 从 _fileSizeCache 取（下载/播放时已存入），取不到显示 0
+// 列出所有缓存（size 从 localStorage 的 _idbSizeMap 读取，不加载 ArrayBuffer，无OOM风险）
 function _idbListAll(cb) {
     _openIDB(function(db) {
         if (!db) { cb([]); return; }
-        var tx   = db.transaction(IDB_STORE, 'readonly');
-        var st   = tx.objectStore(IDB_STORE);
-        var list = [];
-        var curReq = st.openCursor();
+        var tx     = db.transaction(IDB_STORE, 'readonly');
+        var st     = tx.objectStore(IDB_STORE);
+        var list   = [];
+        var curReq = st.openKeyCursor(); // 只遍历 key，不加载 value
         curReq.onsuccess = function(e) {
             var cursor = e.target.result;
             if (cursor) {
-                list.push({ url: cursor.key, size: cursor.value ? cursor.value.byteLength : 0 });
+                // 从 localStorage map 读 size，不触碰 ArrayBuffer
+                var sz = _idbSizeMap[cursor.key] || _fileSizeCache[cursor.key] || 0;
+                list.push({ url: cursor.key, size: sz });
                 cursor.continue();
             } else {
                 cb(list);
@@ -4027,7 +4022,11 @@ function _idbClear(cb) {
         if (!db) { cb && cb(); return; }
         var tx = db.transaction(IDB_STORE, 'readwrite');
         tx.objectStore(IDB_STORE).clear();
-        tx.oncomplete = function() { cb && cb(); };
+        tx.oncomplete = function() {
+            _idbSizeMap = {};
+            try { localStorage.removeItem(_IDB_SIZE_KEY); } catch(e) {}
+            cb && cb();
+        };
     });
 }
 
@@ -4103,64 +4102,37 @@ function _downloadOne(url, onProgress, onDone) {
     _cacheStatus[url] = 'caching';
     _refreshBadge(url);
 
-    // 用 XHR 替代 fetch：iOS 上 XHR responseType=arraybuffer 下载速度
-    // 比 fetch().arrayBuffer() 快很多，且支持进度回调
-    var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.responseType = 'arraybuffer';
-    xhr.timeout = 120000; // 2分钟超时，大文件足够
-
-    xhr.onload = function() {
-        if (xhr.status >= 200 && xhr.status < 300) {
-            var buffer = xhr.response;
-            if (!buffer || buffer.byteLength === 0) {
-                showToast('❌ 下载内容为空，请重试');
-                _cacheStatus[url] = 'error';
-                _refreshBadge(url);
-                onDone(false);
-                return;
+    fetch(url, { mode: 'cors', credentials: 'omit' })
+        .then(function(res) {
+            if (!res.ok) return Promise.reject(res);
+            return res.arrayBuffer();
+        })
+        .then(function(buffer) {
+            if (buffer && buffer.byteLength > 0) {
+                _fileSizeCache[url] = buffer.byteLength;
             }
             _idbPut(url, buffer, function(ok) {
                 _cacheStatus[url] = ok ? 'cached' : 'error';
                 _refreshBadge(url);
                 onDone(ok);
             });
-        } else {
-            var errMsg = 'HTTP ' + xhr.status;
+        })
+        .catch(function(err) {
+            var errMsg = '';
+            if (err && err.status) {
+                errMsg = 'HTTP ' + err.status;
+            } else if (err && err.message) {
+                errMsg = err.message;
+            } else {
+                errMsg = String(err);
+            }
             var fname = decodeURIComponent(url.split('/').pop() || url).slice(0, 30);
-            showToast('❌ ' + fname + ': ' + errMsg);
-            console.error('cache download error', url, errMsg);
+            showToast('\u274c ' + fname + ': ' + errMsg);
+            console.error('cache download error', url, errMsg, err);
             _cacheStatus[url] = 'error';
             _refreshBadge(url);
             onDone(false);
-        }
-    };
-
-    xhr.onerror = function() {
-        var fname = decodeURIComponent(url.split('/').pop() || url).slice(0, 30);
-        showToast('❌ ' + fname + ': 网络错误');
-        console.error('cache download xhr error', url);
-        _cacheStatus[url] = 'error';
-        _refreshBadge(url);
-        onDone(false);
-    };
-
-    xhr.ontimeout = function() {
-        var fname = decodeURIComponent(url.split('/').pop() || url).slice(0, 30);
-        showToast('❌ ' + fname + ': 下载超时');
-        _cacheStatus[url] = 'error';
-        _refreshBadge(url);
-        onDone(false);
-    };
-
-    xhr.onprogress = function(e) {
-        // 可选：未来可用于显示单文件进度
-        if (onProgress && e.lengthComputable) {
-            onProgress(e.loaded, e.total);
-        }
-    };
-
-    xhr.send();
+        });
 }
 
 // ---- 并发控制（最多3个并发）----
