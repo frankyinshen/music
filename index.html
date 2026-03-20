@@ -4439,22 +4439,12 @@ function escHtml(s) {
 
 
 <script>
-// ============================================================
-// Service Worker 注册：让页面本身可以离线打开
-// SW 脚本通过 Blob URL 内联，不需要外部 sw.js 文件
-// ============================================================
+// Service Worker 注册：使用独立 /sw.js 文件，避免 Blob URL 在 iOS Safari 的限制
 (function() {
     if (!('serviceWorker' in navigator)) return;
-
-    var swCode = "var CACHE_NAME = 'player-shell-v2.2.5';\nvar SHELL_URL  = '/';\n\n// 安装时缓存页面自身\nself.addEventListener('install', function(e) {\n    e.waitUntil(\n        caches.open(CACHE_NAME).then(function(cache) {\n            return cache.add(SHELL_URL);\n        })\n    );\n    self.skipWaiting();\n});\n\n// 激活时删除旧版本缓存\nself.addEventListener('activate', function(e) {\n    e.waitUntil(\n        caches.keys().then(function(keys) {\n            return Promise.all(\n                keys.filter(function(k) { return k !== CACHE_NAME; })\n                    .map(function(k) { return caches.delete(k); })\n            );\n        })\n    );\n    self.clients.claim();\n});\n\n// 拦截 fetch：只处理导航请求（页面加载），优先返回缓存\nself.addEventListener('fetch', function(e) {\n    var req = e.request;\n    // 只拦截同域的 GET 导航请求，音频等资源不拦截\n    if (req.method !== 'GET') return;\n    if (req.mode === 'navigate') {\n        e.respondWith(\n            caches.match(SHELL_URL).then(function(cached) {\n                if (cached) {\n                    // 后台同步更新缓存，确保下次打开是最新版本\n                    fetch(req).then(function(resp) {\n                        if (resp && resp.ok) {\n                            caches.open(CACHE_NAME).then(function(cache) {\n                                cache.put(SHELL_URL, resp);\n                            });\n                        }\n                    }).catch(function() {});\n                    return cached;\n                }\n                return fetch(req);\n            })\n        );\n    }\n    // 其他请求（JS/CSS/图片等）：网络优先，失败用缓存兜底\n    // 音频请求已由 IndexedDB 处理，SW 不介入\n});\n";
-
-    var blob   = new Blob([swCode], { type: 'text/javascript' });
-    var swUrl  = URL.createObjectURL(blob);
-
-    navigator.serviceWorker.register(swUrl, { scope: '/' })
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
         .then(function(reg) {
             console.log('[SW] 注册成功，scope:', reg.scope);
-            // 检测到新版本时提示用户刷新
             reg.addEventListener('updatefound', function() {
                 var newWorker = reg.installing;
                 if (!newWorker) return;
@@ -4468,10 +4458,6 @@ function escHtml(s) {
         .catch(function(err) {
             console.warn('[SW] 注册失败（不影响正常使用）:', err);
         });
-
-    // Blob SW 有作用域限制：从 Blob URL 注册的 SW 作用域默认是 Blob URL 的路径
-    // 这会导致 scope: '/' 注册失败，需要服务端配合加响应头
-    // 如果注册失败，降级为普通网页，IndexedDB 离线音频仍然可用
 })();
 </script>
 </body>
