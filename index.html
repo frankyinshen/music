@@ -791,6 +791,59 @@
         }
         .ctx-menu-item:active { background: var(--ios-gray-btn); }
         .ctx-menu-item.danger { color: var(--ios-red); }
+
+        /* ===== 离线缓存 & 空间管理 ===== */
+        .cache-badge {
+            font-size: 11px; padding: 2px 7px; border-radius: 10px;
+            margin-left: 6px; font-weight: 600; flex-shrink: 0;
+        }
+        .cache-badge.cached  { background: rgba(52,199,89,0.15);  color: #34c759; }
+        .cache-badge.caching { background: rgba(0,122,255,0.12);  color: var(--ios-blue); }
+        .cache-badge.error   { background: rgba(255,59,48,0.12);  color: var(--ios-red); }
+
+        /* 空间管理 Bottom Sheet */
+        .cm-sheet-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+            z-index: 3000; opacity: 0; transition: opacity .25s; pointer-events: none;
+        }
+        .cm-sheet-overlay.open { opacity: 1; pointer-events: auto; }
+        .cm-sheet {
+            position: fixed; left: 0; right: 0; bottom: 0;
+            background: var(--ios-bg); border-radius: 20px 20px 0 0;
+            padding: 0 0 calc(var(--safe-bottom) + 8px) 0;
+            z-index: 3001;
+            transform: translateY(100%);
+            transition: transform .28s cubic-bezier(.4,0,.2,1);
+            max-height: 80vh; display: flex; flex-direction: column;
+        }
+        .cm-sheet.open { transform: translateY(0); }
+        .cm-handle { width: 36px; height: 4px; border-radius: 2px; background: #ccc; margin: 10px auto 0; flex-shrink: 0; }
+        .cm-title  { text-align: center; font-size: 17px; font-weight: 700; color: var(--ios-text); padding: 14px 16px 4px; flex-shrink: 0; }
+        .cm-summary { text-align: center; font-size: 13px; color: var(--ios-subtext); padding: 0 24px 10px; flex-shrink: 0; }
+        .cm-list   { overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; padding: 0 16px; }
+        .cm-item   {
+            display: flex; align-items: center; gap: 12px;
+            padding: 14px 4px; border-bottom: 0.5px solid var(--ios-sep);
+        }
+        .cm-item:last-child { border-bottom: none; }
+        .cm-item-info { flex: 1; overflow: hidden; }
+        .cm-item-name { font-size: 15px; font-weight: 600; color: var(--ios-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cm-item-size { font-size: 12px; color: var(--ios-subtext); margin-top: 2px; }
+        .cm-del-btn {
+            background: rgba(255,59,48,0.1); color: var(--ios-red);
+            border: none; border-radius: 8px; padding: 6px 12px;
+            font-size: 13px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .cm-actions { padding: 12px 16px; display: flex; gap: 10px; flex-shrink: 0; }
+        .cm-btn {
+            flex: 1; padding: 13px; border-radius: 12px; border: none;
+            font-size: 15px; font-weight: 600; cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .cm-btn-danger  { background: var(--ios-red);  color: #fff; }
+        .cm-btn-cancel  { background: var(--ios-card); color: var(--ios-blue); }
+        .cm-empty { text-align: center; padding: 40px 20px; color: var(--ios-subtext); font-size: 14px; }
         .st-notice {
             font-size: 11px; color: var(--ios-subtext); text-align: center;
             padding: 0 8px 4px 8px; line-height: 1.6;
@@ -940,8 +993,11 @@
             <button class="pill-btn" onclick="openStats()" aria-label="听力统计">
                 <span>📊</span><span>统计</span>
             </button>
+            <button class="pill-btn" id="cacheManagerBtn" onclick="openCacheManager()" aria-label="离线空间管理">
+                <span>💾</span><span>空间</span>
+            </button>
         </div>
-        <div class="version-tag">Build v2.2.3</div>
+        <div class="version-tag">Build v2.2.5</div>
     </div>
 </div>
 
@@ -1073,6 +1129,20 @@
     </div>
 </div>
 
+
+<!-- 空间管理 Sheet -->
+<div class="cm-sheet-overlay" id="cmOverlay" onclick="closeCacheManager()"></div>
+<div class="cm-sheet" id="cmSheet">
+    <div class="cm-handle"></div>
+    <div class="cm-title">💾 离线空间管理</div>
+    <div class="cm-summary" id="cmSummary">计算中…</div>
+    <div class="cm-list" id="cmList"></div>
+    <div class="cm-actions">
+        <button class="cm-btn cm-btn-danger" onclick="clearAllCache()">🗑️ 清空所有缓存</button>
+        <button class="cm-btn cm-btn-cancel" onclick="closeCacheManager()">关闭</button>
+    </div>
+</div>
+
 <input type="file" id="bsFileInput" accept=".json" style="display:none" onchange="onImportFileChosen(event)">
 
 <script>
@@ -1153,7 +1223,18 @@ function _quickRestoreUI() {
     }
 
     var targetTime = ps.trackTime > 2 ? ps.trackTime : (progressDB[ps.trackUrl] || 0);
-    audio.src = ps.trackUrl;
+    // 恢复时也优先用本地缓存
+    _idbGet(ps.trackUrl, function(buf) {
+        _revokeCurrentObjectUrl();
+        _currentTrackOrigUrl = ps.trackUrl; // 记录原始URL
+        if (buf) {
+            var b = new Blob([buf], { type: _guessMime(ps.trackUrl) });
+            _currentObjectUrl = URL.createObjectURL(b);
+            audio.src = _currentObjectUrl;
+        } else {
+            audio.src = ps.trackUrl;
+        }
+    });
     startAudioInfoLoad(ps.trackUrl);
     setCompact(false);
 
@@ -1216,6 +1297,8 @@ function init() {
     if (!restoreSession()) {
         fetchDirectory(currentPath);
     }
+    // 初始化离线缓存状态（扫描IDB已有缓存）
+    _initCacheStatus();
 }
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
@@ -1274,7 +1357,8 @@ function setupAudioEvents() {
     });
     audio.addEventListener('ended',  function() {
         clearMediaSession();
-        try { delete progressDB[audio.src]; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e) {}
+        var _endedKey = _currentTrackOrigUrl || audio.src;
+        try { delete progressDB[_endedKey]; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e) {}
         if (playMode === 'single') { playTrack(currentTrackIndex); }
         else { playNext(); }
     });
@@ -1373,8 +1457,7 @@ function playTrack(index) {
     currentTrackIndex = index;
     var track = playList[index];
 
-    audio.src = track.url;
-    audio.playbackRate = playbackRate;
+    // UI 立刻更新（同步，不依赖 audio.src）
     document.getElementById('trackName').textContent = track.name;
     updateMediaSession(track);
     document.getElementById('trackTime').textContent = '--:-- / --:--';
@@ -1389,73 +1472,87 @@ function playTrack(index) {
     _sessionCounted = false;
     _sessionSec     = 0;
 
-    if (document.visibilityState === 'hidden') {
-        safePlay();
-        var cpFallback = function() {
-            audio.removeEventListener('canplay', cpFallback);
-            audio.removeEventListener('loadedmetadata', cpFallback);
-            audio.playbackRate = playbackRate;
+    // IDB查询是异步的，audio.src赋值和所有播放逻辑都在回调里执行
+    _idbGet(track.url, function(buffer) {
+        _revokeCurrentObjectUrl(); // 释放上一首的 ObjectURL
+        _currentTrackOrigUrl = track.url; // 记录原始URL，progressDB用这个key
+        if (buffer) {
+            var blob = new Blob([buffer], { type: _guessMime(track.url) });
+            _currentObjectUrl = URL.createObjectURL(blob);
+            audio.src = _currentObjectUrl;
+        } else {
+            audio.src = track.url;
+        }
+        audio.playbackRate = playbackRate;
+
+        if (document.visibilityState === 'hidden') {
             safePlay();
-            updateAudioInfo();
-        };
-        audio.addEventListener('canplay', cpFallback);
-        audio.addEventListener('loadedmetadata', cpFallback);
-    } else {
-        var _metaLoaded = false;
-        var cpHandler = function() {
-            if (_metaLoaded) return;
-            _metaLoaded = true;
-            audio.removeEventListener('canplay', cpHandler);
-            audio.removeEventListener('loadedmetadata', cpHandler);
-            audio.playbackRate = playbackRate;
-            if (savedTime > 2) {
-                try { audio.currentTime = savedTime; } catch(e) {}
-                showToast('恢复进度: ' + fmtTime(savedTime));
-                setTimeout(function() {
-                    try { audio.currentTime = savedTime; } catch(e) {}
-                    safePlay();
-                    updateAudioInfo();
-                }, 100);
-            } else {
+            var cpFallback = function() {
+                audio.removeEventListener('canplay', cpFallback);
+                audio.removeEventListener('loadedmetadata', cpFallback);
+                audio.playbackRate = playbackRate;
                 safePlay();
                 updateAudioInfo();
-            }
-        };
-        audio.addEventListener('canplay', cpHandler);
-        audio.addEventListener('loadedmetadata', cpHandler);
-        audio.load();
-
-        // 兜底轮询：针对服务器不支持Range时iOS迟迟不触发事件的情况
-        var _pollCount = 0;
-        var _pollTimer = setInterval(function() {
-            _pollCount++;
-            if (_metaLoaded || _pollCount > 30) {
-                clearInterval(_pollTimer);
-                return;
-            }
-            if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
-                clearInterval(_pollTimer);
-                if (!_metaLoaded) {
-                    _metaLoaded = true;
-                    audio.removeEventListener('canplay', cpHandler);
-                    audio.removeEventListener('loadedmetadata', cpHandler);
-                    audio.playbackRate = playbackRate;
-                    if (savedTime > 2) {
+            };
+            audio.addEventListener('canplay', cpFallback);
+            audio.addEventListener('loadedmetadata', cpFallback);
+        } else {
+            var _metaLoaded = false;
+            var cpHandler = function() {
+                if (_metaLoaded) return;
+                _metaLoaded = true;
+                audio.removeEventListener('canplay', cpHandler);
+                audio.removeEventListener('loadedmetadata', cpHandler);
+                audio.playbackRate = playbackRate;
+                if (savedTime > 2) {
+                    try { audio.currentTime = savedTime; } catch(e) {}
+                    showToast('恢复进度: ' + fmtTime(savedTime));
+                    setTimeout(function() {
                         try { audio.currentTime = savedTime; } catch(e) {}
-                        showToast('恢复进度: ' + fmtTime(savedTime));
-                        setTimeout(function() {
-                            try { audio.currentTime = savedTime; } catch(e) {}
-                            safePlay();
-                            updateAudioInfo();
-                        }, 100);
-                    } else {
                         safePlay();
                         updateAudioInfo();
+                    }, 100);
+                } else {
+                    safePlay();
+                    updateAudioInfo();
+                }
+            };
+            audio.addEventListener('canplay', cpHandler);
+            audio.addEventListener('loadedmetadata', cpHandler);
+            audio.load();
+
+            // 兜底轮询：针对服务器不支持Range时iOS迟迟不触发事件的情况
+            var _pollCount = 0;
+            var _pollTimer = setInterval(function() {
+                _pollCount++;
+                if (_metaLoaded || _pollCount > 30) {
+                    clearInterval(_pollTimer);
+                    return;
+                }
+                if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
+                    clearInterval(_pollTimer);
+                    if (!_metaLoaded) {
+                        _metaLoaded = true;
+                        audio.removeEventListener('canplay', cpHandler);
+                        audio.removeEventListener('loadedmetadata', cpHandler);
+                        audio.playbackRate = playbackRate;
+                        if (savedTime > 2) {
+                            try { audio.currentTime = savedTime; } catch(e) {}
+                            showToast('恢复进度: ' + fmtTime(savedTime));
+                            setTimeout(function() {
+                                try { audio.currentTime = savedTime; } catch(e) {}
+                                safePlay();
+                                updateAudioInfo();
+                            }, 100);
+                        } else {
+                            safePlay();
+                            updateAudioInfo();
+                        }
                     }
                 }
-            }
-        }, 300);
-    }
+            }, 300);
+        }
+    }); // end _idbGet callback
 }
 
 function playNext() {
@@ -1920,8 +2017,9 @@ function toggleQuickFav(e, encoded) {
 function savePlaylists() { try { localStorage.setItem('my_playlists_v3', JSON.stringify(playlists)); } catch(e) {} }
 
 function saveProgress() {
-    if (audio.src && audio.currentTime > 0) {
-        try { progressDB[audio.src] = audio.currentTime; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e) {}
+    var progKey = _currentTrackOrigUrl || audio.src; // 离线时audio.src是blob URL，必须用原始URL
+    if (progKey && progKey.indexOf('blob:') !== 0 && audio.currentTime > 0) {
+        try { progressDB[progKey] = audio.currentTime; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e) {}
         saveSession();
     }
 }
@@ -2004,6 +2102,12 @@ function renderList(items, isPlaylist) {
                 renderList(items, isPlaylist);
             });
         }
+        // 离线缓存按钮（有音频时显示）
+        if (playList.length > 0) {
+            appendPinnedItem(container, '⬇️', '离线缓存本页全集', playList.length + ' 首', function() {
+                startBatchCache();
+            });
+        }
     }
 
     if (!isPlaylist) {
@@ -2026,10 +2130,15 @@ function renderList(items, isPlaylist) {
             var sub   = (prog && prog > 2) ? '<div class="item-subtext">上次 ' + fmtTime(prog) + '</div>' : '';
             var enc   = encodeURIComponent(JSON.stringify(item));
 
+            var cacheStatus = item.isAudio ? (_cacheStatus[item.url] || '') : '';
+            var cacheBadgeHtml = item.isAudio
+                ? '<span class="' + _badgeClass(cacheStatus) + '" data-url="' + item.url + '" style="' + (cacheStatus ? '' : 'display:none;') + '">' + _badgeText(cacheStatus) + '</span>'
+                : '';
             div.innerHTML =
                 (isPlaylist ? '<div class="drag-handle">≡</div>' : '') +
                 '<div class="item-icon">' + (item.isFolder ? '📁' : '🎵') + '</div>' +
                 '<div class="item-info"><div class="item-title">' + escHtml(item.name) + '</div>' + sub + '</div>' +
+                cacheBadgeHtml +
                 (item.isAudio ? '<div class="item-fav-heart ' + (isFav ? 'fav-on' : '') + '" onclick="toggleQuickFav(event,\'' + enc + '\')">' + (isFav ? '❤️' : '🤍') + '</div>' : '');
 
             div.onclick = function(e) {
@@ -2051,6 +2160,8 @@ function renderList(items, isPlaylist) {
             container.appendChild(div);
         })(items[i]);
     }
+    // 列表渲染完成后刷新缓存badge，确保IDB状态已加载时能正确显示
+    _refreshAllBadges();
 }
 
 function appendPinnedItem(container, icon, title, sub, onclick) {
@@ -2112,6 +2223,11 @@ function renderTracksInPlaylist(name) {
                 playMode = 'list'; updateCycleBtn(); showToast('列表循环');
             }
             renderTracksInPlaylist(name);
+        });
+    }
+    if (playList.length > 0) {
+        appendPinnedItem(container, '⬇️', '离线缓存此收藏夹', playList.length + ' 首', function() {
+            startBatchCache();
         });
     }
     renderList(playList, true);
@@ -3540,6 +3656,420 @@ function checkFictionRatio() {
         + '</div>'
         + '<div style="font-size:14px;font-weight:600;color:#fff;">EVAN要多听听非虚构类音频哦，加油！！相信你可以的！⭐</div>'
         + '</div>';
+}
+
+
+// ============================================================
+// 离线缓存模块  v2.2.5
+// 方案：IndexedDB 存 ArrayBuffer，PWA模式下iOS配额充足
+// ============================================================
+// ObjectURL 生命周期管理（提前声明，_quickRestoreUI 也会用到）
+var _currentObjectUrl  = null;
+var _currentTrackOrigUrl = '';  // 当前曲目的原始URL，用于progressDB key（离线时audio.src是blob URL）
+function _revokeCurrentObjectUrl() {
+    if (_currentObjectUrl) {
+        try { URL.revokeObjectURL(_currentObjectUrl); } catch(e) {}
+        _currentObjectUrl = null;
+    }
+}
+
+var IDB_NAME    = 'AudioOfflineCache';
+var IDB_STORE   = 'audios';
+var IDB_VERSION = 1;
+var _idb        = null;   // IDBDatabase 实例
+
+// 打开/初始化 IndexedDB
+function _openIDB(cb) {
+    if (_idb) { cb(_idb); return; }
+    var req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = function(e) {
+        var db = e.target.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+            db.createObjectStore(IDB_STORE); // key = url
+        }
+    };
+    req.onsuccess = function(e) {
+        _idb = e.target.result;
+        cb(_idb);
+    };
+    req.onerror = function() {
+        console.error('IDB open error', req.error);
+        cb(null);
+    };
+}
+
+// 写入一条缓存（url -> ArrayBuffer）
+function _idbPut(url, buffer, cb) {
+    _openIDB(function(db) {
+        if (!db) { cb && cb(false); return; }
+        var tx = db.transaction(IDB_STORE, 'readwrite');
+        var st = tx.objectStore(IDB_STORE);
+        var req = st.put(buffer, url);
+        req.onsuccess = function() { cb && cb(true); };
+        req.onerror   = function() { cb && cb(false); };
+    });
+}
+
+// 读取一条缓存
+function _idbGet(url, cb) {
+    _openIDB(function(db) {
+        if (!db) { cb(null); return; }
+        var tx = db.transaction(IDB_STORE, 'readonly');
+        var req = tx.objectStore(IDB_STORE).get(url);
+        req.onsuccess = function() { cb(req.result || null); };
+        req.onerror   = function() { cb(null); };
+    });
+}
+
+// 删除一条缓存
+function _idbDelete(url, cb) {
+    _openIDB(function(db) {
+        if (!db) { cb && cb(); return; }
+        var tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).delete(url);
+        tx.oncomplete = function() { cb && cb(); };
+    });
+}
+
+// 列出所有缓存（返回 [{url, size}]）
+function _idbListAll(cb) {
+    _openIDB(function(db) {
+        if (!db) { cb([]); return; }
+        var tx   = db.transaction(IDB_STORE, 'readonly');
+        var st   = tx.objectStore(IDB_STORE);
+        var list = [];
+        var curReq = st.openCursor();
+        curReq.onsuccess = function(e) {
+            var cursor = e.target.result;
+            if (cursor) {
+                list.push({ url: cursor.key, size: cursor.value ? cursor.value.byteLength : 0 });
+                cursor.continue();
+            } else {
+                cb(list);
+            }
+        };
+        curReq.onerror = function() { cb([]); };
+    });
+}
+
+// 清空所有缓存
+function _idbClear(cb) {
+    _openIDB(function(db) {
+        if (!db) { cb && cb(); return; }
+        var tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).clear();
+        tx.oncomplete = function() { cb && cb(); };
+    });
+}
+
+// ---- 下载状态跟踪 ----
+var _cacheStatus = {};   // url -> 'caching' | 'cached' | 'error'
+
+// 初始化：把已有IDB缓存标记为cached
+function _initCacheStatus() {
+    _idbListAll(function(list) {
+        list.forEach(function(item) {
+            _cacheStatus[item.url] = 'cached';
+        });
+        _refreshAllBadges();
+    });
+}
+
+// 播放前检查本地缓存，有则用ObjectURL替代网络URL
+function _getLocalUrl(url, cb) {
+    _idbGet(url, function(buffer) {
+        if (buffer) {
+            var blob = new Blob([buffer], { type: _guessMime(url) });
+            cb(URL.createObjectURL(blob));
+        } else {
+            cb(null);
+        }
+    });
+}
+
+function _guessMime(url) {
+    var u = url.toLowerCase();
+    if (u.indexOf('.mp3')  > -1) return 'audio/mpeg';
+    if (u.indexOf('.m4a')  > -1) return 'audio/mp4';
+    if (u.indexOf('.aac')  > -1) return 'audio/aac';
+    if (u.indexOf('.ogg')  > -1) return 'audio/ogg';
+    if (u.indexOf('.flac') > -1) return 'audio/flac';
+    if (u.indexOf('.wav')  > -1) return 'audio/wav';
+    if (u.indexOf('.opus') > -1) return 'audio/ogg';
+    return 'audio/mpeg';
+}
+
+// ---- 下载单首 ----
+function _downloadOne(url, onProgress, onDone) {
+    _cacheStatus[url] = 'caching';
+    _refreshBadge(url);
+
+    fetch(url, { mode: 'cors', credentials: 'omit' })
+        .then(function(res) {
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            return res.arrayBuffer();
+        })
+        .then(function(buffer) {
+            _idbPut(url, buffer, function(ok) {
+                _cacheStatus[url] = ok ? 'cached' : 'error';
+                _refreshBadge(url);
+                onDone(ok);
+            });
+        })
+        .catch(function(err) {
+            console.error('cache download error', url, err);
+            _cacheStatus[url] = 'error';
+            _refreshBadge(url);
+            onDone(false);
+        });
+}
+
+// ---- 并发控制（最多3个并发）----
+// 批量下载中断标记：记录开始下载时的路径，用户离开目录时自动中止
+var _downloadStartPath = '';
+
+function _batchDownload(urls, onAllDone) {
+    var total     = urls.length;
+    var done      = 0;
+    var cursor    = 0;
+    var concur    = 3;
+    var succeeded = 0;
+
+    if (total === 0) { onAllDone(0, 0); return; }
+
+    function next() {
+        // 用户已离开开始下载时的目录，中止后续下载
+        if (currentPath !== _downloadStartPath) {
+            if (_downloadStartPath) {
+                showToast('已离开目录，缓存任务中止');
+                _downloadStartPath = ''; // 清空防止重复提示
+            }
+            return;
+        }
+        if (cursor >= total) return;
+        var url = urls[cursor++];
+        // 已缓存的跳过
+        if (_cacheStatus[url] === 'cached') {
+            done++; succeeded++;
+            if (done === total) onAllDone(succeeded, total - succeeded);
+            else next();
+            return;
+        }
+        _downloadOne(url, null, function(ok) {
+            done++;
+            if (ok) succeeded++;
+            // 再次检查路径，防止下载完一首后继续下一首
+            if (done === total) onAllDone(succeeded, total - succeeded);
+            else if (currentPath === _downloadStartPath) next();
+        });
+    }
+
+    for (var i = 0; i < Math.min(concur, total); i++) next();
+}
+
+// ---- 刷新badge显示 ----
+function _badgeText(status) {
+    if (status === 'cached')  return '✅ 已缓存';
+    if (status === 'caching') return '⏳ 缓存中';
+    if (status === 'error')   return '❌ 失败';
+    return '';
+}
+function _badgeClass(status) {
+    if (status === 'cached')  return 'cache-badge cached';
+    if (status === 'caching') return 'cache-badge caching';
+    if (status === 'error')   return 'cache-badge error';
+    return 'cache-badge';
+}
+
+function _refreshBadge(url) {
+    var status = _cacheStatus[url] || '';
+    document.querySelectorAll('.cache-badge[data-url]').forEach(function(el) {
+        if (el.getAttribute('data-url') === url) {
+            el.textContent  = _badgeText(status);
+            el.className    = _badgeClass(status);
+            el.style.display = status ? '' : 'none';
+        }
+    });
+}
+
+function _refreshAllBadges() {
+    document.querySelectorAll('.cache-badge[data-url]').forEach(function(el) {
+        var url    = el.getAttribute('data-url');
+        var status = _cacheStatus[url] || '';
+        el.textContent  = _badgeText(status);
+        el.className    = _badgeClass(status);
+        el.style.display = status ? '' : 'none';
+    });
+}
+
+// ---- 批量缓存入口（点击"⬇️ 离线缓存"按钮）----
+function startBatchCache() {
+    var urls = playList.map(function(t) { return t.url; }).filter(Boolean);
+    if (urls.length === 0) { showToast('当前列表没有音频'); return; }
+    _downloadStartPath = currentPath; // 记录开始路径，离开目录时中止下载
+
+    var alreadyCached = urls.filter(function(u) { return _cacheStatus[u] === 'cached'; }).length;
+    if (alreadyCached === urls.length) { showToast('全部已缓存 ✅'); return; }
+
+    showToast('开始缓存 ' + urls.length + ' 首，并发3个');
+
+    // 防止iOS息屏中断下载
+    noSleepV.play().catch(function(){});
+
+    _batchDownload(urls, function(ok, fail) {
+        _downloadStartPath = ''; // 任务正常完成，清空路径标记
+        showToast('缓存完成：' + ok + ' 成功' + (fail > 0 ? '，' + fail + ' 失败' : ''));
+        // 下载完成后如果没在播放可以暂停noSleep
+        if (audio.paused && !isWakeLockEnabled) noSleepV.pause();
+    });
+}
+
+// ---- 播放时优先用本地缓存 ----
+// 这个函数包装原有的 playTrack，在设置 audio.src 之前先查IDB
+var _originalPlayTrack = null; // 延迟到init后绑定
+
+function _tryLocalThenPlay(originalUrl, onUrlReady) {
+    _idbGet(originalUrl, function(buffer) {
+        if (buffer) {
+            var blob = new Blob([buffer], { type: _guessMime(originalUrl) });
+            var localUrl = URL.createObjectURL(blob);
+            onUrlReady(localUrl, true);
+        } else {
+            onUrlReady(originalUrl, false);
+        }
+    });
+}
+
+// ---- 空间管理面板 ----
+function openCacheManager() {
+    document.getElementById('cmOverlay').classList.add('open');
+    document.getElementById('cmSheet').classList.add('open');
+    _renderCacheList();
+}
+
+function closeCacheManager() {
+    document.getElementById('cmOverlay').classList.remove('open');
+    document.getElementById('cmSheet').classList.remove('open');
+}
+
+function _renderCacheList() {
+    var summary = document.getElementById('cmSummary');
+    var list    = document.getElementById('cmList');
+    summary.textContent = '计算中…';
+    list.innerHTML = '';
+
+    _idbListAll(function(items) {
+        if (items.length === 0) {
+            summary.textContent = '暂无离线缓存';
+            list.innerHTML = '<div class="cm-empty">还没有缓存任何音频<br>在文件列表点击 ⬇️ 离线缓存 开始下载</div>';
+            return;
+        }
+
+        var totalBytes = items.reduce(function(s, i) { return s + i.size; }, 0);
+        var totalMB    = (totalBytes / 1048576).toFixed(1);
+        summary.textContent = '共 ' + items.length + ' 个文件，占用 ' + totalMB + ' MB';
+
+        // 按文件夹分组显示
+        var groups = {};
+        items.forEach(function(item) {
+            try {
+                var decoded = decodeURIComponent(item.url);
+                // 取倒数第二段作为"文件夹"
+                var parts = decoded.replace(/^https?:\/\/[^\/]+\//, '').split('/');
+                var folder = parts.length > 1 ? parts.slice(0, -1).join('/') : '根目录';
+                var fname  = parts[parts.length - 1];
+                if (!groups[folder]) groups[folder] = [];
+                groups[folder].push({ url: item.url, name: fname, size: item.size });
+            } catch(e) {
+                if (!groups['其他']) groups['其他'] = [];
+                groups['其他'].push({ url: item.url, name: item.url, size: item.size });
+            }
+        });
+
+        Object.keys(groups).sort().forEach(function(folder) {
+            var files    = groups[folder];
+            var folderMB = (files.reduce(function(s,f){return s+f.size;},0)/1048576).toFixed(1);
+
+            // 文件夹标题行（用DOM API绑定事件，避免JSON.stringify拼字符串的引号截断风险）
+            var header = document.createElement('div');
+            header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 4px 4px;';
+            var folderTitle = document.createElement('div');
+            folderTitle.style.cssText = 'font-size:13px;font-weight:700;color:var(--ios-subtext);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+            folderTitle.innerHTML = '📁 ' + escHtml(folder) + ' <span style="font-weight:400;">(' + folderMB + ' MB)</span>';
+            var folderDelBtn = document.createElement('button');
+            folderDelBtn.style.cssText = 'background:rgba(255,59,48,0.1);color:var(--ios-red);border:none;border-radius:6px;padding:4px 10px;font-size:12px;font-weight:600;cursor:pointer;flex-shrink:0;margin-left:8px;';
+            folderDelBtn.textContent = '删除';
+            (function(f) { folderDelBtn.onclick = function() { deleteFolderCache(f); }; })(folder);
+            header.appendChild(folderTitle);
+            header.appendChild(folderDelBtn);
+            list.appendChild(header);
+
+            // 文件列表（用DOM API绑定事件，避免URL特殊字符引起的拼接截断）
+            files.forEach(function(f) {
+                var item = document.createElement('div');
+                item.className = 'cm-item';
+                var infoDiv = document.createElement('div');
+                infoDiv.className = 'cm-item-info';
+                infoDiv.innerHTML =
+                    '<div class="cm-item-name">' + escHtml(f.name) + '</div>' +
+                    '<div class="cm-item-size">' + (f.size/1048576).toFixed(2) + ' MB</div>';
+                var fileDelBtn = document.createElement('button');
+                fileDelBtn.className = 'cm-del-btn';
+                fileDelBtn.textContent = '删除';
+                (function(url) { fileDelBtn.onclick = function() { deleteSingleCache(url); }; })(f.url);
+                item.appendChild(infoDiv);
+                item.appendChild(fileDelBtn);
+                list.appendChild(item);
+            });
+        });
+    });
+}
+
+function deleteSingleCache(url) {
+    _idbDelete(url, function() {
+        delete _cacheStatus[url];
+        _refreshBadge(url);
+        _renderCacheList();
+        showToast('已删除缓存');
+    });
+}
+
+function deleteFolderCache(folder) {
+    if (!confirm('删除文件夹"' + folder + '"下的所有缓存？')) return;
+    _idbListAll(function(items) {
+        var toDelete = items.filter(function(item) {
+            try {
+                var decoded = decodeURIComponent(item.url);
+                var parts   = decoded.replace(/^https?:\/\/[^\/]+\//, '').split('/');
+                var f       = parts.length > 1 ? parts.slice(0, -1).join('/') : '根目录';
+                return f === folder;
+            } catch(e) { return false; }
+        });
+        var done = 0;
+        if (toDelete.length === 0) { _renderCacheList(); return; }
+        toDelete.forEach(function(item) {
+            _idbDelete(item.url, function() {
+                delete _cacheStatus[item.url];
+                _refreshBadge(item.url);
+                done++;
+                if (done === toDelete.length) {
+                    _renderCacheList();
+                    showToast('已删除 ' + done + ' 个缓存');
+                }
+            });
+        });
+    });
+}
+
+function clearAllCache() {
+    if (!confirm('确定清空所有离线缓存？此操作不可恢复！')) return;
+    _idbClear(function() {
+        _cacheStatus = {};
+        _refreshAllBadges();
+        _renderCacheList();
+        showToast('已清空所有缓存');
+        closeCacheManager();
+    });
 }
 
 function escHtml(s) {
