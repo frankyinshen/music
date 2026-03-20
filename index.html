@@ -1419,6 +1419,7 @@ function init() {
 
     if (!restoreSession()) {
         fetchDirectory(currentPath);
+        setCompact(false); // 无历史记录时直接展开底部栏，显示速度/常亮/空间等按钮
     }
     // 初始化离线缓存状态（扫描IDB已有缓存）
     _initCacheStatus();
