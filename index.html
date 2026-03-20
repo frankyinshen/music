@@ -3,7 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.2.3</title>
+    <title>英语精听播放器 v2.2.5</title>
+    <!-- PWA Meta -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="精听播放器">
+    <meta name="theme-color" content="#007aff">
+    <script>
+    // 动态生成 Web App Manifest 并注入，不需要外部 manifest.json 文件
+    (function() {
+        var manifest = {
+            name: "英语精听播放器",
+            short_name: "精听",
+            description: "英语精听与离线听力学习工具",
+            start_url: "/",
+            display: "standalone",
+            background_color: "#f2f2f7",
+            theme_color: "#007aff",
+            orientation: "portrait",
+            icons: [
+                { src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23007aff'/><text y='70' x='50' text-anchor='middle' font-size='55'>🎧</text></svg>", sizes: "any", type: "image/svg+xml" }
+            ]
+        };
+        var blob = new Blob([JSON.stringify(manifest)], { type: "application/json" });
+        var url  = URL.createObjectURL(blob);
+        var link = document.createElement("link");
+        link.rel  = "manifest";
+        link.href = url;
+        document.head.appendChild(link);
+    })();
+    </script>
     <style>
         :root {
             --ios-bg: #f2f2f7;
@@ -1753,14 +1782,30 @@ function genShuffle() {
 }
 
 function startAudioInfoLoad(url) {
-    var ext = url.split('.').pop().toUpperCase();
+    var ext = url.split('?')[0].split('.').pop().toUpperCase();
+    if (ext.length > 5 || ext.indexOf('/') > -1) ext = 'AUDIO';
+
     if (_fileSizeCache[url]) {
         updateAudioInfo();
-    } else {
-        document.getElementById('audioInfo').textContent = ext + ' 读取中';
+        return; // 已有缓存大小，直接用
     }
 
-    // 优先用 HEAD 请求拿文件大小（Cloudflare 支持）
+    // 离线模式：如果 IDB 里有这个文件，直接从 buffer.byteLength 拿大小
+    if (_cacheStatus[url] === 'cached') {
+        _idbGet(url, function(buffer) {
+            if (buffer && buffer.byteLength > 0) {
+                _fileSizeCache[url] = buffer.byteLength;
+                updateAudioInfo();
+            } else {
+                document.getElementById('audioInfo').textContent = ext;
+            }
+        });
+        return;
+    }
+
+    document.getElementById('audioInfo').textContent = ext + ' 读取中';
+
+    // 在线模式：优先用 HEAD 请求拿文件大小（Cloudflare 支持）
     var xhrDone = false;
     function tryXHR() {
         var xhr = new XMLHttpRequest();
@@ -1818,9 +1863,15 @@ function startAudioInfoLoad(url) {
 }
 
 function updateAudioInfo() {
-    var url = audio.src;
+    // 离线播放时 audio.src 是 blob URL，必须用原始 URL 取扩展名和文件大小
+    var url = _currentTrackOrigUrl || audio.src;
     if (!url) return;
-    var ext  = url.split('.').pop().toUpperCase();
+    if (url.indexOf('blob:') === 0) {
+        if (!_currentTrackOrigUrl) return; // blob URL 但没有原始URL，无法显示信息
+        url = _currentTrackOrigUrl;
+    }
+    var ext  = url.split('?')[0].split('.').pop().toUpperCase();
+    if (ext.length > 5 || ext.indexOf('/') > -1) ext = 'AUDIO'; // 兜底
     var dur  = audio.duration;
     var size = _fileSizeCache[url] || 0;
 
@@ -3900,7 +3951,7 @@ function _downloadOne(url, onProgress, onDone) {
 
     fetch(url, { mode: 'cors', credentials: 'omit' })
         .then(function(res) {
-            if (!res.ok) throw new Error('HTTP ' + res.status);
+            if (!res.ok) return Promise.reject(res); // 传递完整 Response，便于调试
             return res.arrayBuffer();
         })
         .then(function(buffer) {
@@ -3911,7 +3962,12 @@ function _downloadOne(url, onProgress, onDone) {
             });
         })
         .catch(function(err) {
-            console.error('cache download error', url, err);
+            // err 可能是 TypeError（网络中断）或 Response 对象（HTTP错误）
+            if (err && err.status) {
+                console.error('cache download error', url, 'HTTP ' + err.status);
+            } else {
+                console.error('cache download error', url, err);
+            }
             _cacheStatus[url] = 'error';
             _refreshBadge(url);
             onDone(false);
@@ -4381,5 +4437,42 @@ function escHtml(s) {
 }
 </script>
 
+
+<script>
+// ============================================================
+// Service Worker 注册：让页面本身可以离线打开
+// SW 脚本通过 Blob URL 内联，不需要外部 sw.js 文件
+// ============================================================
+(function() {
+    if (!('serviceWorker' in navigator)) return;
+
+    var swCode = "var CACHE_NAME = 'player-shell-v2.2.5';\nvar SHELL_URL  = '/';\n\n// 安装时缓存页面自身\nself.addEventListener('install', function(e) {\n    e.waitUntil(\n        caches.open(CACHE_NAME).then(function(cache) {\n            return cache.add(SHELL_URL);\n        })\n    );\n    self.skipWaiting();\n});\n\n// 激活时删除旧版本缓存\nself.addEventListener('activate', function(e) {\n    e.waitUntil(\n        caches.keys().then(function(keys) {\n            return Promise.all(\n                keys.filter(function(k) { return k !== CACHE_NAME; })\n                    .map(function(k) { return caches.delete(k); })\n            );\n        })\n    );\n    self.clients.claim();\n});\n\n// 拦截 fetch：只处理导航请求（页面加载），优先返回缓存\nself.addEventListener('fetch', function(e) {\n    var req = e.request;\n    // 只拦截同域的 GET 导航请求，音频等资源不拦截\n    if (req.method !== 'GET') return;\n    if (req.mode === 'navigate') {\n        e.respondWith(\n            caches.match(SHELL_URL).then(function(cached) {\n                if (cached) {\n                    // 后台同步更新缓存，确保下次打开是最新版本\n                    fetch(req).then(function(resp) {\n                        if (resp && resp.ok) {\n                            caches.open(CACHE_NAME).then(function(cache) {\n                                cache.put(SHELL_URL, resp);\n                            });\n                        }\n                    }).catch(function() {});\n                    return cached;\n                }\n                return fetch(req);\n            })\n        );\n    }\n    // 其他请求（JS/CSS/图片等）：网络优先，失败用缓存兜底\n    // 音频请求已由 IndexedDB 处理，SW 不介入\n});\n";
+
+    var blob   = new Blob([swCode], { type: 'text/javascript' });
+    var swUrl  = URL.createObjectURL(blob);
+
+    navigator.serviceWorker.register(swUrl, { scope: '/' })
+        .then(function(reg) {
+            console.log('[SW] 注册成功，scope:', reg.scope);
+            // 检测到新版本时提示用户刷新
+            reg.addEventListener('updatefound', function() {
+                var newWorker = reg.installing;
+                if (!newWorker) return;
+                newWorker.addEventListener('statechange', function() {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        showToast('播放器已更新，下次打开生效');
+                    }
+                });
+            });
+        })
+        .catch(function(err) {
+            console.warn('[SW] 注册失败（不影响正常使用）:', err);
+        });
+
+    // Blob SW 有作用域限制：从 Blob URL 注册的 SW 作用域默认是 Blob URL 的路径
+    // 这会导致 scope: '/' 注册失败，需要服务端配合加响应头
+    // 如果注册失败，降级为普通网页，IndexedDB 离线音频仍然可用
+})();
+</script>
 </body>
 </html>
