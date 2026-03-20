@@ -3932,26 +3932,19 @@ function _openIDB(cb) {
 function _idbPut(url, buffer, cb) {
     _openIDB(function(db) {
         if (!db) { cb && cb(false); return; }
-        var tx  = db.transaction(IDB_STORE, 'readwrite');
-        var st  = tx.objectStore(IDB_STORE);
-        var cbCalled = false;
-        tx.oncomplete = function() {
-            // 事务提交完成，数据真正写入磁盘
-            if (!cbCalled) { cbCalled = true; cb && cb(true); }
-        };
-        tx.onerror = function() {
-            if (!cbCalled) { cbCalled = true; cb && cb(false); }
-        };
-        tx.onabort = function() {
-            // 存储配额超限等情况会触发abort
-            console.error('IDB tx abort:', tx.error);
-            if (!cbCalled) { cbCalled = true; cb && cb(false); }
-        };
         try {
-            st.put(buffer, url);
+            var tx  = db.transaction(IDB_STORE, 'readwrite');
+            var st  = tx.objectStore(IDB_STORE);
+            var req = st.put(buffer, url);
+            req.onsuccess = function() { cb && cb(true); };
+            req.onerror   = function() {
+                console.error('IDB put error:', req.error);
+                cb && cb(false);
+            };
+            tx.onabort = function() { console.error('IDB tx abort:', tx.error); };
         } catch(e) {
-            console.error('IDB put error:', e);
-            if (!cbCalled) { cbCalled = true; cb && cb(false); }
+            console.error('IDB put exception:', e);
+            cb && cb(false);
         }
     });
 }
