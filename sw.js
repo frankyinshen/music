@@ -1,0 +1,45 @@
+var CACHE_NAME = 'player-shell-v2.2.5';
+var SHELL_URL  = '/';
+
+self.addEventListener('install', function(e) {
+    e.waitUntil(
+        caches.open(CACHE_NAME).then(function(cache) {
+            return cache.add(SHELL_URL);
+        })
+    );
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', function(e) {
+    e.waitUntil(
+        caches.keys().then(function(keys) {
+            return Promise.all(
+                keys.filter(function(k) { return k !== CACHE_NAME; })
+                    .map(function(k) { return caches.delete(k); })
+            );
+        })
+    );
+    self.clients.claim();
+});
+
+self.addEventListener('fetch', function(e) {
+    var req = e.request;
+    if (req.method !== 'GET') return;
+    if (req.mode === 'navigate') {
+        e.respondWith(
+            caches.match(SHELL_URL).then(function(cached) {
+                if (cached) {
+                    fetch(req).then(function(resp) {
+                        if (resp && resp.ok) {
+                            caches.open(CACHE_NAME).then(function(cache) {
+                                cache.put(SHELL_URL, resp);
+                            });
+                        }
+                    }).catch(function() {});
+                    return cached;
+                }
+                return fetch(req);
+            })
+        );
+    }
+});
