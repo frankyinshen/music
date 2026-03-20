@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.2.5</title>
+    <title>英语精听播放器 v2.3.0</title>
     <!-- PWA Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1108,7 +1108,7 @@
             <span>💾</span><span>空间</span>
         </button>
     </div>
-    <div class="version-tag">Build v2.2.5</div>
+    <div class="version-tag">Build v2.3.0</div>
 </div>
 ```
 
@@ -1500,6 +1500,12 @@ function setupAudioEvents() {
         clearMediaSession();
         var _endedKey = _currentTrackOrigUrl || audio.src;
         try { delete progressDB[_endedKey]; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e) {}
+        // 外目录单曲（从空间管理播放，不在playList里）：播完停止，不切歌
+        if (currentTrackIndex < 0) {
+            document.getElementById('iconPlay').style.display  = 'block';
+            document.getElementById('iconPause').style.display = 'none';
+            return;
+        }
         if (playMode === 'single') { playTrack(currentTrackIndex); }
         else { playNext(); }
     });
@@ -2601,8 +2607,14 @@ function _nowMs() {
 function _commitStatsDelta(useWallClock) {
     if (_lastAudioTime < 0) return;
     var track = playList[currentTrackIndex];
-    // 离线时 playList 可能为空（目录未加载），尝试从缓存恢复
-    if (!track) {
+    if (!track && _currentTrackOrigUrl) {
+        // 从空间管理直接播放的外目录单曲：用当前播放URL构建track对象
+        track = {
+            url:  _currentTrackOrigUrl,
+            name: document.getElementById('trackName').textContent || '离线缓存音频'
+        };
+    } else if (!track) {
+        // 离线时playList为空：尝试从localStorage恢复
         _restorePlayListCache();
         track = playList[currentTrackIndex];
     }
@@ -3873,12 +3885,21 @@ var _idb        = null;   // IDBDatabase 实例
 var _idbOpenQueue = null; // null=未开始, []=开启中排队, db=已开启
 
 function _openIDB(cb) {
-    // 已经打开，直接用
     if (_idb) { cb(_idb); return; }
-    // 正在打开中，排队等待
     if (_idbOpenQueue !== null) { _idbOpenQueue.push(cb); return; }
-    // 第一次打开，初始化队列
     _idbOpenQueue = [cb];
+
+    // 5秒超时保护，防止IDB open永久挂起
+    var timedOut = false;
+    var timeoutId = setTimeout(function() {
+        if (_idbOpenQueue === null) return;
+        timedOut = true;
+        console.error('IDB open timeout');
+        var q = _idbOpenQueue;
+        _idbOpenQueue = null;
+        q.forEach(function(fn) { fn(null); });
+    }, 5000);
+
     var req = indexedDB.open(IDB_NAME, IDB_VERSION);
     req.onupgradeneeded = function(e) {
         var db = e.target.result;
@@ -3887,12 +3908,19 @@ function _openIDB(cb) {
         }
     };
     req.onsuccess = function(e) {
+        if (timedOut) return;
+        clearTimeout(timeoutId);
         _idb = e.target.result;
+        // IDB连接断开时自动重置，允许重新open
+        _idb.onclose = function() { _idb = null; };
+        _idb.onerror = function(ev) { console.error('IDB error', ev); };
         var q = _idbOpenQueue;
         _idbOpenQueue = null;
         q.forEach(function(fn) { fn(_idb); });
     };
     req.onerror = function() {
+        if (timedOut) return;
+        clearTimeout(timeoutId);
         console.error('IDB open error', req.error);
         var q = _idbOpenQueue;
         _idbOpenQueue = null;
@@ -3928,14 +3956,42 @@ function _idbPut(url, buffer, cb) {
     });
 }
 
-// 读取一条缓存
+// 读取一条缓存（带超时保护，防止被并发写入事务阻塞）
 function _idbGet(url, cb) {
+    // 如果正在缓存中（readwrite事务占用），等待中的readonly可能被长时间阻塞
+    // 用超时保护：3秒内没有响应则直接返回null（走网络）
+    var cbCalled = false;
+    var _idbGetTimeout = (navigator.onLine === false) ? 8000 : 3000;
+    var timeoutId = setTimeout(function() {
+        if (!cbCalled) {
+            cbCalled = true;
+            if (navigator.onLine === false) {
+                console.error('[IDB] 离线读取超时，请重试');
+                showToast('⚠️ 本地缓存读取超时，请重试');
+            } else {
+                console.warn('[IDB] _idbGet timeout, fallback to network:', url);
+            }
+            cb(null);
+        }
+    }, _idbGetTimeout);
+
     _openIDB(function(db) {
-        if (!db) { cb(null); return; }
-        var tx = db.transaction(IDB_STORE, 'readonly');
-        var req = tx.objectStore(IDB_STORE).get(url);
-        req.onsuccess = function() { cb(req.result || null); };
-        req.onerror   = function() { cb(null); };
+        if (!db) {
+            if (!cbCalled) { cbCalled = true; clearTimeout(timeoutId); cb(null); }
+            return;
+        }
+        try {
+            var tx  = db.transaction(IDB_STORE, 'readonly');
+            var req = tx.objectStore(IDB_STORE).get(url);
+            req.onsuccess = function() {
+                if (!cbCalled) { cbCalled = true; clearTimeout(timeoutId); cb(req.result || null); }
+            };
+            req.onerror = function() {
+                if (!cbCalled) { cbCalled = true; clearTimeout(timeoutId); cb(null); }
+            };
+        } catch(e) {
+            if (!cbCalled) { cbCalled = true; clearTimeout(timeoutId); cb(null); }
+        }
     });
 }
 
@@ -4328,6 +4384,14 @@ function _doStartBatchCache(urls) {
     if (alreadyCached === urls.length) { showToast('所选文件全部已缓存 ✅'); return; }
     var toDownload = urls.length - alreadyCached;
     showToast('开始缓存 ' + toDownload + ' 首，并发3个');
+    // 自动开启屏幕常亮，防止iOS息屏中断下载
+    var _cacheWakeLockOn = false;
+    if (!isWakeLockEnabled) {
+        _cacheWakeLockOn = true;
+        isWakeLockEnabled = true;
+        _setWakeLockUI(true);
+        _requestWakeLock(true);
+    }
     noSleepV.play().catch(function(){});
     // 显示整体进度条
     _showProgressBar();
@@ -4336,10 +4400,17 @@ function _doStartBatchCache(urls) {
     _batchDownload(urls, function(ok, fail) {
         _downloadStartPath = '';
         _updateProgressBar(toDownload, toDownload);
-        // 2秒后自动隐藏进度条
         setTimeout(_hideProgressBar, 2000);
         showToast('缓存完成：' + ok + ' 成功' + (fail > 0 ? '，' + fail + ' 失败' : ''));
-        if (audio.paused && !isWakeLockEnabled) noSleepV.pause();
+        // 如果是下载时自动开的常亮，下载完成后自动关掉
+        if (_cacheWakeLockOn) {
+            isWakeLockEnabled = false;
+            _setWakeLockUI(false);
+            if (wakeLockObj) { try { wakeLockObj.release(); } catch(e){} wakeLockObj = null; }
+            noSleepV.pause();
+        } else if (audio.paused && !isWakeLockEnabled) {
+            noSleepV.pause();
+        }
     }, function(doneSoFar, totalToDownload) {
         // 进度回调
         _updateProgressBar(doneSoFar, totalToDownload);
@@ -4563,8 +4634,13 @@ function _restorePlayListCache() {
         var data = JSON.parse(raw);
         if (data && data.list && data.list.length > 0) {
             playList = data.list;
-            // currentTrackIndex 保持不变（playTrack 已经设置好了）
-            console.log('[offline] playList 从缓存恢复，共', playList.length, '首');
+            // 同时恢复fileList，保证离线状态下搜索不会白屏
+            fileList = playList.slice();
+            // 恢复currentTrackIndex（如果playTrack还没设置的话）
+            if (currentTrackIndex < 0 && data.index >= 0) {
+                currentTrackIndex = data.index;
+            }
+            console.log('[offline] playList/fileList 从缓存恢复，共', playList.length, '首');
         }
     } catch(e) {}
 }
