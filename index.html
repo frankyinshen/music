@@ -793,6 +793,83 @@
         .ctx-menu-item.danger { color: var(--ios-red); }
 
         /* ===== 离线缓存 & 空间管理 ===== */
+        /* 缓存选择弹窗 */
+        .cs-sheet-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.35);
+            z-index: 3000; opacity: 0; transition: opacity .25s; pointer-events: none;
+        }
+        .cs-sheet-overlay.open { opacity: 1; pointer-events: auto; }
+        .cs-sheet {
+            position: fixed; left: 0; right: 0; bottom: 0;
+            background: var(--ios-bg); border-radius: 20px 20px 0 0;
+            padding: 0 0 calc(var(--safe-bottom) + 8px) 0;
+            z-index: 3001;
+            transform: translateY(100%);
+            transition: transform .28s cubic-bezier(.4,0,.2,1);
+            max-height: 85vh; display: flex; flex-direction: column;
+        }
+        .cs-sheet.open { transform: translateY(0); }
+        .cs-handle { width: 36px; height: 4px; border-radius: 2px; background: #ccc; margin: 10px auto 0; flex-shrink: 0; }
+        .cs-title  { text-align: center; font-size: 17px; font-weight: 700; color: var(--ios-text); padding: 12px 16px 2px; flex-shrink: 0; }
+        .cs-sub    { text-align: center; font-size: 13px; color: var(--ios-subtext); padding: 0 16px 8px; flex-shrink: 0; }
+        .cs-toolbar {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 6px 16px 8px; flex-shrink: 0;
+            border-bottom: 0.5px solid var(--ios-sep);
+        }
+        .cs-select-all {
+            font-size: 14px; font-weight: 600; color: var(--ios-blue);
+            background: none; border: none; cursor: pointer; padding: 4px 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .cs-count { font-size: 13px; color: var(--ios-subtext); }
+        .cs-list   { overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; }
+        .cs-item   {
+            display: flex; align-items: center; gap: 12px;
+            padding: 13px 16px; border-bottom: 0.5px solid var(--ios-sep);
+            cursor: pointer; -webkit-tap-highlight-color: transparent;
+        }
+        .cs-item:last-child { border-bottom: none; }
+        .cs-item input[type=checkbox] { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--ios-blue); cursor: pointer; }
+        .cs-item-info { flex: 1; overflow: hidden; }
+        .cs-item-name { font-size: 15px; color: var(--ios-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .cs-item-sub  { font-size: 12px; color: var(--ios-subtext); margin-top: 2px; }
+        .cs-item.cached .cs-item-name { color: #34c759; }
+        .cs-actions { padding: 12px 16px; display: flex; gap: 10px; flex-shrink: 0; border-top: 0.5px solid var(--ios-sep); }
+        .cs-btn-confirm { flex: 1; padding: 13px; border-radius: 12px; border: none; background: var(--ios-blue); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .cs-btn-cancel  { flex: 1; padding: 13px; border-radius: 12px; border: none; background: var(--ios-card); color: var(--ios-blue); font-size: 16px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+
+        /* 下载整体进度条 */
+        .dl-progress-wrap {
+            margin: 0 16px 8px 16px;
+            background: var(--ios-card); border-radius: 12px;
+            padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+        .dl-progress-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 8px;
+        }
+        .dl-progress-label { font-size: 13px; font-weight: 600; color: var(--ios-text); }
+        .dl-progress-count { font-size: 13px; color: var(--ios-subtext); }
+        .dl-progress-bar-bg {
+            height: 6px; background: var(--ios-gray-btn); border-radius: 3px; overflow: hidden;
+        }
+        .dl-progress-bar-fill {
+            height: 100%; background: var(--ios-blue); border-radius: 3px;
+            width: 0%; transition: width 0.3s ease;
+        }
+
+        /* 重试badge（可点击） */
+        .cache-badge.retry {
+            background: rgba(255,59,48,0.12); color: var(--ios-red);
+            cursor: pointer; text-decoration: underline;
+        }
+
+        /* 空间管理面板：文件item可点击播放 */
+        .cm-item.playable { cursor: pointer; }
+        .cm-item.playable:active { background: var(--ios-gray-btn); }
+        .cm-play-icon { font-size: 18px; flex-shrink: 0; opacity: 0.5; }
+
         .cache-badge {
             font-size: 11px; padding: 2px 7px; border-radius: 10px;
             margin-left: 6px; font-weight: 600; flex-shrink: 0;
@@ -1129,6 +1206,23 @@
     </div>
 </div>
 
+
+<!-- 缓存选择弹窗 -->
+<div class="cs-sheet-overlay" id="csOverlay" onclick="closeCacheSelector()"></div>
+<div class="cs-sheet" id="csSheet">
+    <div class="cs-handle"></div>
+    <div class="cs-title">⬇️ 选择要缓存的音频</div>
+    <div class="cs-sub" id="csSub">全选后点确认开始下载</div>
+    <div class="cs-toolbar">
+        <button class="cs-select-all" id="csSelectAllBtn" onclick="csToggleAll()">取消全选</button>
+        <span class="cs-count" id="csCountLabel">已选 0 / 0</span>
+    </div>
+    <div class="cs-list" id="csList"></div>
+    <div class="cs-actions">
+        <button class="cs-btn-confirm" onclick="csConfirm()">开始缓存</button>
+        <button class="cs-btn-cancel"  onclick="closeCacheSelector()">取消</button>
+    </div>
+</div>
 
 <!-- 空间管理 Sheet -->
 <div class="cm-sheet-overlay" id="cmOverlay" onclick="closeCacheManager()"></div>
@@ -3828,7 +3922,7 @@ function _downloadOne(url, onProgress, onDone) {
 // 批量下载中断标记：记录开始下载时的路径，用户离开目录时自动中止
 var _downloadStartPath = '';
 
-function _batchDownload(urls, onAllDone) {
+function _batchDownload(urls, onAllDone, onProgress) {
     var total     = urls.length;
     var done      = 0;
     var cursor    = 0;
@@ -3858,6 +3952,10 @@ function _batchDownload(urls, onAllDone) {
         _downloadOne(url, null, function(ok) {
             done++;
             if (ok) succeeded++;
+            // 更新整体进度条（只统计真正下载的，不含跳过的）
+            var realDone  = urls.slice(0, cursor).filter(function(u) { return _cacheStatus[u] !== 'cached' || urls.indexOf(u) < cursor; }).length;
+            var realTotal = urls.filter(function(u) { return _cacheStatus[u] !== 'cached'; }).length;
+            if (onProgress) onProgress(Math.min(succeeded + (done - succeeded), realTotal), realTotal);
             // 再次检查路径，防止下载完一首后继续下一首
             if (done === total) onAllDone(succeeded, total - succeeded);
             else if (currentPath === _downloadStartPath) next();
@@ -3884,11 +3982,29 @@ function _badgeClass(status) {
 function _refreshBadge(url) {
     var status = _cacheStatus[url] || '';
     document.querySelectorAll('.cache-badge[data-url]').forEach(function(el) {
-        if (el.getAttribute('data-url') === url) {
-            el.textContent  = _badgeText(status);
-            el.className    = _badgeClass(status);
-            el.style.display = status ? '' : 'none';
+        if (el.getAttribute('data-url') !== url) return;
+        el.style.display = status ? '' : 'none';
+        if (status === 'error') {
+            // 失败时显示可点击的重试按钮
+            el.textContent = '❌ 重试';
+            el.className   = 'cache-badge retry';
+            el.onclick     = function(e) {
+                e.stopPropagation();
+                _retrySingle(url);
+            };
+        } else {
+            el.textContent = _badgeText(status);
+            el.className   = _badgeClass(status);
+            el.onclick     = null;
         }
+    });
+}
+
+// 单首重试下载
+function _retrySingle(url) {
+    showToast('重试下载中…');
+    _downloadOne(url, null, function(ok) {
+        showToast(ok ? '重试成功 ✅' : '重试失败，请检查网络');
     });
 }
 
@@ -3903,24 +4019,164 @@ function _refreshAllBadges() {
 }
 
 // ---- 批量缓存入口（点击"⬇️ 离线缓存"按钮）----
+// 打开缓存选择弹窗
 function startBatchCache() {
-    var urls = playList.map(function(t) { return t.url; }).filter(Boolean);
-    if (urls.length === 0) { showToast('当前列表没有音频'); return; }
-    _downloadStartPath = currentPath; // 记录开始路径，离开目录时中止下载
+    var tracks = playList.filter(function(t) { return t.url; });
+    if (tracks.length === 0) { showToast('当前列表没有音频'); return; }
+    openCacheSelector(tracks);
+}
 
+// 缓存选择弹窗状态
+var _csChecked = {}; // url -> true/false
+
+function openCacheSelector(tracks) {
+    _csChecked = {};
+    var list    = document.getElementById('csList');
+    list.innerHTML = '';
+
+    tracks.forEach(function(track) {
+        var isCached = (_cacheStatus[track.url] === 'cached');
+        _csChecked[track.url] = true; // 默认全选
+
+        var row = document.createElement('div');
+        row.className = 'cs-item' + (isCached ? ' cached' : '');
+
+        var cb = document.createElement('input');
+        cb.type    = 'checkbox';
+        cb.checked = true;
+        (function(url) {
+            cb.onchange = function() {
+                _csChecked[url] = cb.checked;
+                _csUpdateCount();
+            };
+            // 点整行也能切换
+            row.onclick = function(e) {
+                if (e.target === cb) return;
+                cb.checked = !cb.checked;
+                _csChecked[url] = cb.checked;
+                _csUpdateCount();
+            };
+        })(track.url);
+
+        var info = document.createElement('div');
+        info.className = 'cs-item-info';
+        var nameEl = document.createElement('div');
+        nameEl.className = 'cs-item-name';
+        nameEl.textContent = track.name;
+        var subEl = document.createElement('div');
+        subEl.className = 'cs-item-sub';
+        subEl.textContent = isCached ? '✅ 已缓存' : '未缓存';
+
+        info.appendChild(nameEl);
+        info.appendChild(subEl);
+        row.appendChild(cb);
+        row.appendChild(info);
+        list.appendChild(row);
+    });
+
+    _csUpdateCount();
+    document.getElementById('csOverlay').classList.add('open');
+    document.getElementById('csSheet').classList.add('open');
+}
+
+function closeCacheSelector() {
+    document.getElementById('csOverlay').classList.remove('open');
+    document.getElementById('csSheet').classList.remove('open');
+}
+
+function _csUpdateCount() {
+    var total    = Object.keys(_csChecked).length;
+    var selected = Object.keys(_csChecked).filter(function(u) { return _csChecked[u]; }).length;
+    document.getElementById('csCountLabel').textContent = '已选 ' + selected + ' / ' + total;
+    var allSel = (selected === total);
+    document.getElementById('csSelectAllBtn').textContent = allSel ? '取消全选' : '全选';
+    // 副标题提示
+    var alreadyCached = Object.keys(_csChecked).filter(function(u) {
+        return _csChecked[u] && _cacheStatus[u] === 'cached';
+    }).length;
+    var toDownload = selected - alreadyCached;
+    document.getElementById('csSub').textContent =
+        toDownload > 0 ? '将下载 ' + toDownload + ' 首（已缓存的自动跳过）' : '所选文件均已缓存';
+}
+
+function csToggleAll() {
+    var selected = Object.keys(_csChecked).filter(function(u) { return _csChecked[u]; }).length;
+    var total    = Object.keys(_csChecked).length;
+    var toCheck  = (selected < total); // 未全选时点全选，全选时点取消
+    Object.keys(_csChecked).forEach(function(u) { _csChecked[u] = toCheck; });
+    // 同步复选框UI
+    document.getElementById('csList').querySelectorAll('input[type=checkbox]').forEach(function(cb) {
+        cb.checked = toCheck;
+    });
+    _csUpdateCount();
+}
+
+function csConfirm() {
+    var selectedUrls = Object.keys(_csChecked).filter(function(u) { return _csChecked[u]; });
+    if (selectedUrls.length === 0) { showToast('请至少选择一首'); return; }
+    closeCacheSelector();
+    _doStartBatchCache(selectedUrls);
+}
+
+// ---- 整体进度条 ----
+var _dlProgressEl = null; // 进度条DOM容器
+
+function _showProgressBar(container) {
+    // 如果已有进度条先移除
+    _hideProgressBar();
+    _dlProgressEl = document.createElement('div');
+    _dlProgressEl.className = 'dl-progress-wrap';
+    _dlProgressEl.id = 'dlProgressWrap';
+    _dlProgressEl.innerHTML =
+        '<div class="dl-progress-header">' +
+            '<span class="dl-progress-label">⬇️ 缓存中</span>' +
+            '<span class="dl-progress-count" id="dlProgressCount">0 / 0</span>' +
+        '</div>' +
+        '<div class="dl-progress-bar-bg">' +
+            '<div class="dl-progress-bar-fill" id="dlProgressFill"></div>' +
+        '</div>';
+    // 插到fileList的最前面
+    var fileList = document.getElementById('fileList');
+    if (fileList) fileList.insertBefore(_dlProgressEl, fileList.firstChild);
+}
+
+function _updateProgressBar(done, total) {
+    var countEl = document.getElementById('dlProgressCount');
+    var fillEl  = document.getElementById('dlProgressFill');
+    var labelEl = _dlProgressEl && _dlProgressEl.querySelector('.dl-progress-label');
+    if (countEl) countEl.textContent = done + ' / ' + total;
+    if (fillEl)  fillEl.style.width  = (total > 0 ? Math.round(done / total * 100) : 0) + '%';
+    if (labelEl && done === total) labelEl.textContent = '✅ 缓存完成';
+}
+
+function _hideProgressBar() {
+    var old = document.getElementById('dlProgressWrap');
+    if (old && old.parentNode) old.parentNode.removeChild(old);
+    _dlProgressEl = null;
+}
+
+// 真正执行批量下载
+function _doStartBatchCache(urls) {
+    _downloadStartPath = currentPath;
     var alreadyCached = urls.filter(function(u) { return _cacheStatus[u] === 'cached'; }).length;
-    if (alreadyCached === urls.length) { showToast('全部已缓存 ✅'); return; }
-
-    showToast('开始缓存 ' + urls.length + ' 首，并发3个');
-
-    // 防止iOS息屏中断下载
+    if (alreadyCached === urls.length) { showToast('所选文件全部已缓存 ✅'); return; }
+    var toDownload = urls.length - alreadyCached;
+    showToast('开始缓存 ' + toDownload + ' 首，并发3个');
     noSleepV.play().catch(function(){});
-
+    // 显示整体进度条
+    _showProgressBar();
+    _updateProgressBar(0, toDownload);
+    var downloadedCount = 0;
     _batchDownload(urls, function(ok, fail) {
-        _downloadStartPath = ''; // 任务正常完成，清空路径标记
+        _downloadStartPath = '';
+        _updateProgressBar(toDownload, toDownload);
+        // 2秒后自动隐藏进度条
+        setTimeout(_hideProgressBar, 2000);
         showToast('缓存完成：' + ok + ' 成功' + (fail > 0 ? '，' + fail + ' 失败' : ''));
-        // 下载完成后如果没在播放可以暂停noSleep
         if (audio.paused && !isWakeLockEnabled) noSleepV.pause();
+    }, function(doneSoFar, totalToDownload) {
+        // 进度回调
+        _updateProgressBar(doneSoFar, totalToDownload);
     });
 }
 
@@ -4004,24 +4260,72 @@ function _renderCacheList() {
             header.appendChild(folderDelBtn);
             list.appendChild(header);
 
-            // 文件列表（用DOM API绑定事件，避免URL特殊字符引起的拼接截断）
+            // 文件列表（DOM API绑定，支持点击播放）
             files.forEach(function(f) {
                 var item = document.createElement('div');
-                item.className = 'cm-item';
+                item.className = 'cm-item playable';
+
+                // 播放图标
+                var playIcon = document.createElement('span');
+                playIcon.className = 'cm-play-icon';
+                playIcon.textContent = '▶';
+
                 var infoDiv = document.createElement('div');
                 infoDiv.className = 'cm-item-info';
                 infoDiv.innerHTML =
                     '<div class="cm-item-name">' + escHtml(f.name) + '</div>' +
                     '<div class="cm-item-size">' + (f.size/1048576).toFixed(2) + ' MB</div>';
+
                 var fileDelBtn = document.createElement('button');
                 fileDelBtn.className = 'cm-del-btn';
                 fileDelBtn.textContent = '删除';
-                (function(url) { fileDelBtn.onclick = function() { deleteSingleCache(url); }; })(f.url);
+                (function(url, name) {
+                    fileDelBtn.onclick = function(e) {
+                        e.stopPropagation(); // 防止触发row的播放
+                        deleteSingleCache(url);
+                    };
+                    // 点击整行播放
+                    item.onclick = function() {
+                        _playFromCache(url, name);
+                    };
+                })(f.url, f.name);
+
+                item.appendChild(playIcon);
                 item.appendChild(infoDiv);
                 item.appendChild(fileDelBtn);
                 list.appendChild(item);
             });
         });
+    });
+}
+
+// 从空间管理面板直接播放已缓存文件
+function _playFromCache(url, name) {
+    // 先在当前playList里找，找到就正常playTrack
+    var idx = -1;
+    for (var i = 0; i < playList.length; i++) {
+        if (playList[i].url === url) { idx = i; break; }
+    }
+    if (idx >= 0) {
+        closeCacheManager();
+        playTrack(idx);
+        showToast('播放：' + name);
+        return;
+    }
+    // 不在当前playList（用户可能切了目录）：直接从IDB读出来播
+    _idbGet(url, function(buffer) {
+        if (!buffer) { showToast('缓存数据丢失，请重新下载'); return; }
+        _revokeCurrentObjectUrl();
+        _currentTrackOrigUrl = url;
+        var blob = new Blob([buffer], { type: _guessMime(url) });
+        _currentObjectUrl = URL.createObjectURL(blob);
+        audio.src = _currentObjectUrl;
+        audio.playbackRate = playbackRate;
+        document.getElementById('trackName').textContent = name;
+        setCompact(false);
+        safePlay();
+        closeCacheManager();
+        showToast('离线播放：' + name);
     });
 }
 
