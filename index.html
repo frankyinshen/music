@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.2.5</title>
+    <title>英语精听播放器 v2.2.8</title>
     <!-- PWA Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -82,6 +82,7 @@
             display: -webkit-flex; display: flex;
             -webkit-flex-direction: column; flex-direction: column;
         }
+
 
     .header {
         background-color: var(--ios-blur);
@@ -957,6 +958,7 @@
     }
 </style>
 
+
 </head>
 <body class="player-compact">
 
@@ -1035,6 +1037,7 @@
         </div>
     </div>
 
+
 <div class="track-display">
     <div class="track-name" id="trackName">未播放</div>
     <div class="track-time" id="trackTime">--:-- / --:--</div>
@@ -1105,8 +1108,9 @@
             <span>💾</span><span>空间</span>
         </button>
     </div>
-    <div class="version-tag">Build v2.2.5</div>
+    <div class="version-tag">Build v2.2.8</div>
 </div>
+
 
 </div>
 
@@ -1114,6 +1118,7 @@
 <div class="share-picker-sheet" id="sharePickerSheet">
     <div class="sp-handle"></div>
     <div class="sp-title">选择分享范围</div>
+
 
 <div class="sp-row" onclick="doShareDay()">
     <span class="sp-row-icon">📅</span>
@@ -1163,6 +1168,7 @@
 
 <div class="sp-cancel" onclick="closeSharePicker()">取消</div>
 
+
 </div>
 
 <div class="backup-sheet-overlay" id="backupOverlay" onclick="closeBackupSheet()"></div>
@@ -1170,6 +1176,7 @@
     <div class="bs-handle"></div>
     <div class="bs-title">📦 数据备份与恢复</div>
     <div class="bs-sub">导出 JSON 文件可保存到本地，换设备可导入恢复</div>
+
 
 <div class="bs-row" onclick="doExportStats()">
     <span class="bs-row-icon">⬇️</span>
@@ -1199,6 +1206,7 @@
 <div class="bs-info" id="bsInfo">正在读取数据</div>
 <div class="bs-cancel" onclick="closeBackupSheet()">取消</div>
 
+
 </div>
 
 <div class="backup-sheet-overlay" id="partialExportOverlay" onclick="closePartialExport()"></div>
@@ -1206,6 +1214,7 @@
     <div class="bs-handle"></div>
     <div class="bs-title">按日期/文件导出</div>
     <div class="bs-sub">灵活选择特定日期和文件记录</div>
+
 
 <div class="bs-range-section">
     <div class="bs-range-title">📅 选择日期范围</div>
@@ -1227,6 +1236,7 @@
 </div>
 
 <div class="bs-cancel" onclick="closePartialExport()">返回</div>
+
 
 </div>
 
@@ -2197,11 +2207,31 @@ function fetchDirectory(url) {
                 _applyPendingSession();
             }
         } else {
-            document.getElementById('fileList').innerHTML = '<div style="padding:20px;color:red;text-align:center;">无法连接服务器 (' + xhr.status + ')</div>';
+            // 非200也尝试恢复缓存
+            _restorePlayListCache();
+            if (playList.length > 0) {
+                document.getElementById('fileList').innerHTML =
+                    '<div style="padding:16px;text-align:center;color:var(--ios-subtext);font-size:14px;">📶 离线模式 · 显示上次目录</div>';
+                renderList(playList, false);
+                if (_pendingSession) _applyPendingSession();
+            } else {
+                document.getElementById('fileList').innerHTML =
+                    '<div style="padding:20px;color:red;text-align:center;">无法连接服务器 (' + xhr.status + ')</div>';
+            }
         }
     };
     xhr.onerror = function() {
-        document.getElementById('fileList').innerHTML = '<div style="padding:20px;color:red;text-align:center;">无法连接服务器</div>';
+        // 离线模式：尝试用缓存的 playList 恢复，让播放和统计正常工作
+        _restorePlayListCache();
+        if (playList.length > 0) {
+            document.getElementById('fileList').innerHTML =
+                '<div style="padding:16px;text-align:center;color:var(--ios-subtext);font-size:14px;">📶 离线模式 · 显示上次目录</div>';
+            renderList(playList, false);
+            if (_pendingSession) _applyPendingSession();
+        } else {
+            document.getElementById('fileList').innerHTML =
+                '<div style="padding:20px;color:red;text-align:center;">无法连接服务器</div>';
+        }
     };
     xhr.send();
 }
@@ -3821,7 +3851,7 @@ function checkFictionRatio() {
 
 
 // ============================================================
-// 离线缓存模块  v2.2.5
+// 离线缓存模块  v2.2.8
 // 方案：IndexedDB 存 ArrayBuffer，PWA模式下iOS配额充足
 // ============================================================
 // ObjectURL 生命周期管理（提前声明，_quickRestoreUI 也会用到）
