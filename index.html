@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.2.9</title>
+    <title>英语精听播放器 v2.2.5</title>
     <!-- PWA Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -83,7 +83,7 @@
             -webkit-flex-direction: column; flex-direction: column;
         }
 
-
+```
     .header {
         background-color: var(--ios-blur);
         -webkit-backdrop-filter: blur(25px); backdrop-filter: blur(25px);
@@ -957,7 +957,7 @@
         padding: 0 8px 4px 8px; line-height: 1.6;
     }
 </style>
-
+```
 
 </head>
 <body class="player-compact">
@@ -1037,7 +1037,7 @@
         </div>
     </div>
 
-
+```
 <div class="track-display">
     <div class="track-name" id="trackName">未播放</div>
     <div class="track-time" id="trackTime">--:-- / --:--</div>
@@ -1108,9 +1108,9 @@
             <span>💾</span><span>空间</span>
         </button>
     </div>
-    <div class="version-tag">Build v2.2.9</div>
+    <div class="version-tag">Build v2.2.5</div>
 </div>
-
+```
 
 </div>
 
@@ -1119,7 +1119,7 @@
     <div class="sp-handle"></div>
     <div class="sp-title">选择分享范围</div>
 
-
+```
 <div class="sp-row" onclick="doShareDay()">
     <span class="sp-row-icon">📅</span>
     <div>
@@ -1167,7 +1167,7 @@
 </div>
 
 <div class="sp-cancel" onclick="closeSharePicker()">取消</div>
-
+```
 
 </div>
 
@@ -1177,7 +1177,7 @@
     <div class="bs-title">📦 数据备份与恢复</div>
     <div class="bs-sub">导出 JSON 文件可保存到本地，换设备可导入恢复</div>
 
-
+```
 <div class="bs-row" onclick="doExportStats()">
     <span class="bs-row-icon">⬇️</span>
     <div>
@@ -1205,7 +1205,7 @@
 <div class="bs-import-preview" id="bsImportPreview"></div>
 <div class="bs-info" id="bsInfo">正在读取数据</div>
 <div class="bs-cancel" onclick="closeBackupSheet()">取消</div>
-
+```
 
 </div>
 
@@ -1215,7 +1215,7 @@
     <div class="bs-title">按日期/文件导出</div>
     <div class="bs-sub">灵活选择特定日期和文件记录</div>
 
-
+```
 <div class="bs-range-section">
     <div class="bs-range-title">📅 选择日期范围</div>
     <div class="bs-range-row">
@@ -1236,7 +1236,7 @@
 </div>
 
 <div class="bs-cancel" onclick="closePartialExport()">返回</div>
-
+```
 
 </div>
 
@@ -3851,7 +3851,7 @@ function checkFictionRatio() {
 
 
 // ============================================================
-// 离线缓存模块  v2.2.9
+// 离线缓存模块  v2.2.5
 // 方案：IndexedDB 存 ArrayBuffer，PWA模式下iOS配额充足
 // ============================================================
 // ObjectURL 生命周期管理（提前声明，_quickRestoreUI 也会用到）
@@ -3870,22 +3870,33 @@ var IDB_VERSION = 1;
 var _idb        = null;   // IDBDatabase 实例
 
 // 打开/初始化 IndexedDB
+var _idbOpenQueue = null; // null=未开始, []=开启中排队, db=已开启
+
 function _openIDB(cb) {
+    // 已经打开，直接用
     if (_idb) { cb(_idb); return; }
+    // 正在打开中，排队等待
+    if (_idbOpenQueue !== null) { _idbOpenQueue.push(cb); return; }
+    // 第一次打开，初始化队列
+    _idbOpenQueue = [cb];
     var req = indexedDB.open(IDB_NAME, IDB_VERSION);
     req.onupgradeneeded = function(e) {
         var db = e.target.result;
         if (!db.objectStoreNames.contains(IDB_STORE)) {
-            db.createObjectStore(IDB_STORE); // key = url
+            db.createObjectStore(IDB_STORE);
         }
     };
     req.onsuccess = function(e) {
         _idb = e.target.result;
-        cb(_idb);
+        var q = _idbOpenQueue;
+        _idbOpenQueue = null;
+        q.forEach(function(fn) { fn(_idb); });
     };
     req.onerror = function() {
         console.error('IDB open error', req.error);
-        cb(null);
+        var q = _idbOpenQueue;
+        _idbOpenQueue = null;
+        q.forEach(function(fn) { fn(null); });
     };
 }
 
@@ -3893,11 +3904,27 @@ function _openIDB(cb) {
 function _idbPut(url, buffer, cb) {
     _openIDB(function(db) {
         if (!db) { cb && cb(false); return; }
-        var tx = db.transaction(IDB_STORE, 'readwrite');
-        var st = tx.objectStore(IDB_STORE);
-        var req = st.put(buffer, url);
-        req.onsuccess = function() { cb && cb(true); };
-        req.onerror   = function() { cb && cb(false); };
+        var tx  = db.transaction(IDB_STORE, 'readwrite');
+        var st  = tx.objectStore(IDB_STORE);
+        var cbCalled = false;
+        tx.oncomplete = function() {
+            // 事务提交完成，数据真正写入磁盘
+            if (!cbCalled) { cbCalled = true; cb && cb(true); }
+        };
+        tx.onerror = function() {
+            if (!cbCalled) { cbCalled = true; cb && cb(false); }
+        };
+        tx.onabort = function() {
+            // 存储配额超限等情况会触发abort
+            console.error('IDB tx abort:', tx.error);
+            if (!cbCalled) { cbCalled = true; cb && cb(false); }
+        };
+        try {
+            st.put(buffer, url);
+        } catch(e) {
+            console.error('IDB put error:', e);
+            if (!cbCalled) { cbCalled = true; cb && cb(false); }
+        }
     });
 }
 
@@ -4057,26 +4084,33 @@ function _downloadOne(url, onProgress, onDone) {
 var _downloadStartPath = '';
 
 function _batchDownload(urls, onAllDone, onProgress) {
+    // 预先计算需要真正下载的数量（排除已缓存）
+    var toDownloadUrls = urls.filter(function(u) { return _cacheStatus[u] !== 'cached'; });
+    var realTotal = toDownloadUrls.length;
+    var realDone  = 0; // 真正下载完成的计数
+
     var total     = urls.length;
-    var done      = 0;
+    var done      = 0; // 所有处理完的计数（含跳过）
     var cursor    = 0;
     var concur    = 3;
     var succeeded = 0;
 
     if (total === 0) { onAllDone(0, 0); return; }
+    // 全部已缓存，直接完成
+    if (realTotal === 0) { onAllDone(total, 0); return; }
 
     function next() {
         // 用户已离开开始下载时的目录，中止后续下载
         if (currentPath !== _downloadStartPath) {
             if (_downloadStartPath) {
                 showToast('已离开目录，缓存任务中止');
-                _downloadStartPath = ''; // 清空防止重复提示
+                _downloadStartPath = '';
             }
             return;
         }
         if (cursor >= total) return;
         var url = urls[cursor++];
-        // 已缓存的跳过
+        // 已缓存的直接跳过，不计入进度
         if (_cacheStatus[url] === 'cached') {
             done++; succeeded++;
             if (done === total) onAllDone(succeeded, total - succeeded);
@@ -4085,12 +4119,10 @@ function _batchDownload(urls, onAllDone, onProgress) {
         }
         _downloadOne(url, null, function(ok) {
             done++;
+            realDone++;
             if (ok) succeeded++;
-            // 更新整体进度条（只统计真正下载的，不含跳过的）
-            var realDone  = urls.slice(0, cursor).filter(function(u) { return _cacheStatus[u] !== 'cached' || urls.indexOf(u) < cursor; }).length;
-            var realTotal = urls.filter(function(u) { return _cacheStatus[u] !== 'cached'; }).length;
-            if (onProgress) onProgress(Math.min(succeeded + (done - succeeded), realTotal), realTotal);
-            // 再次检查路径，防止下载完一首后继续下一首
+            // 进度只反映真正需要下载的
+            if (onProgress) onProgress(realDone, realTotal);
             if (done === total) onAllDone(succeeded, total - succeeded);
             else if (currentPath === _downloadStartPath) next();
         });
