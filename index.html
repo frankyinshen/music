@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.2.8</title>
+    <title>英语精听播放器 v2.2.9</title>
     <!-- PWA Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1108,7 +1108,7 @@
             <span>💾</span><span>空间</span>
         </button>
     </div>
-    <div class="version-tag">Build v2.2.8</div>
+    <div class="version-tag">Build v2.2.9</div>
 </div>
 
 
@@ -3851,7 +3851,7 @@ function checkFictionRatio() {
 
 
 // ============================================================
-// 离线缓存模块  v2.2.8
+// 离线缓存模块  v2.2.9
 // 方案：IndexedDB 存 ArrayBuffer，PWA模式下iOS配额充足
 // ============================================================
 // ObjectURL 生命周期管理（提前声明，_quickRestoreUI 也会用到）
@@ -3923,6 +3923,8 @@ function _idbDelete(url, cb) {
 }
 
 // 列出所有缓存（返回 [{url, size}]）
+// 注意：读取 size 需要加载每个 ArrayBuffer，数量多时较慢
+// 仅在空间管理面板打开时调用，不在启动时调用
 function _idbListAll(cb) {
     _openIDB(function(db) {
         if (!db) { cb([]); return; }
@@ -3958,11 +3960,41 @@ var _cacheStatus = {};   // url -> 'caching' | 'cached' | 'error'
 
 // 初始化：把已有IDB缓存标记为cached
 function _initCacheStatus() {
-    _idbListAll(function(list) {
-        list.forEach(function(item) {
-            _cacheStatus[item.url] = 'cached';
-        });
-        _refreshAllBadges();
+    // 用 getAllKeys() 只读 key，不加载 ArrayBuffer，启动速度快几十倍
+    _openIDB(function(db) {
+        if (!db) return;
+        var tx  = db.transaction(IDB_STORE, 'readonly');
+        var req = tx.objectStore(IDB_STORE).getAllKeys();
+        req.onsuccess = function() {
+            (req.result || []).forEach(function(url) {
+                _cacheStatus[url] = 'cached';
+            });
+            _refreshAllBadges();
+        };
+        req.onerror = function() {
+            // getAllKeys 不支持时降级为游标只读key
+            _idbListKeysOnly(function(urls) {
+                urls.forEach(function(url) { _cacheStatus[url] = 'cached'; });
+                _refreshAllBadges();
+            });
+        };
+    });
+}
+
+// 只读 key 的游标（getAllKeys 不支持时的降级方案）
+function _idbListKeysOnly(cb) {
+    _openIDB(function(db) {
+        if (!db) { cb([]); return; }
+        var tx  = db.transaction(IDB_STORE, 'readonly');
+        var st  = tx.objectStore(IDB_STORE);
+        var keys = [];
+        var req = st.openKeyCursor();
+        req.onsuccess = function(e) {
+            var cursor = e.target.result;
+            if (cursor) { keys.push(cursor.key); cursor.continue(); }
+            else cb(keys);
+        };
+        req.onerror = function() { cb([]); };
     });
 }
 
