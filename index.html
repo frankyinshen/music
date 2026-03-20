@@ -2240,6 +2240,8 @@ function parseDirectory(htmlText, baseUrl) {
     }
     if (playMode === 'shuffle') genShuffle();
     renderList(fileList, false);
+    // 保存 playList 到 localStorage，离线时统计可用
+    _savePlayListCache();
 }
 
 function renderList(items, isPlaylist) {
@@ -2371,6 +2373,7 @@ function renderTracksInPlaylist(name) {
     document.getElementById('currentFolder').textContent = '/收藏/' + name;
     playList = playlists[name] ? playlists[name].slice() : [];
     if (playMode === 'shuffle') genShuffle();
+    _savePlayListCache(); // 保存 playList，离线统计用
 
     var container = document.getElementById('fileList');
     container.innerHTML = '';
@@ -2525,9 +2528,6 @@ try { statsDB = JSON.parse(localStorage.getItem('stats_db_v1') || '{}'); } catch
 
 function isAudible() {
     if (audio.muted) return false;
-    // 离线播放时 audio.src 是 blob URL，iOS 可能返回 volume=0
-    // 只要不是静音就算有效播放，不再检查 volume 数值
-    if (audio.src && audio.src.indexOf('blob:') === 0) return true;
     if (audio.volume < MIN_VOL) return false;
     return true;
 }
@@ -2581,6 +2581,11 @@ function _nowMs() {
 function _commitStatsDelta(useWallClock) {
     if (_lastAudioTime < 0) return;
     var track = playList[currentTrackIndex];
+    // 离线时 playList 可能为空（目录未加载），尝试从缓存恢复
+    if (!track) {
+        _restorePlayListCache();
+        track = playList[currentTrackIndex];
+    }
     if (!track) return;
 
     var delta;
@@ -4451,6 +4456,33 @@ function clearAllCache() {
         showToast('已清空所有缓存');
         closeCacheManager();
     });
+}
+
+// playList 本地缓存：供离线时统计使用
+var _PLAYLIST_CACHE_KEY = 'playlist_cache_v1';
+
+function _savePlayListCache() {
+    if (!playList || playList.length === 0) return;
+    try {
+        localStorage.setItem(_PLAYLIST_CACHE_KEY, JSON.stringify({
+            path:  currentPath,
+            list:  playList,
+            index: currentTrackIndex
+        }));
+    } catch(e) {}
+}
+
+function _restorePlayListCache() {
+    try {
+        var raw = localStorage.getItem(_PLAYLIST_CACHE_KEY);
+        if (!raw) return;
+        var data = JSON.parse(raw);
+        if (data && data.list && data.list.length > 0) {
+            playList = data.list;
+            // currentTrackIndex 保持不变（playTrack 已经设置好了）
+            console.log('[offline] playList 从缓存恢复，共', playList.length, '首');
+        }
+    } catch(e) {}
 }
 
 function escHtml(s) {
