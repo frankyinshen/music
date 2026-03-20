@@ -4110,35 +4110,64 @@ function _downloadOne(url, onProgress, onDone) {
     _cacheStatus[url] = 'caching';
     _refreshBadge(url);
 
-    fetch(url, { mode: 'cors', credentials: 'omit' })
-        .then(function(res) {
-            if (!res.ok) return Promise.reject(res); // 传递完整 Response，便于调试
-            return res.arrayBuffer();
-        })
-        .then(function(buffer) {
+    // 用 XHR 替代 fetch：iOS 上 XHR responseType=arraybuffer 下载速度
+    // 比 fetch().arrayBuffer() 快很多，且支持进度回调
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', url, true);
+    xhr.responseType = 'arraybuffer';
+    xhr.timeout = 120000; // 2分钟超时，大文件足够
+
+    xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+            var buffer = xhr.response;
+            if (!buffer || buffer.byteLength === 0) {
+                showToast('❌ 下载内容为空，请重试');
+                _cacheStatus[url] = 'error';
+                _refreshBadge(url);
+                onDone(false);
+                return;
+            }
             _idbPut(url, buffer, function(ok) {
                 _cacheStatus[url] = ok ? 'cached' : 'error';
                 _refreshBadge(url);
                 onDone(ok);
             });
-        })
-        .catch(function(err) {
-            var errMsg = '';
-            if (err && err.status) {
-                errMsg = 'HTTP ' + err.status;
-            } else if (err && err.message) {
-                errMsg = err.message;
-            } else {
-                errMsg = String(err);
-            }
-            // 把错误信息显示在屏幕上（方便没有Mac的情况下调试）
+        } else {
+            var errMsg = 'HTTP ' + xhr.status;
             var fname = decodeURIComponent(url.split('/').pop() || url).slice(0, 30);
             showToast('❌ ' + fname + ': ' + errMsg);
-            console.error('cache download error', url, errMsg, err);
+            console.error('cache download error', url, errMsg);
             _cacheStatus[url] = 'error';
             _refreshBadge(url);
             onDone(false);
-        });
+        }
+    };
+
+    xhr.onerror = function() {
+        var fname = decodeURIComponent(url.split('/').pop() || url).slice(0, 30);
+        showToast('❌ ' + fname + ': 网络错误');
+        console.error('cache download xhr error', url);
+        _cacheStatus[url] = 'error';
+        _refreshBadge(url);
+        onDone(false);
+    };
+
+    xhr.ontimeout = function() {
+        var fname = decodeURIComponent(url.split('/').pop() || url).slice(0, 30);
+        showToast('❌ ' + fname + ': 下载超时');
+        _cacheStatus[url] = 'error';
+        _refreshBadge(url);
+        onDone(false);
+    };
+
+    xhr.onprogress = function(e) {
+        // 可选：未来可用于显示单文件进度
+        if (onProgress && e.lengthComputable) {
+            onProgress(e.loaded, e.total);
+        }
+    };
+
+    xhr.send();
 }
 
 // ---- 并发控制（最多3个并发）----
