@@ -4123,12 +4123,18 @@ function _downloadOne(url, onProgress, onDone) {
             });
         })
         .catch(function(err) {
-            // err 可能是 TypeError（网络中断）或 Response 对象（HTTP错误）
+            var errMsg = '';
             if (err && err.status) {
-                console.error('cache download error', url, 'HTTP ' + err.status);
+                errMsg = 'HTTP ' + err.status;
+            } else if (err && err.message) {
+                errMsg = err.message;
             } else {
-                console.error('cache download error', url, err);
+                errMsg = String(err);
             }
+            // 把错误信息显示在屏幕上（方便没有Mac的情况下调试）
+            var fname = decodeURIComponent(url.split('/').pop() || url).slice(0, 30);
+            showToast('❌ ' + fname + ': ' + errMsg);
+            console.error('cache download error', url, errMsg, err);
             _cacheStatus[url] = 'error';
             _refreshBadge(url);
             onDone(false);
