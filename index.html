@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.3.0</title>
+    <title>英语精听播放器 v2.3.1</title>
     <!-- PWA Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -168,7 +168,6 @@
         }
         body.player-compact .pf { max-height: 0; opacity: 0; }
 
-        /* Slider */
         .slider-container { padding: 0 20px; margin-bottom: 5px; }
         .slider-wrapper {
             position: relative; height: 20px;
@@ -200,7 +199,6 @@
             box-shadow: 0 3px 12px rgba(0,0,0,0.32);
         }
 
-        /* Track display */
         .track-display { text-align: center; padding: 0 20px; margin-bottom: 5px; }
         .track-name {
             font-size: 16px; font-weight: 700;
@@ -210,7 +208,6 @@
         .track-time { font-size: 11px; color: var(--ios-subtext); font-variant-numeric: tabular-nums; margin-bottom: 2px; }
         .audio-info { font-size: 10px; color: #b0b0b8; min-height: 13px; letter-spacing: 0.3px; }
 
-        /* Learning controls */
         .learning-controls {
             display: -webkit-flex; display: flex;
             -webkit-justify-content: center; justify-content: center;
@@ -228,7 +225,6 @@
         .learn-btn svg { width: 26px; height: 26px; margin-bottom: 2px; pointer-events: none; }
         .learn-btn.active { color: var(--ios-blue); }
 
-        /* Basic controls */
         .basic-controls {
             display: -webkit-flex; display: flex;
             -webkit-justify-content: center; justify-content: center;
@@ -267,7 +263,6 @@
             background: none; border: none; padding: 6px;
         }
 
-        /* Feature grid */
         .feature-grid {
             display: -webkit-flex; display: flex;
             -webkit-justify-content: space-around; justify-content: space-around;
@@ -490,7 +485,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Share Picker Sheet */
         .share-picker-overlay {
             position: fixed; inset: 0;
             background: rgba(0,0,0,0.35);
@@ -605,7 +599,6 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* Backup Sheet */
         .backup-sheet-overlay {
             position: fixed; inset: 0;
             background: rgba(0,0,0,0.35);
@@ -675,7 +668,6 @@
         .bs-import-preview.show { display: block; }
         .bs-import-preview b { color: var(--ios-blue); }
 
-        /* Partial Export Sheet */
         .bs-range-section {
             padding: 12px 24px;
             border-top: 1px solid var(--ios-divider);
@@ -782,7 +774,6 @@
             color: var(--ios-subtext); font-size: 14px;
         }
 
-        /* 长按菜单 */
         .ctx-menu-overlay {
             position: fixed; inset: 0;
             background: rgba(0,0,0,0.3);
@@ -820,8 +811,6 @@
         .ctx-menu-item:active { background: var(--ios-gray-btn); }
         .ctx-menu-item.danger { color: var(--ios-red); }
 
-        /* ===== 离线缓存 & 空间管理 ===== */
-        /* 缓存选择弹窗 */
         .cs-sheet-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.35);
             z-index: 3000; opacity: 0; transition: opacity .25s; pointer-events: none;
@@ -867,7 +856,6 @@
         .cs-btn-confirm { flex: 1; padding: 13px; border-radius: 12px; border: none; background: var(--ios-blue); color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
         .cs-btn-cancel  { flex: 1; padding: 13px; border-radius: 12px; border: none; background: var(--ios-card); color: var(--ios-blue); font-size: 16px; font-weight: 600; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 
-        /* 下载整体进度条 */
         .dl-progress-wrap {
             margin: 0 16px 8px 16px;
             background: var(--ios-card); border-radius: 12px;
@@ -887,13 +875,11 @@
             width: 0%; transition: width 0.3s ease;
         }
 
-        /* 重试badge（可点击） */
         .cache-badge.retry {
             background: rgba(255,59,48,0.12); color: var(--ios-red);
             cursor: pointer; text-decoration: underline;
         }
 
-        /* 空间管理面板：文件item可点击播放 */
         .cm-item.playable { cursor: pointer; }
         .cm-item.playable:active { background: var(--ios-gray-btn); }
         .cm-play-icon { font-size: 18px; flex-shrink: 0; opacity: 0.5; }
@@ -906,7 +892,6 @@
         .cache-badge.caching { background: rgba(0,122,255,0.12);  color: var(--ios-blue); }
         .cache-badge.error   { background: rgba(255,59,48,0.12);  color: var(--ios-red); }
 
-        /* 空间管理 Bottom Sheet */
         .cm-sheet-overlay {
             position: fixed; inset: 0; background: rgba(0,0,0,0.35);
             z-index: 3000; opacity: 0; transition: opacity .25s; pointer-events: none;
@@ -1102,7 +1087,7 @@
                 <span>💾</span><span>空间</span>
             </button>
         </div>
-        <div class="version-tag">Build v2.3.0</div>
+        <div class="version-tag">Build v2.3.1</div>
     </div>
 </div>
 
@@ -1110,21 +1095,13 @@
 <div class="share-picker-sheet" id="sharePickerSheet">
     <div class="sp-handle"></div>
     <div class="sp-title">选择分享范围</div>
-
     <div class="sp-row" onclick="doShareDay()">
         <span class="sp-row-icon">📅</span>
-        <div>
-            <div>当日分享</div>
-            <div class="sp-row-sub" id="spDayLabel">今天</div>
-        </div>
+        <div><div>当日分享</div><div class="sp-row-sub" id="spDayLabel">今天</div></div>
     </div>
-
     <div class="sp-row" onclick="toggleWeekExtra()">
         <span class="sp-row-icon">📊</span>
-        <div>
-            <div>本周分享</div>
-            <div class="sp-row-sub" id="spWeekLabel">本周</div>
-        </div>
+        <div><div>本周分享</div><div class="sp-row-sub" id="spWeekLabel">本周</div></div>
         <span style="margin-left:auto;font-size:13px;color:#ccc" id="spWeekArrow">▶</span>
     </div>
     <div class="sp-week-extra" id="spWeekExtra">
@@ -1136,27 +1113,15 @@
         <div class="sp-coin-hint">不填则隐藏金币</div>
         <button class="sp-range-confirm" onclick="doShareWeek()">生成本周分享长图</button>
     </div>
-
     <div class="sp-row" onclick="toggleRangePicker()">
         <span class="sp-row-icon">🗓️</span>
-        <div>
-            <div>自定义区间</div>
-            <div class="sp-row-sub">选择任意起止日期</div>
-        </div>
+        <div><div>自定义区间</div><div class="sp-row-sub">选择任意起止日期</div></div>
     </div>
-
     <div class="sp-range-area" id="spRangeArea">
-        <div class="sp-range-row">
-            <label>开始</label>
-            <input type="date" id="spRangeStart">
-        </div>
-        <div class="sp-range-row">
-            <label>结束</label>
-            <input type="date" id="spRangeEnd">
-        </div>
+        <div class="sp-range-row"><label>开始</label><input type="date" id="spRangeStart"></div>
+        <div class="sp-range-row"><label>结束</label><input type="date" id="spRangeEnd"></div>
         <button class="sp-range-confirm" onclick="doShareRange()">生成分享长图</button>
     </div>
-
     <div class="sp-cancel" onclick="closeSharePicker()">取消</div>
 </div>
 
@@ -1165,31 +1130,18 @@
     <div class="bs-handle"></div>
     <div class="bs-title">📦 数据备份与恢复</div>
     <div class="bs-sub">导出 JSON 文件可保存到本地，换设备可导入恢复</div>
-
     <div class="bs-row" onclick="doExportStats()">
         <span class="bs-row-icon">⬇️</span>
-        <div>
-            <div>导出全部数据</div>
-            <div class="bs-row-sub" id="bsExportSub">下载完整 stats_backup.json</div>
-        </div>
+        <div><div>导出全部数据</div><div class="bs-row-sub" id="bsExportSub">下载完整 stats_backup.json</div></div>
     </div>
-
     <div class="bs-row" onclick="openPartialExport()">
         <span class="bs-row-icon">📋</span>
-        <div>
-            <div>按日期/文件导出</div>
-            <div class="bs-row-sub">灵活选择特定日期和文件</div>
-        </div>
+        <div><div>按日期/文件导出</div><div class="bs-row-sub">灵活选择特定日期和文件</div></div>
     </div>
-
     <div class="bs-row" onclick="doImportStats()">
         <span class="bs-row-icon">⬆️</span>
-        <div>
-            <div>导入备份</div>
-            <div class="bs-row-sub bs-row-warn">将与现有数据合并（不覆盖记录）</div>
-        </div>
+        <div><div>导入备份</div><div class="bs-row-sub bs-row-warn">将与现有数据合并（不覆盖记录）</div></div>
     </div>
-
     <div class="bs-import-preview" id="bsImportPreview"></div>
     <div class="bs-info" id="bsInfo">正在读取数据</div>
     <div class="bs-cancel" onclick="closeBackupSheet()">取消</div>
@@ -1200,42 +1152,27 @@
     <div class="bs-handle"></div>
     <div class="bs-title">按日期/文件导出</div>
     <div class="bs-sub">灵活选择特定日期和文件记录</div>
-
     <div class="bs-range-section">
         <div class="bs-range-title">📅 选择日期范围</div>
-        <div class="bs-range-row">
-            <label>从</label>
-            <input type="date" id="peRangeStart">
-        </div>
-        <div class="bs-range-row">
-            <label>至</label>
-            <input type="date" id="peRangeEnd">
-        </div>
+        <div class="bs-range-row"><label>从</label><input type="date" id="peRangeStart"></div>
+        <div class="bs-range-row"><label>至</label><input type="date" id="peRangeEnd"></div>
         <button class="bs-range-btn" onclick="loadFilesForDateRange()">查看文件列表</button>
     </div>
-
     <div class="bs-range-section" id="peFileListSection" style="display:none;">
         <div class="bs-range-title">🎵 选择文件 <span id="peFileCount" style="font-size:12px;color:#999;margin-left:4px;"></span></div>
         <div id="peFileList"></div>
         <button class="bs-range-btn" style="margin-top:12px;" onclick="doPartialExport()">导出选中的记录</button>
     </div>
-
     <div class="bs-cancel" onclick="closePartialExport()">返回</div>
 </div>
 
 <div class="ctx-menu-overlay" id="ctxOverlay" onclick="closeCtxMenu()"></div>
 <div class="ctx-menu" id="ctxMenu">
     <div class="ctx-menu-title" id="ctxMenuTitle"></div>
-    <div class="ctx-menu-item" id="ctxRename" onclick="ctxDoRename()">
-        <span>✏️</span><span>重命名</span>
-    </div>
-    <div class="ctx-menu-item danger" id="ctxDelete" onclick="ctxDoDelete()">
-        <span>🗑️</span><span>删除收藏夹</span>
-    </div>
+    <div class="ctx-menu-item" id="ctxRename" onclick="ctxDoRename()"><span>✏️</span><span>重命名</span></div>
+    <div class="ctx-menu-item danger" id="ctxDelete" onclick="ctxDoDelete()"><span>🗑️</span><span>删除收藏夹</span></div>
 </div>
 
-
-<!-- 缓存选择弹窗 -->
 <div class="cs-sheet-overlay" id="csOverlay" onclick="closeCacheSelector()"></div>
 <div class="cs-sheet" id="csSheet">
     <div class="cs-handle"></div>
@@ -1248,11 +1185,10 @@
     <div class="cs-list" id="csList"></div>
     <div class="cs-actions">
         <button class="cs-btn-confirm" onclick="csConfirm()">开始缓存</button>
-        <button class="cs-btn-cancel"  onclick="closeCacheSelector()">取消</button>
+        <button class="cs-btn-cancel" onclick="closeCacheSelector()">取消</button>
     </div>
 </div>
 
-<!-- 空间管理 Sheet -->
 <div class="cm-sheet-overlay" id="cmOverlay" onclick="closeCacheManager()"></div>
 <div class="cm-sheet" id="cmSheet">
     <div class="cm-handle"></div>
@@ -1345,10 +1281,10 @@ function _quickRestoreUI() {
     }
 
     var targetTime = ps.trackTime > 2 ? ps.trackTime : (progressDB[ps.trackUrl] || 0);
-    // 恢复时也优先用本地缓存
     _idbGet(ps.trackUrl, function(buf) {
+        // [Fix 3] revoke 旧 ObjectURL 后再创建新的，防止恢复时泄漏
         _revokeCurrentObjectUrl();
-        _currentTrackOrigUrl = ps.trackUrl; // 记录原始URL
+        _currentTrackOrigUrl = ps.trackUrl;
         if (buf) {
             var b = new Blob([buf], { type: _guessMime(ps.trackUrl) });
             _currentObjectUrl = URL.createObjectURL(b);
@@ -1418,9 +1354,8 @@ function init() {
 
     if (!restoreSession()) {
         fetchDirectory(currentPath);
-        setCompact(false); // 无历史记录时直接展开底部栏，显示速度/常亮/空间等按钮
+        setCompact(false);
     }
-    // 初始化离线缓存状态（扫描IDB已有缓存）
     _initCacheStatus();
 }
 if (document.readyState === 'loading') {
@@ -1482,7 +1417,6 @@ function setupAudioEvents() {
         clearMediaSession();
         var _endedKey = _currentTrackOrigUrl || audio.src;
         try { delete progressDB[_endedKey]; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e) {}
-        // 外目录单曲（从空间管理播放，不在playList里）：播完停止，不切歌
         if (currentTrackIndex < 0) {
             document.getElementById('iconPlay').style.display  = 'block';
             document.getElementById('iconPause').style.display = 'none';
@@ -1498,7 +1432,6 @@ function setupAudioEvents() {
             updateAudioInfo();
         }
     });
-    // loadedmetadata 专门负责时长就绪，iOS上比durationchange更可靠
     audio.addEventListener('loadedmetadata', function() {
         if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
             document.getElementById('trackTime').textContent = fmtTime(audio.currentTime) + ' / ' + fmtTime(audio.duration);
@@ -1586,7 +1519,6 @@ function playTrack(index) {
     currentTrackIndex = index;
     var track = playList[index];
 
-    // UI 立刻更新（同步，不依赖 audio.src）
     document.getElementById('trackName').textContent = track.name;
     updateMediaSession(track);
     document.getElementById('trackTime').textContent = '--:-- / --:--';
@@ -1601,10 +1533,10 @@ function playTrack(index) {
     _sessionCounted = false;
     _sessionSec     = 0;
 
-    // IDB查询是异步的，audio.src赋值和所有播放逻辑都在回调里执行
     _idbGet(track.url, function(buffer) {
-        _revokeCurrentObjectUrl(); // 释放上一首的 ObjectURL
-        _currentTrackOrigUrl = track.url; // 记录原始URL，progressDB用这个key
+        // [Fix 3] 每次切歌前 revoke 旧的 ObjectURL，防止累积内存泄漏
+        _revokeCurrentObjectUrl();
+        _currentTrackOrigUrl = track.url;
         if (buffer) {
             var blob = new Blob([buffer], { type: _guessMime(track.url) });
             _currentObjectUrl = URL.createObjectURL(blob);
@@ -1650,7 +1582,6 @@ function playTrack(index) {
             audio.addEventListener('loadedmetadata', cpHandler);
             audio.load();
 
-            // 兜底轮询：针对服务器不支持Range时iOS迟迟不触发事件的情况
             var _pollCount = 0;
             var _pollTimer = setInterval(function() {
                 _pollCount++;
@@ -1681,7 +1612,7 @@ function playTrack(index) {
                 }
             }, 300);
         }
-    }); // end _idbGet callback
+    });
 }
 
 function playNext() {
@@ -1689,10 +1620,7 @@ function playNext() {
     if (playMode === 'shuffle') {
         var pos = shuffleOrder.indexOf(currentTrackIndex);
         var next = pos + 1;
-        if (next >= shuffleOrder.length) {
-            genShuffle();
-            next = 0;
-        }
+        if (next >= shuffleOrder.length) { genShuffle(); next = 0; }
         playTrack(shuffleOrder[next]);
     } else {
         playTrack((currentTrackIndex + 1) % playList.length);
@@ -1791,12 +1719,8 @@ function startAudioInfoLoad(url) {
     var ext = url.split('?')[0].split('.').pop().toUpperCase();
     if (ext.length > 5 || ext.indexOf('/') > -1) ext = 'AUDIO';
 
-    if (_fileSizeCache[url]) {
-        updateAudioInfo();
-        return; // 已有缓存大小，直接用
-    }
+    if (_fileSizeCache[url]) { updateAudioInfo(); return; }
 
-    // 离线模式：如果 IDB 里有这个文件，直接从 buffer.byteLength 拿大小
     if (_cacheStatus[url] === 'cached') {
         _idbGet(url, function(buffer) {
             if (buffer && buffer.byteLength > 0) {
@@ -1811,7 +1735,6 @@ function startAudioInfoLoad(url) {
 
     document.getElementById('audioInfo').textContent = ext + ' 读取中';
 
-    // 在线模式：优先用 HEAD 请求拿文件大小（Cloudflare 支持）
     var xhrDone = false;
     function tryXHR() {
         var xhr = new XMLHttpRequest();
@@ -1831,14 +1754,11 @@ function startAudioInfoLoad(url) {
         try { xhr.send(); } catch(e) { tryFromAudio(); }
     }
 
-    // HEAD 拿不到大小时，从 audio 的已下载量估算
     function tryFromAudio() {
         if (xhrDone) return;
-        // 轮询 audio.buffered 来估算文件大小
         var pollCount = 0;
         var pollTimer = setInterval(function() {
             pollCount++;
-            // 用 PerformanceResourceTiming 拿真实大小
             if (window.performance && performance.getEntriesByName) {
                 var entries = performance.getEntriesByName(url, 'resource');
                 if (entries.length) {
@@ -1855,7 +1775,6 @@ function startAudioInfoLoad(url) {
                     }
                 }
             }
-            // 超时直接只显示格式
             if (pollCount > 20) {
                 clearInterval(pollTimer);
                 if (!xhrDone) {
@@ -1869,15 +1788,14 @@ function startAudioInfoLoad(url) {
 }
 
 function updateAudioInfo() {
-    // 离线播放时 audio.src 是 blob URL，必须用原始 URL 取扩展名和文件大小
     var url = _currentTrackOrigUrl || audio.src;
     if (!url) return;
     if (url.indexOf('blob:') === 0) {
-        if (!_currentTrackOrigUrl) return; // blob URL 但没有原始URL，无法显示信息
+        if (!_currentTrackOrigUrl) return;
         url = _currentTrackOrigUrl;
     }
     var ext  = url.split('?')[0].split('.').pop().toUpperCase();
-    if (ext.length > 5 || ext.indexOf('/') > -1) ext = 'AUDIO'; // 兜底
+    if (ext.length > 5 || ext.indexOf('/') > -1) ext = 'AUDIO';
     var dur  = audio.duration;
     var size = _fileSizeCache[url] || 0;
 
@@ -2013,11 +1931,8 @@ document.addEventListener('visibilitychange', function() {
     } else {
         if (isWakeLockEnabled) _requestWakeLock(true);
         if (_wasPlayingBeforeHide && audio.src) {
-            if (audio.ended) {
-                playNext();
-            } else if (audio.paused) {
-                safePlay();
-            }
+            if (audio.ended) { playNext(); }
+            else if (audio.paused) { safePlay(); }
         }
     }
 });
@@ -2059,8 +1974,7 @@ function _updateTimerLabel() {
     var m = Math.floor(remaining / 60000);
     var s = Math.floor((remaining % 60000) / 1000);
     document.getElementById('timerLabel').textContent =
-        m > 0 ? m + '分' + (s < 10 ? '0' : '') + s + '秒'
-              : s + '秒';
+        m > 0 ? m + '分' + (s < 10 ? '0' : '') + s + '秒' : s + '秒';
     if (remaining <= 0) {
         clearInterval(_sleepCountdown);
         _sleepCountdown = null;
@@ -2108,7 +2022,7 @@ function openPlaylistModal() {
             var opt = document.createElement('div');
             opt.style.cssText = 'padding:16px 25px;border-bottom:0.5px solid #eee;display:-webkit-flex;display:flex;-webkit-align-items:center;align-items:center;font-size:17px;cursor:pointer;';
             var isIn = playlists[name].some(function(f) { return f.url === track.url; });
-            opt.innerHTML = '<span style="margin-right:12px;">📁</span><span style="-webkit-flex:1;flex:1;">' + name + '</span>' + (isIn ? '<span style="color:var(--ios-blue);">✓</span>' : '');
+            opt.innerHTML = '<span style="margin-right:12px;">📁</span><span style="-webkit-flex:1;flex:1;">' + escHtml(name) + '</span>' + (isIn ? '<span style="color:var(--ios-blue);">✓</span>' : '');
             opt.onclick = function() { addToPlaylist(name); };
             container.appendChild(opt);
         })(keys[k]);
@@ -2168,13 +2082,17 @@ function toggleQuickFav(e, encoded) {
 function savePlaylists() { try { localStorage.setItem('my_playlists_v3', JSON.stringify(playlists)); } catch(e) {} }
 
 function saveProgress() {
-    var progKey = _currentTrackOrigUrl || audio.src; // 离线时audio.src是blob URL，必须用原始URL
+    var progKey = _currentTrackOrigUrl || audio.src;
     if (progKey && progKey.indexOf('blob:') !== 0 && audio.currentTime > 0) {
         try { progressDB[progKey] = audio.currentTime; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e) {}
         saveSession();
     }
 }
 
+// ============================================================
+// [Fix 1] fetchDirectory 加 10 秒 XHR 超时保护
+// 原版无 timeout，服务器无响应时用户会一直看到"连接中"
+// ============================================================
 function fetchDirectory(url) {
     if (url === 'virtual:folders') { renderPlaylistFolders(); return; }
     if (url.indexOf('virtual:list:') === 0) { renderTracksInPlaylist(url.replace('virtual:list:', '')); return; }
@@ -2187,15 +2105,13 @@ function fetchDirectory(url) {
 
     var xhr = new XMLHttpRequest();
     xhr.open('GET', url, true);
+    xhr.timeout = 10000; // [Fix 1] 10 秒超时
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) return;
         if (xhr.status >= 200 && xhr.status < 300) {
             parseDirectory(xhr.responseText, url);
-            if (_pendingSession) {
-                _applyPendingSession();
-            }
+            if (_pendingSession) { _applyPendingSession(); }
         } else {
-            // 非200也尝试恢复缓存
             _restorePlayListCache();
             if (playList.length > 0) {
                 document.getElementById('fileList').innerHTML =
@@ -2208,8 +2124,21 @@ function fetchDirectory(url) {
             }
         }
     };
+    // [Fix 1] 超时回调：提示用户，并降级到离线模式
+    xhr.ontimeout = function() {
+        showToast('⚠️ 连接超时，切换到离线模式');
+        _restorePlayListCache();
+        if (playList.length > 0) {
+            document.getElementById('fileList').innerHTML =
+                '<div style="padding:16px;text-align:center;color:var(--ios-subtext);font-size:14px;">📶 离线模式 · 显示上次目录（连接超时）</div>';
+            renderList(playList, false);
+            if (_pendingSession) _applyPendingSession();
+        } else {
+            document.getElementById('fileList').innerHTML =
+                '<div style="padding:20px;color:red;text-align:center;">连接超时，且无离线缓存</div>';
+        }
+    };
     xhr.onerror = function() {
-        // 离线模式：尝试用缓存的 playList 恢复，让播放和统计正常工作
         _restorePlayListCache();
         if (playList.length > 0) {
             document.getElementById('fileList').innerHTML =
@@ -2248,7 +2177,6 @@ function parseDirectory(htmlText, baseUrl) {
     }
     if (playMode === 'shuffle') genShuffle();
     renderList(fileList, false);
-    // 保存 playList 到 localStorage，离线时统计可用
     _savePlayListCache();
 }
 
@@ -2262,20 +2190,14 @@ function renderList(items, isPlaylist) {
             var sLabel = playMode === 'shuffle' ? '关闭随机 改为列表循环' : '随机播放此目录';
             appendPinnedItem(container, '🔀', sLabel, playList.length + ' 首', function() {
                 if (playMode !== 'shuffle') {
-                    playMode = 'shuffle';
-                    genShuffle();
-                    updateCycleBtn();
-                    playTrack(shuffleOrder[0]);
-                    showToast('随机播放');
+                    playMode = 'shuffle'; genShuffle(); updateCycleBtn();
+                    playTrack(shuffleOrder[0]); showToast('随机播放');
                 } else {
-                    playMode = 'list';
-                    updateCycleBtn();
-                    showToast('列表循环');
+                    playMode = 'list'; updateCycleBtn(); showToast('列表循环');
                 }
                 renderList(items, isPlaylist);
             });
         }
-        // 离线缓存按钮（有音频时显示）
         if (playList.length > 0) {
             appendPinnedItem(container, '⬇️', '离线缓存本页全集', playList.length + ' 首', function() {
                 startBatchCache();
@@ -2305,7 +2227,7 @@ function renderList(items, isPlaylist) {
 
             var cacheStatus = item.isAudio ? (_cacheStatus[item.url] || '') : '';
             var cacheBadgeHtml = item.isAudio
-                ? '<span class="' + _badgeClass(cacheStatus) + '" data-url="' + item.url + '" style="' + (cacheStatus ? '' : 'display:none;') + '">' + _badgeText(cacheStatus) + '</span>'
+                ? '<span class="' + _badgeClass(cacheStatus) + '" data-url="' + escHtml(item.url) + '" style="' + (cacheStatus ? '' : 'display:none;') + '">' + _badgeText(cacheStatus) + '</span>'
                 : '';
             div.innerHTML =
                 (isPlaylist ? '<div class="drag-handle">≡</div>' : '') +
@@ -2333,14 +2255,13 @@ function renderList(items, isPlaylist) {
             container.appendChild(div);
         })(items[i]);
     }
-    // 列表渲染完成后刷新缓存badge，确保IDB状态已加载时能正确显示
     _refreshAllBadges();
 }
 
 function appendPinnedItem(container, icon, title, sub, onclick) {
     var div = document.createElement('div');
     div.className = 'list-item pinned-item';
-    div.innerHTML = '<div class="item-icon">' + icon + '</div><div class="item-info"><div class="item-title">' + title + '</div>' + (sub ? '<div class="item-subtext">' + sub + '</div>' : '') + '</div>';
+    div.innerHTML = '<div class="item-icon">' + icon + '</div><div class="item-info"><div class="item-title">' + escHtml(title) + '</div>' + (sub ? '<div class="item-subtext">' + sub + '</div>' : '') + '</div>';
     div.onclick = onclick;
     container.appendChild(div);
 }
@@ -2381,7 +2302,7 @@ function renderTracksInPlaylist(name) {
     document.getElementById('currentFolder').textContent = '/收藏/' + name;
     playList = playlists[name] ? playlists[name].slice() : [];
     if (playMode === 'shuffle') genShuffle();
-    _savePlayListCache(); // 保存 playList，离线统计用
+    _savePlayListCache();
 
     var container = document.getElementById('fileList');
     container.innerHTML = '';
@@ -2506,7 +2427,9 @@ function showToast(msg) {
     showToast._t = setTimeout(function() { t.style.display = 'none'; }, 1800);
 }
 
-//  LISTENING STATS  v2.2.3
+// ============================================================
+//  LISTENING STATS
+// ============================================================
 var statsDB        = {};
 var _stFlush       = 0;
 var MIN_VOL        = 0.4;
@@ -2515,7 +2438,6 @@ var _sessionSec     = 0;
 
 try { statsDB = JSON.parse(localStorage.getItem('stats_db_v1') || '{}'); } catch(e) {}
 
-// 历史数据修复：为旧记录补充 count 字段
 (function() {
     var CUTOFF = '2025-03-08';
     var dirty  = false;
@@ -2523,10 +2445,7 @@ try { statsDB = JSON.parse(localStorage.getItem('stats_db_v1') || '{}'); } catch
         if (day >= CUTOFF) return;
         Object.keys(statsDB[day]).forEach(function(k) {
             var e = statsDB[day][k];
-            if (e.sec >= 1 && !e.count) {
-                e.count = 1;
-                dirty = true;
-            }
+            if (e.sec >= 1 && !e.count) { e.count = 1; dirty = true; }
         });
     });
     if (dirty) {
@@ -2590,13 +2509,11 @@ function _commitStatsDelta(useWallClock) {
     if (_lastAudioTime < 0) return;
     var track = playList[currentTrackIndex];
     if (!track && _currentTrackOrigUrl) {
-        // 从空间管理直接播放的外目录单曲：用当前播放URL构建track对象
         track = {
             url:  _currentTrackOrigUrl,
             name: document.getElementById('trackName').textContent || '离线缓存音频'
         };
     } else if (!track) {
-        // 离线时playList为空：尝试从localStorage恢复
         _restorePlayListCache();
         track = playList[currentTrackIndex];
     }
@@ -2609,7 +2526,7 @@ function _commitStatsDelta(useWallClock) {
         delta = audio.currentTime - _lastAudioTime;
     }
 
-    if (delta > 0 && delta <= 10.5) {  // 兼容Wall Clock兜底（最大10秒）
+    if (delta > 0 && delta <= 10.5) {
         var today = todayKey();
         if (!statsDB[today]) statsDB[today] = {};
         var k = urlHash(track.url);
@@ -2828,9 +2745,7 @@ function buildShareImage(dates, label, showBarChart, weekExtra) {
     while (pd <= prevEnd) {
         var dk = pd.getFullYear() + '-' + pad2(pd.getMonth()+1) + '-' + pad2(pd.getDate());
         var dd = statsDB[dk] || {};
-        Object.keys(dd).forEach(function(k) {
-            prevTotalSec += dd[k].sec || 0;
-        });
+        Object.keys(dd).forEach(function(k) { prevTotalSec += dd[k].sec || 0; });
         pd.setDate(pd.getDate() + 1);
     }
     var diffSec = totalSec - prevTotalSec;
@@ -3117,7 +3032,6 @@ function doExportStats() {
     showToast('备份已导出：' + fname);
 }
 
-// 按日期/文件导出
 var _peSelectedFiles = {};
 
 function openPartialExport() {
@@ -3163,35 +3077,24 @@ function loadFilesForDateRange() {
         var dayData = statsDB[arr[i]];
         Object.keys(dayData).forEach(function(k) {
             if (!fileMap[k]) {
-                fileMap[k] = {
-                    name: dayData[k].name,
-                    url:  dayData[k].url,
-                    days: []
-                };
+                fileMap[k] = { name: dayData[k].name, url: dayData[k].url, days: [] };
             }
             fileMap[k].days.push(arr[i]);
         });
     }
 
     totalFiles = Object.keys(fileMap).length;
-
-    if (totalFiles === 0) {
-        showToast('该日期范围内没有记录');
-        return;
-    }
+    if (totalFiles === 0) { showToast('该日期范围内没有记录'); return; }
 
     _peSelectedFiles = {};
     Object.keys(fileMap).forEach(function(k) {
         if (!_peSelectedFiles[k]) _peSelectedFiles[k] = {};
-        fileMap[k].days.forEach(function(day) {
-            _peSelectedFiles[k][day] = true;
-        });
+        fileMap[k].days.forEach(function(day) { _peSelectedFiles[k][day] = true; });
     });
 
     var container = document.getElementById('peFileList');
     container.innerHTML = '';
 
-    // 计算每个文件的总秒数（兼容写法，不用可选链）
     var fileKeys = Object.keys(fileMap).sort(function(a, b) {
         var secA = 0, secB = 0;
         var daysA = Object.keys(_peSelectedFiles[a] || {});
@@ -3224,9 +3127,7 @@ function loadFilesForDateRange() {
             checkbox.onchange = function() {
                 if (this.checked) {
                     _peSelectedFiles[fk] = {};
-                    fdays.forEach(function(day) {
-                        _peSelectedFiles[fk][day] = true;
-                    });
+                    fdays.forEach(function(day) { _peSelectedFiles[fk][day] = true; });
                 } else {
                     delete _peSelectedFiles[fk];
                 }
@@ -3237,11 +3138,9 @@ function loadFilesForDateRange() {
         label.htmlFor = 'pe_' + k;
         label.innerHTML =
             '<div style="font-size:15px;font-weight:600;color:var(--ios-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' +
-            escHtml(file.name) +
-            '</div>' +
+            escHtml(file.name) + '</div>' +
             '<div style="font-size:12px;color:var(--ios-subtext);margin-top:2px;">' +
-            file.days.length + ' 天   ' + fmtHM(totalSec) +
-            '</div>';
+            file.days.length + ' 天   ' + fmtHM(totalSec) + '</div>';
 
         div.appendChild(checkbox);
         div.appendChild(label);
@@ -3254,10 +3153,7 @@ function loadFilesForDateRange() {
 
 function doPartialExport() {
     var selectedCount = Object.keys(_peSelectedFiles).length;
-    if (selectedCount === 0) {
-        showToast('请至少选择一个文件');
-        return;
-    }
+    if (selectedCount === 0) { showToast('请至少选择一个文件'); return; }
 
     flushStats();
 
@@ -3266,9 +3162,7 @@ function doPartialExport() {
         Object.keys(_peSelectedFiles[k]).forEach(function(day) {
             if (!rangeStats[day]) rangeStats[day] = {};
             var entry = statsDB[day] && statsDB[day][k];
-            if (entry) {
-                rangeStats[day][k] = entry;
-            }
+            if (entry) { rangeStats[day][k] = entry; }
         });
     });
 
@@ -3294,11 +3188,7 @@ function doPartialExport() {
     if (navigator.share && navigator.canShare) {
         var f = new File([blob], fname, { type: 'application/json' });
         if (navigator.canShare({ files: [f] })) {
-            navigator.share({
-                title: '听力统计导出',
-                text: dayCount + '天 ' + selectedCount + '个文件',
-                files: [f]
-            }).catch(function(){});
+            navigator.share({ title: '听力统计导出', text: dayCount + '天 ' + selectedCount + '个文件', files: [f] }).catch(function(){});
             closePartialExport();
             return;
         }
@@ -3327,7 +3217,6 @@ function onImportFileChosen(evt) {
             var incoming = payload.statsDB || payload;
             var dateRange = payload.dateRange || '全部数据';
 
-            // 计算文件条数（兼容全量和部分导出格式）
             var fileCount = payload.fileCount || 0;
             if (!fileCount) {
                 Object.keys(incoming).forEach(function(day) {
@@ -3337,15 +3226,28 @@ function onImportFileChosen(evt) {
 
             if (typeof incoming !== 'object' || Array.isArray(incoming)) throw new Error('格式错误');
 
-            var previewText = '即将导入：<b>' + dateRange + '</b><br>' +
-                '共 <b>' + Object.keys(incoming).length + '</b> 天，<b>' + fileCount + '</b> 条记录' +
-                '<div style="display:flex;gap:8px;margin-top:12px;">' +
-                '<button style="flex:1;padding:12px;background:#007aff;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;" onclick="confirmImportData()">确认导入</button>' +
-                '<button style="flex:1;padding:12px;background:#e8e8e8;color:#333;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;" onclick="cancelImport()">取消</button>' +
-                '</div>';
-
+            // 用 DOM 构建按钮，避免 innerHTML 拼接 onclick 时 dateRange 含单引号截断
             var previewEl = document.getElementById('bsImportPreview');
-            previewEl.innerHTML = previewText;
+            previewEl.innerHTML =
+                '即将导入：<b>' + escHtml(dateRange) + '</b><br>' +
+                '共 <b>' + Object.keys(incoming).length + '</b> 天，<b>' + fileCount + '</b> 条记录';
+
+            var btnWrap = document.createElement('div');
+            btnWrap.style.cssText = 'display:flex;gap:8px;margin-top:12px;';
+
+            var btnOk = document.createElement('button');
+            btnOk.style.cssText = 'flex:1;padding:12px;background:#007aff;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;';
+            btnOk.textContent = '确认导入';
+            btnOk.onclick = confirmImportData;
+
+            var btnNo = document.createElement('button');
+            btnNo.style.cssText = 'flex:1;padding:12px;background:#e8e8e8;color:#333;border:none;border-radius:10px;font-size:16px;font-weight:600;cursor:pointer;';
+            btnNo.textContent = '取消';
+            btnNo.onclick = cancelImport;
+
+            btnWrap.appendChild(btnOk);
+            btnWrap.appendChild(btnNo);
+            previewEl.appendChild(btnWrap);
             previewEl.classList.add('show');
 
             window._pendingImportData = { incoming: incoming, dateRange: dateRange, payload: payload };
@@ -3372,15 +3274,9 @@ function confirmImportData() {
         Object.keys(dayData).forEach(function(k) {
             var src = dayData[k];
             if (!statsDB[day][k]) {
-                statsDB[day][k] = {
-                    name:  src.name  || '',
-                    url:   src.url   || '',
-                    sec:   src.sec   || 0,
-                    count: src.count || 0
-                };
+                statsDB[day][k] = { name: src.name || '', url: src.url || '', sec: src.sec || 0, count: src.count || 0 };
                 merged++;
             } else {
-                // 取较大值，确保不丢数据
                 statsDB[day][k].sec   = Math.max(statsDB[day][k].sec,   src.sec   || 0);
                 statsDB[day][k].count = Math.max(statsDB[day][k].count, src.count || 0);
                 merged++;
@@ -3654,7 +3550,6 @@ function drawBarChart(values, dates) {
     }
 }
 
-// 长按菜单
 var _ctxTarget = null;
 var _longPressTimer = null;
 
@@ -3664,7 +3559,6 @@ function setupLongPress(el, name) {
         e.stopPropagation();
         openCtxMenu(name, e);
     }
-    // 触摸长按（500ms）
     el.addEventListener('touchstart', function(e) {
         _longPressTimer = setTimeout(function() {
             _longPressTimer = null;
@@ -3679,7 +3573,6 @@ function setupLongPress(el, name) {
         clearTimeout(_longPressTimer);
         _longPressTimer = null;
     });
-    // 桌面右键
     el.addEventListener('contextmenu', function(e) {
         e.preventDefault();
         trigger(e);
@@ -3699,7 +3592,6 @@ function openCtxMenu(name, e) {
 
     overlay.classList.add('open');
     menu.classList.add('open');
-    // 触发弹出动画
     requestAnimationFrame(function() {
         menu.style.transform = 'translate(-50%,-50%) scale(1)';
     });
@@ -3727,7 +3619,6 @@ function ctxDoDelete() {
     setTimeout(function() { deletePlaylist(name); }, 150);
 }
 
-// 优化3：音频错误完善捕获
 function safePlay(targetAudio) {
     return (targetAudio || audio).play().catch(function(e) {
         if (!e) return;
@@ -3740,7 +3631,7 @@ function safePlay(targetAudio) {
             document.getElementById('iconPlay').style.display  = 'block';
             document.getElementById('iconPause').style.display = 'none';
         } else if (e.name === 'AbortError') {
-            // 切歌时的正常中断，不提示
+            // 切歌时的正常中断
         } else {
             showToast('⚠️ 音频加载失败，请检查网络或文件');
             document.getElementById('iconPlay').style.display  = 'block';
@@ -3749,7 +3640,6 @@ function safePlay(targetAudio) {
     });
 }
 
-// audio error 事件（网络断开等情况 play() 不一定触发）
 var _audioRetryCount = 0;
 var _audioRetryMax   = 3;
 var _audioRetryTimer = null;
@@ -3758,7 +3648,6 @@ audio.addEventListener('error', function() {
     var err = audio.error;
     if (!err) return;
 
-    // M4A/网络错误自动重试（最多3次，间隔递增）
     var isRetryable = (
         err.code === MediaError.MEDIA_ERR_NETWORK ||
         err.code === MediaError.MEDIA_ERR_DECODE  ||
@@ -3768,20 +3657,16 @@ audio.addEventListener('error', function() {
 
     if (isRetryable && _audioRetryCount < _audioRetryMax) {
         _audioRetryCount++;
-        var delay = _audioRetryCount * 1500; // 1.5s / 3s / 4.5s
+        var delay = _audioRetryCount * 1500;
         var retryUrl = audio.src;
         showToast('加载失败，' + (_audioRetryCount) + '/' + _audioRetryMax + ' 重试中…');
         clearTimeout(_audioRetryTimer);
         _audioRetryTimer = setTimeout(function() {
-            if (audio.src === retryUrl) {
-                audio.load();
-                safePlay();
-            }
+            if (audio.src === retryUrl) { audio.load(); safePlay(); }
         }, delay);
         return;
     }
 
-    // 超过重试次数或不可重试，显示错误
     _audioRetryCount = 0;
     var msg = '⚠️ 音频加载失败';
     if (err.code === MediaError.MEDIA_ERR_NETWORK)           msg = '⚠️ 网络错误，请检查网络连接';
@@ -3792,12 +3677,10 @@ audio.addEventListener('error', function() {
     document.getElementById('iconPause').style.display = 'none';
 });
 
-// 播放成功时重置重试计数
 audio.addEventListener('playing', function() {
     _audioRetryCount = 0;
     clearTimeout(_audioRetryTimer);
 });
-
 
 function checkFictionRatio() {
     var today = todayKey();
@@ -3810,22 +3693,15 @@ function checkFictionRatio() {
         var entry = dayData[k];
         var sec = entry.sec || 0;
         totalSec += sec;
-        // 用URL判断目录；文件删除/重命名后历史URL不变，逻辑不受影响
-        // URL是percent-encoded的，必须先decode再indexOf中文路径
         var decodedUrl = '';
         try { decodedUrl = decodeURIComponent(entry.url || ''); } catch(e) { decodedUrl = entry.url || ''; }
-        if (decodedUrl.indexOf(FICTION_DIR) > -1) {
-            fictionSec += sec;
-        }
+        if (decodedUrl.indexOf(FICTION_DIR) > -1) { fictionSec += sec; }
     });
 
-    // 当天总时长不足5分钟，数据太少不提醒
     if (totalSec < 300) return '';
 
     var nonFictionSec = totalSec - fictionSec;
     var nonFictionPct = totalSec > 0 ? nonFictionSec / totalSec : 1;
-
-    // 非虚构 >= 60% 比例正常，不提醒
     if (nonFictionPct >= 0.6) return '';
 
     var fictionMin    = Math.round(fictionSec / 60);
@@ -3843,14 +3719,11 @@ function checkFictionRatio() {
         + '</div>';
 }
 
-
 // ============================================================
-// 离线缓存模块  v2.2.5
-// 方案：IndexedDB 存 ArrayBuffer，PWA模式下iOS配额充足
+// 离线缓存模块
 // ============================================================
-// ObjectURL 生命周期管理（提前声明，_quickRestoreUI 也会用到）
-var _currentObjectUrl  = null;
-var _currentTrackOrigUrl = '';  // 当前曲目的原始URL，用于progressDB key（离线时audio.src是blob URL）
+var _currentObjectUrl    = null;
+var _currentTrackOrigUrl = '';
 function _revokeCurrentObjectUrl() {
     if (_currentObjectUrl) {
         try { URL.revokeObjectURL(_currentObjectUrl); } catch(e) {}
@@ -3861,22 +3734,19 @@ function _revokeCurrentObjectUrl() {
 var IDB_NAME    = 'AudioOfflineCache';
 var IDB_STORE   = 'audios';
 var IDB_VERSION = 1;
-var _idb        = null;   // IDBDatabase 实例
+var _idb        = null;
 
-// 缓存文件大小 map，存在 localStorage，避免打开空间管理时把所有 ArrayBuffer 读进内存
 var _IDB_SIZE_KEY = 'idb_size_map_v1';
 var _idbSizeMap   = {};
 try { _idbSizeMap = JSON.parse(localStorage.getItem(_IDB_SIZE_KEY) || '{}'); } catch(e) {}
 
-// 打开/初始化 IndexedDB
-var _idbOpenQueue = null; // null=未开始, []=开启中排队, db=已开启
+var _idbOpenQueue = null;
 
 function _openIDB(cb) {
     if (_idb) { cb(_idb); return; }
     if (_idbOpenQueue !== null) { _idbOpenQueue.push(cb); return; }
     _idbOpenQueue = [cb];
 
-    // 5秒超时保护，防止IDB open永久挂起
     var timedOut = false;
     var timeoutId = setTimeout(function() {
         if (_idbOpenQueue === null) return;
@@ -3898,7 +3768,6 @@ function _openIDB(cb) {
         if (timedOut) return;
         clearTimeout(timeoutId);
         _idb = e.target.result;
-        // IDB连接断开时自动重置，允许重新open
         _idb.onclose = function() { _idb = null; };
         _idb.onerror = function(ev) { console.error('IDB error', ev); };
         var q = _idbOpenQueue;
@@ -3915,7 +3784,6 @@ function _openIDB(cb) {
     };
 }
 
-// 写入一条缓存（url -> ArrayBuffer）
 function _idbPut(url, buffer, cb) {
     _openIDB(function(db) {
         if (!db) { cb && cb(false); return; }
@@ -3924,12 +3792,11 @@ function _idbPut(url, buffer, cb) {
             var st  = tx.objectStore(IDB_STORE);
             var req = st.put(buffer, url);
             req.onsuccess = function() {
-                // 顺手把文件大小存到 localStorage，避免空间管理时加载全部 ArrayBuffer
                 _idbSizeMap[url] = buffer.byteLength;
                 try { localStorage.setItem(_IDB_SIZE_KEY, JSON.stringify(_idbSizeMap)); } catch(e) {}
                 cb && cb(true);
             };
-            req.onerror   = function() {
+            req.onerror = function() {
                 console.error('IDB put error:', req.error);
                 cb && cb(false);
             };
@@ -3941,21 +3808,16 @@ function _idbPut(url, buffer, cb) {
     });
 }
 
-// 读取一条缓存（带超时保护，防止被并发写入事务阻塞）
 function _idbGet(url, cb) {
-    // 如果正在缓存中（readwrite事务占用），等待中的readonly可能被长时间阻塞
-    // 用超时保护：3秒内没有响应则直接返回null（走网络）
     var cbCalled = false;
-    var _idbGetTimeout = (navigator.onLine === false) ? 8000 : 3000;
+    // [Fix 4] 用 navigator.onLine 只做粗判断；真正的超时靠计时器兜底
+    // 不完全依赖 onLine（iOS 上可能误报），统一给离线稍长时间（6s），在线给 3s
+    var _idbGetTimeout = (navigator.onLine === false) ? 6000 : 3000;
     var timeoutId = setTimeout(function() {
         if (!cbCalled) {
             cbCalled = true;
-            if (navigator.onLine === false) {
-                console.error('[IDB] 离线读取超时，请重试');
-                showToast('⚠️ 本地缓存读取超时，请重试');
-            } else {
-                console.warn('[IDB] _idbGet timeout, fallback to network:', url);
-            }
+            // 不显示 toast，静默降级走网络即可，避免每次播放都弹提示
+            console.warn('[IDB] _idbGet timeout, fallback to network:', url);
             cb(null);
         }
     }, _idbGetTimeout);
@@ -3980,7 +3842,6 @@ function _idbGet(url, cb) {
     });
 }
 
-// 删除一条缓存
 function _idbDelete(url, cb) {
     _openIDB(function(db) {
         if (!db) { cb && cb(); return; }
@@ -3994,21 +3855,16 @@ function _idbDelete(url, cb) {
     });
 }
 
-// 列出所有缓存（返回 [{url, size}]）
-// openKeyCursor 只读 key，不加载 ArrayBuffer，避免大量缓存时内存爆炸
-// size 从 _fileSizeCache 取（下载/播放时已存入），取不到显示 0
-// 列出所有缓存（size 从 localStorage 的 _idbSizeMap 读取，不加载 ArrayBuffer，无OOM风险）
 function _idbListAll(cb) {
     _openIDB(function(db) {
         if (!db) { cb([]); return; }
         var tx     = db.transaction(IDB_STORE, 'readonly');
         var st     = tx.objectStore(IDB_STORE);
         var list   = [];
-        var curReq = st.openKeyCursor(); // 只遍历 key，不加载 value
+        var curReq = st.openKeyCursor();
         curReq.onsuccess = function(e) {
             var cursor = e.target.result;
             if (cursor) {
-                // 从 localStorage map 读 size，不触碰 ArrayBuffer
                 var sz = _idbSizeMap[cursor.key] || _fileSizeCache[cursor.key] || 0;
                 list.push({ url: cursor.key, size: sz });
                 cursor.continue();
@@ -4020,7 +3876,6 @@ function _idbListAll(cb) {
     });
 }
 
-// 清空所有缓存
 function _idbClear(cb) {
     _openIDB(function(db) {
         if (!db) { cb && cb(); return; }
@@ -4034,24 +3889,18 @@ function _idbClear(cb) {
     });
 }
 
-// ---- 下载状态跟踪 ----
-var _cacheStatus = {};   // url -> 'caching' | 'cached' | 'error'
+var _cacheStatus = {};
 
-// 初始化：把已有IDB缓存标记为cached
 function _initCacheStatus() {
-    // 用 getAllKeys() 只读 key，不加载 ArrayBuffer，启动速度快几十倍
     _openIDB(function(db) {
         if (!db) return;
         var tx  = db.transaction(IDB_STORE, 'readonly');
         var req = tx.objectStore(IDB_STORE).getAllKeys();
         req.onsuccess = function() {
-            (req.result || []).forEach(function(url) {
-                _cacheStatus[url] = 'cached';
-            });
+            (req.result || []).forEach(function(url) { _cacheStatus[url] = 'cached'; });
             _refreshAllBadges();
         };
         req.onerror = function() {
-            // getAllKeys 不支持时降级为游标只读key
             _idbListKeysOnly(function(urls) {
                 urls.forEach(function(url) { _cacheStatus[url] = 'cached'; });
                 _refreshAllBadges();
@@ -4060,7 +3909,6 @@ function _initCacheStatus() {
     });
 }
 
-// 只读 key 的游标（getAllKeys 不支持时的降级方案）
 function _idbListKeysOnly(cb) {
     _openIDB(function(db) {
         if (!db) { cb([]); return; }
@@ -4077,18 +3925,6 @@ function _idbListKeysOnly(cb) {
     });
 }
 
-// 播放前检查本地缓存，有则用ObjectURL替代网络URL
-function _getLocalUrl(url, cb) {
-    _idbGet(url, function(buffer) {
-        if (buffer) {
-            var blob = new Blob([buffer], { type: _guessMime(url) });
-            cb(URL.createObjectURL(blob));
-        } else {
-            cb(null);
-        }
-    });
-}
-
 function _guessMime(url) {
     var u = url.toLowerCase();
     if (u.indexOf('.mp3')  > -1) return 'audio/mpeg';
@@ -4101,7 +3937,6 @@ function _guessMime(url) {
     return 'audio/mpeg';
 }
 
-// ---- 下载单首 ----
 function _downloadOne(url, onProgress, onDone) {
     _cacheStatus[url] = 'caching';
     _refreshBadge(url);
@@ -4123,13 +3958,9 @@ function _downloadOne(url, onProgress, onDone) {
         })
         .catch(function(err) {
             var errMsg = '';
-            if (err && err.status) {
-                errMsg = 'HTTP ' + err.status;
-            } else if (err && err.message) {
-                errMsg = err.message;
-            } else {
-                errMsg = String(err);
-            }
+            if (err && err.status) { errMsg = 'HTTP ' + err.status; }
+            else if (err && err.message) { errMsg = err.message; }
+            else { errMsg = String(err); }
             var fname = decodeURIComponent(url.split('/').pop() || url).slice(0, 30);
             showToast('\u274c ' + fname + ': ' + errMsg);
             console.error('cache download error', url, errMsg, err);
@@ -4139,28 +3970,28 @@ function _downloadOne(url, onProgress, onDone) {
         });
 }
 
-// ---- 并发控制（最多3个并发）----
-// 批量下载中断标记：记录开始下载时的路径，用户离开目录时自动中止
+// ============================================================
+// [Fix 2] _batchDownload：加 _onAllDoneCalled 标志位
+// 防止全部 url 已缓存时同步跳过导致 onAllDone 被多次调用
+// ============================================================
 var _downloadStartPath = '';
 
 function _batchDownload(urls, onAllDone, onProgress) {
-    // 预先计算需要真正下载的数量（排除已缓存）
     var toDownloadUrls = urls.filter(function(u) { return _cacheStatus[u] !== 'cached'; });
     var realTotal = toDownloadUrls.length;
-    var realDone  = 0; // 真正下载完成的计数
+    var realDone  = 0;
 
     var total     = urls.length;
-    var done      = 0; // 所有处理完的计数（含跳过）
+    var done      = 0;
     var cursor    = 0;
     var concur    = 3;
     var succeeded = 0;
+    var _onAllDoneCalled = false; // [Fix 2] 防止重复触发
 
     if (total === 0) { onAllDone(0, 0); return; }
-    // 全部已缓存，直接完成
     if (realTotal === 0) { onAllDone(total, 0); return; }
 
     function next() {
-        // 用户已离开开始下载时的目录，中止后续下载
         if (currentPath !== _downloadStartPath) {
             if (_downloadStartPath) {
                 showToast('已离开目录，缓存任务中止');
@@ -4170,28 +4001,33 @@ function _batchDownload(urls, onAllDone, onProgress) {
         }
         if (cursor >= total) return;
         var url = urls[cursor++];
-        // 已缓存的直接跳过，不计入进度
         if (_cacheStatus[url] === 'cached') {
             done++; succeeded++;
-            if (done === total) onAllDone(succeeded, total - succeeded);
-            else next();
+            if (done === total) {
+                if (!_onAllDoneCalled) { // [Fix 2]
+                    _onAllDoneCalled = true;
+                    onAllDone(succeeded, total - succeeded);
+                }
+            } else { next(); }
             return;
         }
         _downloadOne(url, null, function(ok) {
             done++;
             realDone++;
             if (ok) succeeded++;
-            // 进度只反映真正需要下载的
             if (onProgress) onProgress(realDone, realTotal);
-            if (done === total) onAllDone(succeeded, total - succeeded);
-            else if (currentPath === _downloadStartPath) next();
+            if (done === total) {
+                if (!_onAllDoneCalled) { // [Fix 2]
+                    _onAllDoneCalled = true;
+                    onAllDone(succeeded, total - succeeded);
+                }
+            } else if (currentPath === _downloadStartPath) { next(); }
         });
     }
 
     for (var i = 0; i < Math.min(concur, total); i++) next();
 }
 
-// ---- 刷新badge显示 ----
 function _badgeText(status) {
     if (status === 'cached')  return '✅ 已缓存';
     if (status === 'caching') return '⏳ 缓存中';
@@ -4211,13 +4047,9 @@ function _refreshBadge(url) {
         if (el.getAttribute('data-url') !== url) return;
         el.style.display = status ? '' : 'none';
         if (status === 'error') {
-            // 失败时显示可点击的重试按钮
             el.textContent = '❌ 重试';
             el.className   = 'cache-badge retry';
-            el.onclick     = function(e) {
-                e.stopPropagation();
-                _retrySingle(url);
-            };
+            el.onclick     = function(e) { e.stopPropagation(); _retrySingle(url); };
         } else {
             el.textContent = _badgeText(status);
             el.className   = _badgeClass(status);
@@ -4226,7 +4058,6 @@ function _refreshBadge(url) {
     });
 }
 
-// 单首重试下载
 function _retrySingle(url) {
     showToast('重试下载中…');
     _downloadOne(url, null, function(ok) {
@@ -4244,16 +4075,13 @@ function _refreshAllBadges() {
     });
 }
 
-// ---- 批量缓存入口（点击"⬇️ 离线缓存"按钮）----
-// 打开缓存选择弹窗
 function startBatchCache() {
     var tracks = playList.filter(function(t) { return t.url; });
     if (tracks.length === 0) { showToast('当前列表没有音频'); return; }
     openCacheSelector(tracks);
 }
 
-// 缓存选择弹窗状态
-var _csChecked = {}; // url -> true/false
+var _csChecked = {};
 
 function openCacheSelector(tracks) {
     _csChecked = {};
@@ -4262,7 +4090,7 @@ function openCacheSelector(tracks) {
 
     tracks.forEach(function(track) {
         var isCached = (_cacheStatus[track.url] === 'cached');
-        _csChecked[track.url] = true; // 默认全选
+        _csChecked[track.url] = true;
 
         var row = document.createElement('div');
         row.className = 'cs-item' + (isCached ? ' cached' : '');
@@ -4275,7 +4103,6 @@ function openCacheSelector(tracks) {
                 _csChecked[url] = cb.checked;
                 _csUpdateCount();
             };
-            // 点整行也能切换
             row.onclick = function(e) {
                 if (e.target === cb) return;
                 cb.checked = !cb.checked;
@@ -4316,7 +4143,6 @@ function _csUpdateCount() {
     document.getElementById('csCountLabel').textContent = '已选 ' + selected + ' / ' + total;
     var allSel = (selected === total);
     document.getElementById('csSelectAllBtn').textContent = allSel ? '取消全选' : '全选';
-    // 副标题提示
     var alreadyCached = Object.keys(_csChecked).filter(function(u) {
         return _csChecked[u] && _cacheStatus[u] === 'cached';
     }).length;
@@ -4328,9 +4154,8 @@ function _csUpdateCount() {
 function csToggleAll() {
     var selected = Object.keys(_csChecked).filter(function(u) { return _csChecked[u]; }).length;
     var total    = Object.keys(_csChecked).length;
-    var toCheck  = (selected < total); // 未全选时点全选，全选时点取消
+    var toCheck  = (selected < total);
     Object.keys(_csChecked).forEach(function(u) { _csChecked[u] = toCheck; });
-    // 同步复选框UI
     document.getElementById('csList').querySelectorAll('input[type=checkbox]').forEach(function(cb) {
         cb.checked = toCheck;
     });
@@ -4344,11 +4169,9 @@ function csConfirm() {
     _doStartBatchCache(selectedUrls);
 }
 
-// ---- 整体进度条 ----
-var _dlProgressEl = null; // 进度条DOM容器
+var _dlProgressEl = null;
 
-function _showProgressBar(container) {
-    // 如果已有进度条先移除
+function _showProgressBar() {
     _hideProgressBar();
     _dlProgressEl = document.createElement('div');
     _dlProgressEl.className = 'dl-progress-wrap';
@@ -4361,7 +4184,6 @@ function _showProgressBar(container) {
         '<div class="dl-progress-bar-bg">' +
             '<div class="dl-progress-bar-fill" id="dlProgressFill"></div>' +
         '</div>';
-    // 插到fileList的最前面
     var fileList = document.getElementById('fileList');
     if (fileList) fileList.insertBefore(_dlProgressEl, fileList.firstChild);
 }
@@ -4381,14 +4203,13 @@ function _hideProgressBar() {
     _dlProgressEl = null;
 }
 
-// 真正执行批量下载
 function _doStartBatchCache(urls) {
     _downloadStartPath = currentPath;
     var alreadyCached = urls.filter(function(u) { return _cacheStatus[u] === 'cached'; }).length;
     if (alreadyCached === urls.length) { showToast('所选文件全部已缓存 ✅'); return; }
     var toDownload = urls.length - alreadyCached;
     showToast('开始缓存 ' + toDownload + ' 首，并发3个');
-    // 自动开启屏幕常亮，防止iOS息屏中断下载
+
     var _cacheWakeLockOn = false;
     if (!isWakeLockEnabled) {
         _cacheWakeLockOn = true;
@@ -4397,16 +4218,15 @@ function _doStartBatchCache(urls) {
         _requestWakeLock(true);
     }
     noSleepV.play().catch(function(){});
-    // 显示整体进度条
+
     _showProgressBar();
     _updateProgressBar(0, toDownload);
-    var downloadedCount = 0;
+
     _batchDownload(urls, function(ok, fail) {
         _downloadStartPath = '';
         _updateProgressBar(toDownload, toDownload);
         setTimeout(_hideProgressBar, 2000);
         showToast('缓存完成：' + ok + ' 成功' + (fail > 0 ? '，' + fail + ' 失败' : ''));
-        // 如果是下载时自动开的常亮，下载完成后自动关掉
         if (_cacheWakeLockOn) {
             isWakeLockEnabled = false;
             _setWakeLockUI(false);
@@ -4416,28 +4236,42 @@ function _doStartBatchCache(urls) {
             noSleepV.pause();
         }
     }, function(doneSoFar, totalToDownload) {
-        // 进度回调
         _updateProgressBar(doneSoFar, totalToDownload);
     });
 }
 
-// ---- 播放时优先用本地缓存 ----
-// 这个函数包装原有的 playTrack，在设置 audio.src 之前先查IDB
-var _originalPlayTrack = null; // 延迟到init后绑定
-
-function _tryLocalThenPlay(originalUrl, onUrlReady) {
-    _idbGet(originalUrl, function(buffer) {
-        if (buffer) {
-            var blob = new Blob([buffer], { type: _guessMime(originalUrl) });
-            var localUrl = URL.createObjectURL(blob);
-            onUrlReady(localUrl, true);
-        } else {
-            onUrlReady(originalUrl, false);
-        }
+// ============================================================
+// [Fix 3] _playFromCache：revoke 旧 ObjectURL 后再创建新的
+// 防止从空间管理面板反复播放不同文件时累积内存泄漏
+// ============================================================
+function _playFromCache(url, name) {
+    var idx = -1;
+    for (var i = 0; i < playList.length; i++) {
+        if (playList[i].url === url) { idx = i; break; }
+    }
+    if (idx >= 0) {
+        closeCacheManager();
+        playTrack(idx);
+        showToast('播放：' + name);
+        return;
+    }
+    _idbGet(url, function(buffer) {
+        if (!buffer) { showToast('缓存数据丢失，请重新下载'); return; }
+        // [Fix 3] 释放上一个 ObjectURL，再创建新的
+        _revokeCurrentObjectUrl();
+        _currentTrackOrigUrl = url;
+        var blob = new Blob([buffer], { type: _guessMime(url) });
+        _currentObjectUrl = URL.createObjectURL(blob);
+        audio.src = _currentObjectUrl;
+        audio.playbackRate = playbackRate;
+        document.getElementById('trackName').textContent = name;
+        setCompact(false);
+        safePlay();
+        closeCacheManager();
+        showToast('离线播放：' + name);
     });
 }
 
-// ---- 空间管理面板 ----
 function openCacheManager() {
     document.getElementById('cmOverlay').classList.add('open');
     document.getElementById('cmSheet').classList.add('open');
@@ -4466,12 +4300,10 @@ function _renderCacheList() {
         var totalMB    = (totalBytes / 1048576).toFixed(1);
         summary.textContent = '共 ' + items.length + ' 个文件，占用 ' + totalMB + ' MB';
 
-        // 按文件夹分组显示
         var groups = {};
         items.forEach(function(item) {
             try {
                 var decoded = decodeURIComponent(item.url);
-                // 取倒数第二段作为"文件夹"
                 var parts = decoded.replace(/^https?:\/\/[^\/]+\//, '').split('/');
                 var folder = parts.length > 1 ? parts.slice(0, -1).join('/') : '根目录';
                 var fname  = parts[parts.length - 1];
@@ -4487,7 +4319,6 @@ function _renderCacheList() {
             var files    = groups[folder];
             var folderMB = (files.reduce(function(s,f){return s+f.size;},0)/1048576).toFixed(1);
 
-            // 文件夹标题行（用DOM API绑定事件，避免JSON.stringify拼字符串的引号截断风险）
             var header = document.createElement('div');
             header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:10px 4px 4px;';
             var folderTitle = document.createElement('div');
@@ -4501,12 +4332,10 @@ function _renderCacheList() {
             header.appendChild(folderDelBtn);
             list.appendChild(header);
 
-            // 文件列表（DOM API绑定，支持点击播放）
             files.forEach(function(f) {
                 var item = document.createElement('div');
                 item.className = 'cm-item playable';
 
-                // 播放图标
                 var playIcon = document.createElement('span');
                 playIcon.className = 'cm-play-icon';
                 playIcon.textContent = '▶';
@@ -4522,13 +4351,10 @@ function _renderCacheList() {
                 fileDelBtn.textContent = '删除';
                 (function(url, name) {
                     fileDelBtn.onclick = function(e) {
-                        e.stopPropagation(); // 防止触发row的播放
+                        e.stopPropagation();
                         deleteSingleCache(url);
                     };
-                    // 点击整行播放
-                    item.onclick = function() {
-                        _playFromCache(url, name);
-                    };
+                    item.onclick = function() { _playFromCache(url, name); };
                 })(f.url, f.name);
 
                 item.appendChild(playIcon);
@@ -4537,36 +4363,6 @@ function _renderCacheList() {
                 list.appendChild(item);
             });
         });
-    });
-}
-
-// 从空间管理面板直接播放已缓存文件
-function _playFromCache(url, name) {
-    // 先在当前playList里找，找到就正常playTrack
-    var idx = -1;
-    for (var i = 0; i < playList.length; i++) {
-        if (playList[i].url === url) { idx = i; break; }
-    }
-    if (idx >= 0) {
-        closeCacheManager();
-        playTrack(idx);
-        showToast('播放：' + name);
-        return;
-    }
-    // 不在当前playList（用户可能切了目录）：直接从IDB读出来播
-    _idbGet(url, function(buffer) {
-        if (!buffer) { showToast('缓存数据丢失，请重新下载'); return; }
-        _revokeCurrentObjectUrl();
-        _currentTrackOrigUrl = url;
-        var blob = new Blob([buffer], { type: _guessMime(url) });
-        _currentObjectUrl = URL.createObjectURL(blob);
-        audio.src = _currentObjectUrl;
-        audio.playbackRate = playbackRate;
-        document.getElementById('trackName').textContent = name;
-        setCompact(false);
-        safePlay();
-        closeCacheManager();
-        showToast('离线播放：' + name);
     });
 }
 
@@ -4617,7 +4413,6 @@ function clearAllCache() {
     });
 }
 
-// playList 本地缓存：供离线时统计使用
 var _PLAYLIST_CACHE_KEY = 'playlist_cache_v1';
 
 function _savePlayListCache() {
@@ -4638,9 +4433,7 @@ function _restorePlayListCache() {
         var data = JSON.parse(raw);
         if (data && data.list && data.list.length > 0) {
             playList = data.list;
-            // 同时恢复fileList，保证离线状态下搜索不会白屏
             fileList = playList.slice();
-            // 恢复currentTrackIndex（如果playTrack还没设置的话）
             if (currentTrackIndex < 0 && data.index >= 0) {
                 currentTrackIndex = data.index;
             }
@@ -4654,9 +4447,7 @@ function escHtml(s) {
 }
 </script>
 
-
 <script>
-// Service Worker 注册：使用独立 /sw.js 文件，避免 Blob URL 在 iOS Safari 的限制
 (function() {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('/sw.js', { scope: '/' })
