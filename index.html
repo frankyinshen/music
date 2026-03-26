@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.3.1</title>
+    <title>英语精听播放器 v2.3.2</title>
     <!-- PWA Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -938,12 +938,18 @@
             font-size: 11px; color: var(--ios-subtext); text-align: center;
             padding: 0 8px 4px 8px; line-height: 1.6;
         }
+        .st-del-btn {
+            background: none; border: none; font-size: 18px; color: var(--ios-subtext);
+            padding: 8px 0 8px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+            display: -webkit-flex; display: flex; -webkit-align-items: center; align-items: center;
+        }
+        .st-del-btn:active { opacity: 0.5; }
     </style>
 </head>
 <body class="player-compact">
 
 <audio id="audioPlayer" preload="metadata" playsinline webkit-playsinline x5-playsinline></audio>
-<video id="noSleepVideo" loop muted playsinline src="data:video/mp4;base64,AAAAHGZ0eXBpc29tAAACAGlzb21pc28yYXZjMQAAAAhmcmVlAAAAG21kYXQAAAGzABAHAAABthAwwgRUwu11AAIAAAFVbW9vdgAAAGxtdmhkAAAAAMw11LPMNdSzAAACWAAAAKAAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAANh0cmFrAAAAXHRraGQAAAADzDXUs8w11LMAAAABAAAAAAAoAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAEAAAABAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAACgAAAAAAABAAAAAAHcbWRpYQAAACBtZGhkAAAAAMw11LPMNdSzAAACWAAAAKBBVxAAAAAAAC1oZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAAVBtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAADsc3RibAAAALhzdHNkAAAAAAAAAAEAAACoYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAABAAABAEgAAABIAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoAP//AAAAQmF2Y0MAAgwL//tYn/4CAwz+/v7+///+gP20P/11AABaOAAACtAAAeEAAQAAAAMAAgAAAwQAAAIAC7x+OQAEAEQAEQAAAQABAAABvWcAAAAQc3R0cwAAAAAAAAABAAAAAQAAAKAAAAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAUc3RzejAAAAAAAAAAAAAAAQAAABIAAAAUc3RjbwAAAAAAAAABAAAAMAAAAGB1ZHRhAAAAWG1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAAK2lsc3QAAAAjqXRvbwAAABtkYXRhAAAAAQAAAABMYXZmNTkuMjcuMTAw"></video>
+<video id="noSleepVideo" loop muted playsinline src="data:video/mp4;base64,AAAAHGZ0eXBpc29tAAACAGlzb21pc28yYXZjMQAAAAhmcmVlAAAAG21kYXQAAAGzABAHAAABthAwwgRUwu11AAIAAAFVbW9vdgAAAGxtdmhkAAAAAMw11LPMNdSzAAACWAAAAKAAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAANh0cmFrAAAAXHRraGQAAAADzDXUs8w11LMAAAABAAAAAAAoAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAQAAAAAEAAAABAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAACgAAAAAAABAAAAAAHcbWRpYQAAACBtZGhkAAAAAMw11LPMNdSzAAACWAAAAKBBVxAAAAAAAC1oZGxyAAAAAAAAAAB2aWRlAAAAAAAAAAAAAAAAVmlkZW9IYW5kbGVyAAAAAVBtaW5mAAAAFHZtaGQAAAABAAAAAAAAAAAAAAAkZGluZgAAABxkcmVmAAAAAAAAAAEAAAAMdXJsIAAAAAEAAADsc3RibAAAALhzdHNkAAAAAAAAAAEAAACoYXZjMQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAABAAABAEgAAABIAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoAP//AAAAQmF2Y0MAAgwL//tYn/4CAwz+/v7+///+gP20P/11AABaOAAACtAAAeEAAQAAAAMAAgAAAwQAAAIAC7x+OQAEAEQAEQAAAQABAAABvWcAAAAQc3R0cwAAAAAAAAABAAAAAQAAAKAAAAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAUc3RzcwAAAAAAAAABAAAAAQAAABxzdHNjAAAAAAAAAAEAAAABAAAAAQAAAAEAAAAUc3RzejAAAAAAAAAAAAAAAQAAABIAAAAUc3RjbwAAAAAAAAABAAAAMAAAAGB1ZHRhAAAAWG1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAAK2lsc3QAAAAjqXRvbwAAABtkYXRhAAAAAQAAAABMYXZmNTkuMjcuMTAw"></video>
 
 <div id="toast"></div>
 
@@ -1087,7 +1093,7 @@
                 <span>💾</span><span>空间</span>
             </button>
         </div>
-        <div class="version-tag">Build v2.3.1</div>
+        <div class="version-tag">Build v2.3.2</div>
     </div>
 </div>
 
@@ -2635,11 +2641,24 @@ function getDayTracks(key) {
     var day = statsDB[key] || {}, ks = Object.keys(day), arr = [];
     for (var i = 0; i < ks.length; i++) {
         var e = day[ks[i]];
-        if (e.sec >= 1) arr.push({ name: e.name, url: e.url, sec: Math.floor(e.sec), count: e.count || 0 });
+        if (e.sec >= 1) arr.push({ hash: ks[i], name: e.name, url: e.url, sec: Math.floor(e.sec), count: e.count || 0 });
     }
     arr.sort(function(a,b){ return b.sec - a.sec; });
     return arr;
 }
+
+// ===================== 新增：手工删除记录 =====================
+function deleteStatRecord(day, hashKey) {
+    if (confirm('确定要删除该条统计记录吗？\n删除后总时长和图表将重新计算。')) {
+        if (statsDB[day] && statsDB[day][hashKey]) {
+            delete statsDB[day][hashKey];
+            flushStats();
+            renderStats(); // 重新渲染包含总时长、柱状图的所有UI
+            showToast('已删除记录并重新计算');
+        }
+    }
+}
+// =============================================================
 
 var _stWeekOff = 0;
 var _stSelDay  = null;
@@ -3394,6 +3413,7 @@ function renderStats() {
                     '<div class="st-file-name">' + escHtml(tr.name) + '</div>' +
                     '<div class="st-file-count"><b>' + cnt + '次收听</b> ' + dur + '</div>' +
                 '</div>' +
+                '<button class="st-del-btn" onclick="deleteStatRecord(\'' + _stSelDay + '\', \'' + tr.hash + '\')" aria-label="删除此记录">🗑️</button>' +
             '</div>';
         }
     }
@@ -3647,6 +3667,7 @@ var _audioRetryTimer = null;
 audio.addEventListener('error', function() {
     var err = audio.error;
     if (!err) return;
+    try { audio.pause(); } catch(e) {} // 【核心保护】强制抛错时暂停，阻断时间系统无限累加
 
     var isRetryable = (
         err.code === MediaError.MEDIA_ERR_NETWORK ||
