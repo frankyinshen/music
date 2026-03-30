@@ -998,11 +998,14 @@
 </div>
 
 <div class="header">
-    <div class="path-nav">
-        <button class="back-btn" onclick="goBack()" aria-label="返回上级目录">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="pointer-events:none"><path d="M15 18l-6-6 6-6"/></svg>
-            返回
-        </button>
+<div class="path-nav">
+        <div style="display:-webkit-flex; display:flex; -webkit-align-items:center; align-items:center;">
+            <button class="back-btn" onclick="goBack()" aria-label="返回上级目录" style="margin-right: 12px;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="pointer-events:none"><path d="M15 18l-6-6 6-6"/></svg>
+                返回
+            </button>
+            <button class="back-btn" onclick="fetchDirectory(SITE_ROOT)" aria-label="回到根目录" style="font-size: 15px;">首页</button>
+        </div>
         <div class="current-folder" id="currentFolder">/</div>
         <button class="header-stats-btn" onclick="openStats()" aria-label="听力统计">📊</button>
     </div>
@@ -2338,12 +2341,23 @@ function renderTracksInPlaylist(name) {
 function goBack() {
     if (currentPath.indexOf('virtual:list:') === 0) { fetchDirectory('virtual:folders'); return; }
     if (currentPath === 'virtual:folders') { fetchDirectory(SITE_ROOT); return; }
-    try {
-        var u = new URL(currentPath);
-        var parts = u.pathname.split('/').filter(function(x) { return x; });
-        parts.pop();
-        fetchDirectory(u.origin + '/' + parts.join('/') + (parts.length ? '/' : ''));
-    } catch(e) { fetchDirectory(SITE_ROOT); }
+    if (currentPath === SITE_ROOT) return; 
+
+    var p = currentPath;
+    if (p.charAt(p.length - 1) === '/') {
+        p = p.substring(0, p.length - 1);
+    }
+    var idx = p.lastIndexOf('/');
+    if (idx !== -1) {
+        var parentPath = p.substring(0, idx + 1);
+        // 防止退到设定的根目录之外
+        if (parentPath.indexOf(SITE_ROOT) !== 0) {
+            parentPath = SITE_ROOT;
+        }
+        fetchDirectory(parentPath);
+    } else {
+        fetchDirectory(SITE_ROOT);
+    }
 }
 
 var _searchTimer = null;
