@@ -2339,7 +2339,23 @@ function renderTracksInPlaylist(name) {
     renderList(playList, true);
 }
 
-function goBack()
+function goBack() {
+    if (currentPath.indexOf('virtual:list:') === 0) { fetchDirectory('virtual:folders'); return; }
+    if (currentPath === 'virtual:folders') { fetchDirectory(SITE_ROOT); return; }
+    if (currentPath === SITE_ROOT) return;
+
+    try {
+        var u = new URL(currentPath);
+        var parts = u.pathname.split('/').filter(function(x) { return x; });
+        parts.pop(); 
+        var parentPath = u.origin + '/' + parts.join('/') + (parts.length ? '/' : '');
+        if (parentPath.indexOf(SITE_ROOT) !== 0) parentPath = SITE_ROOT;
+        fetchDirectory(parentPath);
+    } catch(e) {
+        fetchDirectory(SITE_ROOT);
+    }
+}
+
 var _searchTimer = null;
 function onSearchInput() {
     clearTimeout(_searchTimer);
