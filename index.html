@@ -4006,7 +4006,7 @@ function _batchDownload(urls, onAllDone, onProgress) {
     var total     = urls.length;
     var done      = 0;
     var cursor    = 0;
-    var concur    = 3;
+    var concur    = 1;
     var succeeded = 0;
     var _onAllDoneCalled = false; // [Fix 2] 防止重复触发
 
