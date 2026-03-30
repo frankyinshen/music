@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.3.4</title>
+    <title>英语精听播放器 v2.3.5</title>
     <link rel="preconnect" href="https://cdn.evanyin.dpdns.org" crossorigin>
     <!-- PWA Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -1094,7 +1094,7 @@
                 <span>💾</span><span>空间</span>
             </button>
         </div>
-       <div class="version-tag">Build v2.3.4</div>
+       <div class="version-tag">Build v2.3.5</div>
     </div>
 </div>
 
@@ -4006,7 +4006,7 @@ function _batchDownload(urls, onAllDone, onProgress) {
     var total     = urls.length;
     var done      = 0;
     var cursor    = 0;
-    var concur    = 1;
+    var concur    = 5;
     var succeeded = 0;
     var _onAllDoneCalled = false; // [Fix 2] 防止重复触发
 
@@ -4230,7 +4230,7 @@ function _doStartBatchCache(urls) {
     var alreadyCached = urls.filter(function(u) { return _cacheStatus[u] === 'cached'; }).length;
     if (alreadyCached === urls.length) { showToast('所选文件全部已缓存 ✅'); return; }
     var toDownload = urls.length - alreadyCached;
-    showToast('开始缓存 ' + toDownload + ' 首，逐个下载');
+    showToast('开始缓存 ' + toDownload + ' 首，并发5个');
 
     var _cacheWakeLockOn = false;
     if (!isWakeLockEnabled) {
