@@ -999,14 +999,14 @@
 
 <div class="header">
 <div class="path-nav">
-        <div style="display:-webkit-flex; display:flex; -webkit-align-items:center; align-items:center;">
+        <div style="display:-webkit-flex; display:flex; -webkit-align-items:center; align-items:center; -webkit-flex-shrink:0; flex-shrink:0;">
             <button class="back-btn" onclick="goBack()" aria-label="返回上级目录" style="margin-right: 12px;">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="pointer-events:none"><path d="M15 18l-6-6 6-6"/></svg>
                 返回
             </button>
             <button class="back-btn" onclick="fetchDirectory(SITE_ROOT)" aria-label="回到根目录" style="font-size: 15px;">首页</button>
         </div>
-        <div class="current-folder" id="currentFolder">/</div>
+       <div class="current-folder" id="currentFolder" style="flex:1; text-align:center;">/</div>
         <button class="header-stats-btn" onclick="openStats()" aria-label="听力统计">📊</button>
     </div>
     <div class="search-bar">
