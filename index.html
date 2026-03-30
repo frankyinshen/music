@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.3.5</title>
-    <link rel="preconnect" href="https://cdn.evanyin.dpdns.org" crossorigin>
+    <title>英语精听播放器 v2.3.2</title>
     <!-- PWA Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -88,7 +87,6 @@
             padding: calc(var(--safe-top) + 6px) 15px 8px 15px;
             border-bottom: 0.5px solid rgba(0,0,0,0.1);
             z-index: 100; -webkit-flex-shrink: 0; flex-shrink: 0;
-            position: relative; 
         }
         .path-nav {
             display: -webkit-flex; display: flex;
@@ -999,15 +997,12 @@
 </div>
 
 <div class="header">
-<div class="path-nav">
-        <div style="display:-webkit-flex; display:flex; -webkit-align-items:center; align-items:center; -webkit-flex-shrink:0; flex-shrink:0;">
-            <button class="back-btn" onclick="goBack()" aria-label="返回上级目录" style="margin-right: 12px;">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="pointer-events:none"><path d="M15 18l-6-6 6-6"/></svg>
-                返回
-            </button>
-            <button class="back-btn" onclick="fetchDirectory(SITE_ROOT)" aria-label="回到根目录" style="font-size: 15px;">首页</button>
-        </div>
-       <div class="current-folder" id="currentFolder" style="flex:1; text-align:center;">/</div>
+    <div class="path-nav">
+        <button class="back-btn" onclick="goBack()" aria-label="返回上级目录">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="pointer-events:none"><path d="M15 18l-6-6 6-6"/></svg>
+            返回
+        </button>
+        <div class="current-folder" id="currentFolder">/</div>
         <button class="header-stats-btn" onclick="openStats()" aria-label="听力统计">📊</button>
     </div>
     <div class="search-bar">
@@ -1098,7 +1093,7 @@
                 <span>💾</span><span>空间</span>
             </button>
         </div>
-       <div class="version-tag">Build v2.3.5</div>
+        <div class="version-tag">Build v2.3.2</div>
     </div>
 </div>
 
@@ -2342,18 +2337,12 @@ function renderTracksInPlaylist(name) {
 function goBack() {
     if (currentPath.indexOf('virtual:list:') === 0) { fetchDirectory('virtual:folders'); return; }
     if (currentPath === 'virtual:folders') { fetchDirectory(SITE_ROOT); return; }
-    if (currentPath === SITE_ROOT) return;
-
     try {
         var u = new URL(currentPath);
         var parts = u.pathname.split('/').filter(function(x) { return x; });
-        parts.pop(); 
-        var parentPath = u.origin + '/' + parts.join('/') + (parts.length ? '/' : '');
-        if (parentPath.indexOf(SITE_ROOT) !== 0) parentPath = SITE_ROOT;
-        fetchDirectory(parentPath);
-    } catch(e) {
-        fetchDirectory(SITE_ROOT);
-    }
+        parts.pop();
+        fetchDirectory(u.origin + '/' + parts.join('/') + (parts.length ? '/' : ''));
+    } catch(e) { fetchDirectory(SITE_ROOT); }
 }
 
 var _searchTimer = null;
@@ -4016,7 +4005,7 @@ function _batchDownload(urls, onAllDone, onProgress) {
     var total     = urls.length;
     var done      = 0;
     var cursor    = 0;
-    var concur    = 5;
+    var concur    = 3;
     var succeeded = 0;
     var _onAllDoneCalled = false; // [Fix 2] 防止重复触发
 
@@ -4240,7 +4229,7 @@ function _doStartBatchCache(urls) {
     var alreadyCached = urls.filter(function(u) { return _cacheStatus[u] === 'cached'; }).length;
     if (alreadyCached === urls.length) { showToast('所选文件全部已缓存 ✅'); return; }
     var toDownload = urls.length - alreadyCached;
-    showToast('开始缓存 ' + toDownload + ' 首，并发5个');
+    showToast('开始缓存 ' + toDownload + ' 首，并发3个');
 
     var _cacheWakeLockOn = false;
     if (!isWakeLockEnabled) {
