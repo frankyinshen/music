@@ -1215,7 +1215,7 @@
 <input type="file" id="bsFileInput" accept=".json" style="display:none" onchange="onImportFileChosen(event)">
 
 <script>
-var SITE_ROOT    = 'https://cdn.evanyin.dpdns.org/';
+var SITE_ROOT    = 'https://res.evanyin.dpdns.org/';
 var AUDIO_EXTS   = ['.mp3','.wav','.flac','.m4a','.aac','.ogg','.opus'];
 var SPEED_OPTIONS = [
     0.5, 0.6, 0.7, 0.8, 0.9,
@@ -2339,28 +2339,7 @@ function renderTracksInPlaylist(name) {
     renderList(playList, true);
 }
 
-function goBack() {
-    if (currentPath.indexOf('virtual:list:') === 0) { fetchDirectory('virtual:folders'); return; }
-    if (currentPath === 'virtual:folders') { fetchDirectory(SITE_ROOT); return; }
-    if (currentPath === SITE_ROOT) return; 
-
-    var p = currentPath;
-    if (p.charAt(p.length - 1) === '/') {
-        p = p.substring(0, p.length - 1);
-    }
-    var idx = p.lastIndexOf('/');
-    if (idx !== -1) {
-        var parentPath = p.substring(0, idx + 1);
-        // 防止退到设定的根目录之外
-        if (parentPath.indexOf(SITE_ROOT) !== 0) {
-            parentPath = SITE_ROOT;
-        }
-        fetchDirectory(parentPath);
-    } else {
-        fetchDirectory(SITE_ROOT);
-    }
-}
-
+function goBack()
 var _searchTimer = null;
 function onSearchInput() {
     clearTimeout(_searchTimer);
