@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.3.2</title>
+    <title>英语精听播放器 v2.3.8</title>
     <!-- PWA Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1093,7 +1093,7 @@
                 <span>💾</span><span>空间</span>
             </button>
         </div>
-        <div class="version-tag">Build v2.3.2</div>
+        <div class="version-tag">Build v2.3.8</div>
     </div>
 </div>
 
@@ -1210,7 +1210,8 @@
 <input type="file" id="bsFileInput" accept=".json" style="display:none" onchange="onImportFileChosen(event)">
 
 <script>
-var SITE_ROOT    = 'https://res.evanyin.dpdns.org/';
+var API_ROOT     = 'https://res.evanyin.dpdns.org';
+var SITE_ROOT    = 'https://cdn.evanyin.dpdns.org/';
 var AUDIO_EXTS   = ['.mp3','.wav','.flac','.m4a','.aac','.ogg','.opus'];
 var SPEED_OPTIONS = [
     0.5, 0.6, 0.7, 0.8, 0.9,
@@ -2104,60 +2105,88 @@ function fetchDirectory(url) {
     if (url.indexOf('virtual:list:') === 0) { renderTracksInPlaylist(url.replace('virtual:list:', '')); return; }
     currentPath = url;
     document.getElementById('fileList').innerHTML = '<div style="text-align:center;padding:20px;color:gray;">连接中</div>';
+
+    // 计算显示路径
     var rawDisp = url.replace(SITE_ROOT, '/');
     if (!rawDisp || rawDisp === '') rawDisp = '/';
     try { rawDisp = decodeURIComponent(rawDisp); } catch(e) {}
     document.getElementById('currentFolder').textContent = rawDisp;
 
+    // 把 CDN URL 转换成 R2 prefix，通过 Worker JSON 接口拿目录列表
+    var prefix = url.replace(SITE_ROOT, '');
+    if (prefix.indexOf('http') === 0) {
+    try { prefix = new URL(prefix).pathname.slice(1); } catch(e) { prefix = ''; }
+}
+    var apiUrl = API_ROOT + '/_api/list?prefix=' + encodeURIComponent(prefix);
+
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', url, true);
-    xhr.timeout = 10000; // [Fix 1] 10 秒超时
+    xhr.open('GET', apiUrl, true);
+    xhr.timeout = 10000;
     xhr.onreadystatechange = function() {
         if (xhr.readyState !== 4) return;
         if (xhr.status >= 200 && xhr.status < 300) {
-            parseDirectory(xhr.responseText, url);
-            if (_pendingSession) { _applyPendingSession(); }
-        } else {
-            _restorePlayListCache();
-            if (playList.length > 0) {
+            try {
+                var data = JSON.parse(xhr.responseText);
+                parseDirectoryJSON(data, prefix);
+                if (_pendingSession) { _applyPendingSession(); }
+            } catch(e) {
                 document.getElementById('fileList').innerHTML =
-                    '<div style="padding:16px;text-align:center;color:var(--ios-subtext);font-size:14px;">📶 离线模式 · 显示上次目录</div>';
-                renderList(playList, false);
-                if (_pendingSession) _applyPendingSession();
-            } else {
-                document.getElementById('fileList').innerHTML =
-                    '<div style="padding:20px;color:red;text-align:center;">无法连接服务器 (' + xhr.status + ')</div>';
+                    '<div style="padding:20px;color:red;text-align:center;">目录解析失败</div>';
             }
+        } else {
+            _fallbackOffline();
         }
     };
-    // [Fix 1] 超时回调：提示用户，并降级到离线模式
     xhr.ontimeout = function() {
         showToast('⚠️ 连接超时，切换到离线模式');
-        _restorePlayListCache();
-        if (playList.length > 0) {
-            document.getElementById('fileList').innerHTML =
-                '<div style="padding:16px;text-align:center;color:var(--ios-subtext);font-size:14px;">📶 离线模式 · 显示上次目录（连接超时）</div>';
-            renderList(playList, false);
-            if (_pendingSession) _applyPendingSession();
-        } else {
-            document.getElementById('fileList').innerHTML =
-                '<div style="padding:20px;color:red;text-align:center;">连接超时，且无离线缓存</div>';
-        }
+        _fallbackOffline();
     };
-    xhr.onerror = function() {
-        _restorePlayListCache();
-        if (playList.length > 0) {
-            document.getElementById('fileList').innerHTML =
-                '<div style="padding:16px;text-align:center;color:var(--ios-subtext);font-size:14px;">📶 离线模式 · 显示上次目录</div>';
-            renderList(playList, false);
-            if (_pendingSession) _applyPendingSession();
-        } else {
-            document.getElementById('fileList').innerHTML =
-                '<div style="padding:20px;color:red;text-align:center;">无法连接服务器</div>';
-        }
-    };
+    xhr.onerror = function() { _fallbackOffline(); };
     xhr.send();
 }
+
+function _fallbackOffline() {
+    _restorePlayListCache();
+    if (playList.length > 0) {
+        document.getElementById('fileList').innerHTML =
+            '<div style="padding:16px;text-align:center;color:var(--ios-subtext);font-size:14px;">📶 离线模式 · 显示上次目录</div>';
+        renderList(playList, false);
+        if (_pendingSession) _applyPendingSession();
+    } else {
+        document.getElementById('fileList').innerHTML =
+            '<div style="padding:20px;color:red;text-align:center;">无法连接服务器</div>';
+    }
+}
+
+function parseDirectoryJSON(data, prefix) {
+    fileList = []; playList = [];
+    var folders = data.folders || [];
+    var files   = data.files   || [];
+
+    for (var i = 0; i < folders.length; i++) {
+        var f = folders[i];
+        var fullUrl = SITE_ROOT + f.path;
+        fileList.push({ name: f.name, url: fullUrl, isFolder: true, isAudio: false });
+    }
+    for (var j = 0; j < files.length; j++) {
+        var fi = files[j];
+        var nLow = fi.name.toLowerCase();
+        var isAudio = AUDIO_EXTS.some(function(ext) { return nLow.slice(-ext.length) === ext; });
+        if (isAudio) {
+            var fileUrl = SITE_ROOT + fi.key;
+            var item = { name: fi.name, url: fileUrl, isFolder: false, isAudio: true };
+            fileList.push(item);
+            playList.push(item);
+        }
+    }
+    if (playMode === 'shuffle') genShuffle();
+    renderList(fileList, false);
+    _savePlayListCache();
+}
+
+
+
+
 
 function parseDirectory(htmlText, baseUrl) {
     var parser = new DOMParser();
@@ -2334,16 +2363,23 @@ function renderTracksInPlaylist(name) {
     renderList(playList, true);
 }
 
+
+
 function goBack() {
     if (currentPath.indexOf('virtual:list:') === 0) { fetchDirectory('virtual:folders'); return; }
     if (currentPath === 'virtual:folders') { fetchDirectory(SITE_ROOT); return; }
+    if (currentPath === SITE_ROOT) return;
     try {
         var u = new URL(currentPath);
         var parts = u.pathname.split('/').filter(function(x) { return x; });
         parts.pop();
-        fetchDirectory(u.origin + '/' + parts.join('/') + (parts.length ? '/' : ''));
+        var parentUrl = SITE_ROOT.replace(/\/$/, '') + '/' + parts.join('/') + (parts.length ? '/' : '');
+        fetchDirectory(parentUrl);
     } catch(e) { fetchDirectory(SITE_ROOT); }
 }
+
+
+
 
 var _searchTimer = null;
 function onSearchInput() {
