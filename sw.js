@@ -1,4 +1,4 @@
-var CACHE_NAME = 'player-shell-v2.3.2';
+var CACHE_NAME = 'player-shell-v2.3.8';
 var SHELL_URL  = '/';
 
 self.addEventListener('install', function(e) {
