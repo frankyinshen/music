@@ -1421,17 +1421,23 @@ function setupAudioEvents() {
         saveProgress();
     });
     audio.addEventListener('ended',  function() {
-        clearMediaSession();
-        var _endedKey = _currentTrackOrigUrl || audio.src;
-        try { delete progressDB[_endedKey]; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e) {}
-        if (currentTrackIndex < 0) {
+    clearMediaSession();
+    var _endedKey = _currentTrackOrigUrl || audio.src;
+    try { delete progressDB[_endedKey]; localStorage.setItem('audio_progress_v2', JSON.stringify(progressDB)); } catch(e) {}
+    if (currentTrackIndex < 0) {
+        // 离线缓存直接播放模式：有原始URL则重播，否则停止
+        if (_currentTrackOrigUrl) {
+            audio.currentTime = 0;
+            safePlay();
+        } else {
             document.getElementById('iconPlay').style.display  = 'block';
             document.getElementById('iconPause').style.display = 'none';
-            return;
         }
-        if (playMode === 'single') { playTrack(currentTrackIndex); }
-        else { playNext(); }
-    });
+        return;
+    }
+    if (playMode === 'single') { playTrack(currentTrackIndex); }
+    else { playNext(); }
+});
     audio.addEventListener('timeupdate', onTU);
     audio.addEventListener('durationchange', function() {
         if (audio.duration && !isNaN(audio.duration) && isFinite(audio.duration)) {
@@ -1492,14 +1498,27 @@ function setupMediaSession() {
     if (!('mediaSession' in navigator)) return;
     var ms = navigator.mediaSession;
     var handlers = [
-        ['play',          function() { safePlay(); }],
-        ['pause',         function() { audio.pause(); }],
-        ['previoustrack', function() { playPrev(); }],
-        ['nexttrack',     function() { playNext(); }],
-        ['seekbackward',  function(d) { seekRelative(-(d && d.seekOffset ? d.seekOffset : 15)); }],
-        ['seekforward',   function(d) { seekRelative(+(d && d.seekOffset ? d.seekOffset : 15)); }],
-        ['seekto',        function(d) { if (d && d.seekTime !== undefined && audio.duration) { audio.currentTime = d.seekTime; saveProgress(); } }]
-    ];
+    ['play',          function() { safePlay(); }],
+    ['pause',         function() { audio.pause(); }],
+    ['previoustrack', function() { playPrev(); }],
+    ['nexttrack',     function() { playNext(); }],
+    ['seekbackward',  function(d) {
+        var offset = (d && d.seekOffset !== undefined && d.seekOffset !== null) ? d.seekOffset : 15;
+        seekRelative(-offset);
+    }],
+    ['seekforward',   function(d) {
+        var offset = (d && d.seekOffset !== undefined && d.seekOffset !== null) ? d.seekOffset : 15;
+        seekRelative(+offset);
+    }],
+    ['seekto',        function(d) {
+        if (d && d.seekTime !== undefined && audio.duration) {
+            var wasPlaying = !audio.paused;
+            try { audio.currentTime = d.seekTime; } catch(e) {}
+            saveProgress();
+            if (wasPlaying) { safePlay(); }
+        }
+    }]
+];
     for (var i = 0; i < handlers.length; i++) {
         try { ms.setActionHandler(handlers[i][0], handlers[i][1]); } catch(e) {}
     }
