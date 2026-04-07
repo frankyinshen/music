@@ -1278,6 +1278,8 @@ function _quickRestoreUI() {
     if (!_pendingSession) return;
     var ps = _pendingSession;
 
+    setCompact(false); // 提早展开底栏，防止离线加载阻断导致底栏不出现
+
     document.getElementById('trackName').textContent = ps.trackName || '恢复中';
     document.getElementById('trackTime').textContent = fmtTime(ps.trackTime) + ' / --:--';
 
@@ -1300,8 +1302,7 @@ function _quickRestoreUI() {
             audio.src = ps.trackUrl;
         }
     });
-    startAudioInfoLoad(ps.trackUrl);
-    setCompact(false);
+    try { startAudioInfoLoad(ps.trackUrl); } catch(e) {} // 增加容错
 
     var seekApplied = false;
     var lsHandler = function() {
@@ -2186,6 +2187,7 @@ function fetchDirectory(url) {
 }
 
 function _fallbackOffline() {
+    setCompact(false); // 确保在网络彻底断开兜底时底栏强制展开
     _restorePlayListCache();
     if (playList.length > 0) {
         document.getElementById('fileList').innerHTML =
