@@ -1498,8 +1498,14 @@ function setupMediaSession() {
     if (!('mediaSession' in navigator)) return;
     var ms = navigator.mediaSession;
     var handlers = [
-    ['play',          function() { safePlay(); }],
-    ['pause',         function() { audio.pause(); }],
+    ['play',  function() {
+    // 给系统一点时间，避免立即调用被拒绝
+    setTimeout(function() { safePlay(); }, 50);
+    }],
+    ['pause', function() {
+    audio.pause();
+    _wasPlayingBeforeHide = false; // 锁屏主动暂停后不要再自动恢复
+    }],
     ['previoustrack', function() { playPrev(); }],
     ['nexttrack',     function() { playNext(); }],
     ['seekbackward',  function(d) {
@@ -1670,8 +1676,9 @@ function _doSeek(targetTime, forcePlay) {
     var isLockScreen = (document.visibilityState === 'hidden');
 
     if (isLockScreen) {
+        // 锁屏下不要 pause，直接 seek，iOS 会保持播放状态
         try { audio.currentTime = targetTime; } catch(e) {}
-        if (shouldPlay) { safePlay(); }
+        // 不调用 safePlay()，让系统自己继续播放，避免被拦截
     } else {
         try { audio.pause(); } catch(e) {}
         try { audio.currentTime = targetTime; } catch(e) {}
@@ -1957,8 +1964,16 @@ document.addEventListener('visibilitychange', function() {
     } else {
         if (isWakeLockEnabled) _requestWakeLock(true);
         if (_wasPlayingBeforeHide && audio.src) {
-            if (audio.ended) { playNext(); }
-            else if (audio.paused) { safePlay(); }
+            if (audio.ended) {
+                playNext();
+            } else if (audio.paused) {
+                // 解锁回来时用 setTimeout 给浏览器一点时间恢复上下文
+                setTimeout(function() {
+                    if (audio.paused && _wasPlayingBeforeHide) {
+                        safePlay();
+                    }
+                }, 300);
+            }
         }
     }
 });
