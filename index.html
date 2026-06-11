@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>英语精听播放器 v2.3.9</title>
+    <title>英语精听播放器 v2.4.0</title>
     <!-- PWA Meta -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -1093,7 +1093,7 @@
                 <span>💾</span><span>空间</span>
             </button>
         </div>
-        <div class="version-tag">Build v2.3.9</div>
+        <div class="version-tag">Build v2.4.0</div>
     </div>
 </div>
 
@@ -1500,35 +1500,7 @@ function setupMediaSession() {
     var ms = navigator.mediaSession;
     var handlers = [
 ['play', function() {
-    var resumeTime = audio.currentTime;
-    var src = audio.src;
-    if (!src || src === window.location.href) return;
-
-    // iOS 锁屏下音频管线可能已挂起，需要重新 load 再 seek 到原位置
-    audio.pause();
-    audio.load();
-
-    var resumed = false;
-    function doResume() {
-        if (resumed) return;
-        resumed = true;
-        if (resumeTime > 0.5) {
-            try { audio.currentTime = resumeTime; } catch(e) {}
-        }
-        safePlay();
-    }
-
-    audio.addEventListener('canplay', function onCP() {
-        audio.removeEventListener('canplay', onCP);
-        doResume();
-    });
-    audio.addEventListener('loadedmetadata', function onLM() {
-        audio.removeEventListener('loadedmetadata', onLM);
-        doResume();
-    });
-
-    // 兜底：若 canplay/loadedmetadata 均未触发
-    setTimeout(function() { doResume(); }, 800);
+    _iosLockScreenResume();
 }],
     ['pause', function() {
     audio.pause();
@@ -1995,22 +1967,27 @@ document.addEventListener('visibilitychange', function() {
         if (audio.ended) {
             playNext();
         } else {
-            // 解锁回到界面：不论是否 paused，都重新对齐进度条显示
             setTimeout(function() {
                 if (!_wasPlayingBeforeHide) return;
-                var t = audio.currentTime;
-                var d = audio.duration;
-                if (d && !isNaN(d) && !isNaN(t)) {
-                    var pct = (t / d) * 100;
-                    slider.value = pct;
-                    setFill(pct);
-                    document.getElementById('trackTime').textContent =
-                        fmtTime(t) + ' / ' + fmtTime(d);
+                // 解锁回界面：如果锁屏期间 resume 流程正在进行中，不重复干预
+                if (_isResumingFromLock) return;
+                // 音频正在播放且有声音，只需同步进度条UI
+                if (!audio.paused) {
+                    var t = audio.currentTime;
+                    var d = audio.duration;
+                    if (d && !isNaN(d) && !isNaN(t)) {
+                        var pct = (t / d) * 100;
+                        slider.value = pct;
+                        setFill(pct);
+                        document.getElementById('trackTime').textContent =
+                            fmtTime(t) + ' / ' + fmtTime(d);
+                    }
+                    return;
                 }
-                if (audio.paused) {
-                    safePlay();
-                }
-            }, 300);
+                // 音频是暂停状态（锁屏点播放但管线挂起，或用户确实暂停了）
+                // 用同样的重建管线方式恢复
+                _iosLockScreenResume();
+            }, 400);
         }
     }
 }
@@ -3747,7 +3724,93 @@ function ctxDoDelete() {
     if (!name) return;
     setTimeout(function() { deletePlaylist(name); }, 150);
 }
+// ============================================================
+// iOS 锁屏播放修复
+// 核心思路：重新赋值 src（或 ObjectURL），强制系统重建音频管线
+// ============================================================
+var _isResumingFromLock = false;
 
+function _iosLockScreenResume() {
+    if (_isResumingFromLock) return;
+    
+    var resumeTime = audio.currentTime;
+    var origUrl    = _currentTrackOrigUrl || audio.src;
+    
+    if (!origUrl || origUrl === window.location.href) return;
+    if (origUrl.indexOf('blob:') === 0 && !_currentTrackOrigUrl) return;
+    
+    _isResumingFromLock = true;
+    
+    function _doLoad(src) {
+        audio.pause();
+        audio.src = '';           // 先清空，强制释放旧管线
+        audio.load();
+        
+        // 短暂延迟后重新赋值，让系统有时间回收旧资源
+        setTimeout(function() {
+            audio.src = src;
+            audio.playbackRate = playbackRate;
+            
+            var done = false;
+            function onReady() {
+                if (done) return;
+                done = true;
+                audio.removeEventListener('canplay',       onReady);
+                audio.removeEventListener('loadedmetadata', onReady);
+                
+                if (resumeTime > 0.5) {
+                    try { audio.currentTime = resumeTime; } catch(e) {}
+                }
+                
+                safePlay().then(function() {
+                    _isResumingFromLock = false;
+                }).catch(function() {
+                    _isResumingFromLock = false;
+                });
+            }
+            
+            audio.addEventListener('canplay',        onReady);
+            audio.addEventListener('loadedmetadata', onReady);
+            
+            // 兜底
+            setTimeout(function() {
+                if (!done) {
+                    done = true;
+                    audio.removeEventListener('canplay',        onReady);
+                    audio.removeEventListener('loadedmetadata', onReady);
+                    if (resumeTime > 0.5) {
+                        try { audio.currentTime = resumeTime; } catch(e) {}
+                    }
+                    safePlay().then(function() {
+                        _isResumingFromLock = false;
+                    }).catch(function() {
+                        _isResumingFromLock = false;
+                    });
+                }
+            }, 1500);
+            
+            audio.load();
+        }, 100);
+    }
+    
+    // 如果当前是 ObjectURL（已缓存离线文件），重新从 IDB 取出创建新的 ObjectURL
+    if (_currentObjectUrl && _currentTrackOrigUrl) {
+        _idbGet(_currentTrackOrigUrl, function(buffer) {
+            _revokeCurrentObjectUrl();
+            if (buffer) {
+                var blob = new Blob([buffer], { type: _guessMime(_currentTrackOrigUrl) });
+                _currentObjectUrl = URL.createObjectURL(blob);
+                _doLoad(_currentObjectUrl);
+            } else {
+                // IDB 取不到就直接用网络 URL
+                _currentObjectUrl = null;
+                _doLoad(_currentTrackOrigUrl);
+            }
+        });
+    } else {
+        _doLoad(origUrl);
+    }
+}
 function safePlay(targetAudio) {
     return (targetAudio || audio).play().catch(function(e) {
         if (!e) return;
