@@ -1499,16 +1499,12 @@ function setupMediaSession() {
     if (!('mediaSession' in navigator)) return;
     var ms = navigator.mediaSession;
     var handlers = [
-    ['play',  function() {
-        // 给系统一点时间，避免立即调用被拒绝
-        setTimeout(function() { 
-            // 修复 iOS 锁屏暂停后再播放时时间走但无声音的 Bug：强制重新赋值时间以唤醒底层音频管线
-            if (audio.duration && !isNaN(audio.currentTime)) {
-                try { audio.currentTime = audio.currentTime; } catch(e) {}
-            }
-            safePlay(); 
-        }, 50);
-    }],
+['play',  function() {
+    if (audio.duration && !isNaN(audio.currentTime)) {
+        try { audio.currentTime = audio.currentTime; } catch(e) {}
+    }
+    safePlay();
+}],
     ['pause', function() {
     audio.pause();
     _wasPlayingBeforeHide = false; // 锁屏主动暂停后不要再自动恢复
