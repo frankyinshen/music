@@ -1499,11 +1499,36 @@ function setupMediaSession() {
     if (!('mediaSession' in navigator)) return;
     var ms = navigator.mediaSession;
     var handlers = [
-['play',  function() {
-    if (audio.duration && !isNaN(audio.currentTime)) {
-        try { audio.currentTime = audio.currentTime; } catch(e) {}
+['play', function() {
+    var resumeTime = audio.currentTime;
+    var src = audio.src;
+    if (!src || src === window.location.href) return;
+
+    // iOS 锁屏下音频管线可能已挂起，需要重新 load 再 seek 到原位置
+    audio.pause();
+    audio.load();
+
+    var resumed = false;
+    function doResume() {
+        if (resumed) return;
+        resumed = true;
+        if (resumeTime > 0.5) {
+            try { audio.currentTime = resumeTime; } catch(e) {}
+        }
+        safePlay();
     }
-    safePlay();
+
+    audio.addEventListener('canplay', function onCP() {
+        audio.removeEventListener('canplay', onCP);
+        doResume();
+    });
+    audio.addEventListener('loadedmetadata', function onLM() {
+        audio.removeEventListener('loadedmetadata', onLM);
+        doResume();
+    });
+
+    // 兜底：若 canplay/loadedmetadata 均未触发
+    setTimeout(function() { doResume(); }, 800);
 }],
     ['pause', function() {
     audio.pause();
@@ -1964,21 +1989,31 @@ document.addEventListener('visibilitychange', function() {
             try { wakeLockObj.release(); } catch(e) {}
             wakeLockObj = null;
         }
-    } else {
-        if (isWakeLockEnabled) _requestWakeLock(true);
-        if (_wasPlayingBeforeHide && audio.src) {
-            if (audio.ended) {
-                playNext();
-            } else if (audio.paused) {
-                // 解锁回来时用 setTimeout 给浏览器一点时间恢复上下文
-                setTimeout(function() {
-                    if (audio.paused && _wasPlayingBeforeHide) {
-                        safePlay();
-                    }
-                }, 300);
-            }
+   } else {
+    if (isWakeLockEnabled) _requestWakeLock(true);
+    if (_wasPlayingBeforeHide && audio.src) {
+        if (audio.ended) {
+            playNext();
+        } else {
+            // 解锁回到界面：不论是否 paused，都重新对齐进度条显示
+            setTimeout(function() {
+                if (!_wasPlayingBeforeHide) return;
+                var t = audio.currentTime;
+                var d = audio.duration;
+                if (d && !isNaN(d) && !isNaN(t)) {
+                    var pct = (t / d) * 100;
+                    slider.value = pct;
+                    setFill(pct);
+                    document.getElementById('trackTime').textContent =
+                        fmtTime(t) + ' / ' + fmtTime(d);
+                }
+                if (audio.paused) {
+                    safePlay();
+                }
+            }, 300);
         }
     }
+}
 });
 
 window.addEventListener('pagehide', function() { saveSession(); });
